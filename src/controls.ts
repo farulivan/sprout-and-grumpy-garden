@@ -1,5 +1,6 @@
-// Player input. Keyboard and on-screen touch buttons all end up as the same held actions, plus a set of
-// actions that were pressed since they were last looked at.
+// Player input. Keyboard, gamepad and on-screen touch buttons all end up as the same held actions, plus
+// a set of actions that were pressed since they were last looked at.
+import { PAD_ACTIONS, readPad } from './gamepad';
 import type { InputFrame } from './sim/input';
 
 export type Action = 'left' | 'right' | 'up' | 'jump' | 'shoot' | 'start' | 'pause' | 'mute';
@@ -31,6 +32,7 @@ export class Controls {
   autoFire = false;
   aimLock = false;
   private just = new Set<Action>();
+  private pad = readPad(null);
 
   constructor(onAnyKey: () => void = () => {}) {
     window.addEventListener('keydown', (e) => {
@@ -48,6 +50,20 @@ export class Controls {
     window.addEventListener('blur', () => {
       for (const a of Object.keys(this.held) as Action[]) this.held[a] = false;
     });
+    // lets the page show the gamepad hint only to players who have one
+    window.addEventListener('gamepadconnected', () => document.body.classList.add('gamepad'));
+  }
+
+  // Gamepads have no events for buttons: call this once per display frame to read them.
+  poll() {
+    const pads = navigator.getGamepads?.() ?? [];
+    const next = readPad([...pads].find((p) => p?.connected));
+    for (const action of PAD_ACTIONS) {
+      if (!next[action] || this.pad[action]) continue;
+      this.just.add(action);
+      if (action === 'start') this.just.add('pause'); // Start both begins a fight and pauses one
+    }
+    this.pad = next;
   }
 
   press(action: Action) {
@@ -64,13 +80,14 @@ export class Controls {
 
   // What the simulation gets for one step.
   frame(): InputFrame {
-    const h = this.held;
+    const h = this.held,
+      pad = this.pad;
     return {
-      left: h.left,
-      right: h.right,
-      up: h.up || this.aimLock,
-      jump: h.jump,
-      shoot: h.shoot || this.autoFire,
+      left: h.left || pad.left,
+      right: h.right || pad.right,
+      up: h.up || pad.up || this.aimLock,
+      jump: h.jump || pad.jump,
+      shoot: h.shoot || pad.shoot || this.autoFire,
       jumpPressed: this.just.has('jump'),
     };
   }

@@ -182,6 +182,14 @@ body.touch .keys-only {
   display: none;
 }
 
+/* The gamepad line appears once a gamepad is connected (body.gamepad is set by src/controls.ts). */
+.pad-only {
+  display: none;
+}
+body.gamepad .pad-only {
+  display: grid;
+}
+
 /* Round HUD buttons (sound + pause), visible only during the fight. */
 #hud-btns {
   position: absolute;

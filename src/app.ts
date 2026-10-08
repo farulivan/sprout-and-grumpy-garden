@@ -85,6 +85,7 @@ export class App {
   tick(dt: number) {
     const c = this.o.controls,
       state = this.fight.state;
+    c.poll();
     if (c.pressed('mute')) this.toggleMute();
     let stepped = false;
     if (this.paused) {
