@@ -76,6 +76,13 @@ h1 {
     0 3px 0 #fff,
     0 4px 0 #cde7b9;
 }
+/* Which boss this is: the game is named after the garden, each fight after its boss. */
+.chapter {
+  margin: 0 0 6px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #e07a3f;
+}
 .sub {
   font-size: 16px;
   margin: 0 0 10px;

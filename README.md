@@ -1,8 +1,10 @@
-# Sprout & the Grumpy Sunflower 🌱🌻
+# Sprout & the Grumpy Garden 🌱🌻
 
 A cute, kid-friendly boss-battle game in the style of Cuphead / Mega Man boss fights, themed around plants.
-Little **Pip** the sprout must cheer up **Sunny**, a grumpy sunflower, by showering him with seeds.
-Win by emptying Sunny's bar without losing all your hearts.
+Little **Pip** the sprout cheers up the garden's grumpy plants, one boss at a time, by showering them with seeds.
+
+The game is named after the garden and each fight after its boss. So far there is one chapter,
+**The Grumpy Sunflower**: win by emptying **Sunny**'s bar without losing all your hearts.
 
 Built with TypeScript, Vite and Phaser 4. There are still no art or sound files: every picture is drawn in
 code when the game starts, and every sound is synthesized with WebAudio.
@@ -133,7 +135,8 @@ name in `SfxName` plus a recipe in `src/audio.ts`.
 **Add a boss.** Write `src/sim/bosses/<name>.ts` extending `Boss` (its movement, hurtboxes and attacks) and
 add it to `src/sim/bosses/index.ts`. TypeScript then asks for its view in `src/game/views/bossViews.ts`. The
 toasts in `src/presentation.ts`, the lose text in `src/ui/overlay.ts` and the cards in `index.html` still
-name Sunny, and the game always starts the `sunny` fight: choosing a boss needs a level-select screen.
+name Sunny, the title card says "Chapter 1 · The Grumpy Sunflower", and the game always starts the
+`sunny` fight: choosing a boss needs a level-select screen.
 
 **Tune difficulty.**
 
@@ -185,7 +188,7 @@ Add `?hitboxes` (or call `S.hitboxes(true)`) to draw what the simulation actuall
 
 ## Ideas for later
 
-- A second boss (e.g. a cactus or a mushroom) and a small level-select map.
+- A second chapter (e.g. "The Prickly Cactus" or "The Moody Mushroom") and a small level-select map.
 - A dash or a "Sunshine Super" meter that fills with hits.
 - Hand-drawn sprite sheets and recorded sound to replace the code-drawn placeholders.
 - An installable, offline version (PWA) for tablets.
