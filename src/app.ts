@@ -18,6 +18,8 @@ export interface AppOptions {
   audio: GameAudio;
   presenter: Presenter;
   onFight?: (fight: Fight) => void; // a new fight replaced the old one
+  onPause?: (paused: boolean) => void;
+  onMute?: (muted: boolean) => void;
 }
 
 export class App {
@@ -63,6 +65,7 @@ export class App {
 
   setPaused(paused: boolean) {
     if (paused && this.fight.state !== 'play') return;
+    if (paused !== this.paused) this.o.onPause?.(paused);
     this.paused = paused;
     this.o.audio.paused = paused;
     if (this.fight.state === 'play') this.overlay.show(paused ? 'pause' : null);
@@ -72,6 +75,7 @@ export class App {
     const { audio } = this.o;
     audio.muted = !audio.muted;
     save.muted = audio.muted;
+    this.o.onMute?.(audio.muted);
     this.overlay.setMuted(audio.muted);
     if (this.fight.state === 'play' && !this.paused)
       this.o.presenter.toast(audio.muted ? 'Sound off' : 'Sound on', 1.2);

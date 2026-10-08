@@ -12,8 +12,8 @@ All art is drawn in code and all sound is synthesized with WebAudio.
 The game is being moved from vanilla JS + Canvas 2D to TypeScript + Vite + Phaser 4. The full plan, with the rules and risks for each step, is in [MIGRATION.md](MIGRATION.md). Work happens on the `phaser-migration` branch; `main` holds the untouched original.
 
 - [x] **M0 Safety net:** original frozen in `legacy/` (`npm run legacy`); its behaviour is recorded in `tests/fixtures/legacy-baseline.json` by `npm run baseline`
-- [x] **M1 TypeScript + Vite + pure simulation:** all gameplay lives in `src/sim/` (no browser, no engine) and is tested against the original. The page is still drawn with Canvas 2D by the temporary `src/canvas/` layer
-- [ ] **M2 Phaser presentation** (next: step 1 in MIGRATION.md, a `FightScene` that runs the simulation with a hitbox overlay)
+- [x] **M1 TypeScript + Vite + pure simulation:** all gameplay lives in `src/sim/` (no browser, no engine) and is tested against the original
+- [x] **M2 Phaser presentation:** the game is drawn by Phaser 4 scenes in `src/game/`; the temporary Canvas 2D layer is gone
 - [ ] **M3** Improvements: gamepad, jump buffering, music timing, save data
 - [ ] **M4** Cleanup: delete `legacy/`, rewrite this README
 
@@ -21,8 +21,15 @@ How the code fits together today:
 
 - `src/sim/` is the game: `Fight.step(input)` advances exactly 1/60 s and `fight.drainEvents()` reports what happened. Nothing in it draws, plays sound or touches the DOM.
 - `src/presentation.ts` is the one table that turns those events into sounds, particles, shake and toasts, through a small `Presenter` interface.
-- `src/app.ts` runs the fixed-step loop and the screen flow (title, pause, mute, win, lose). It is renderer-agnostic.
-- `src/canvas/` (plain JS, temporary) implements the `Presenter` and draws a `Fight`. M2 replaces it with Phaser scenes in `src/game/`.
+- `src/app.ts` runs the fixed-step loop and the screen flow (title, pause, mute, win, lose). It is renderer-agnostic and is ticked from Phaser's `step` event.
+- `src/game/` is Phaser: `BootScene` bakes every texture from the canvas drawing helpers, `FightScene` syncs views to the simulation each frame, `HudScene` draws hearts, the boss bar and toasts on top.
+- `index.html` + `src/ui/` are the HTML cards and touch buttons layered over the canvas.
+
+Things worth knowing before changing the Phaser layer:
+
+- The canvas is 1920x1080 and cameras zoom by `RES` (2), so all positions stay in the 960x540 world. Baked parts are shown at scale `INV`; multiply by it when scaling a part.
+- Phaser's own API notes for v4 ship in `node_modules/phaser/skills/*/SKILL.md`. Read the relevant one before using an API: v4 differs from the v3 examples found online.
+- `?debug` adds `window.sprout` (`step(n)` runs whole frames even in a hidden tab); `?hitboxes` draws what the simulation collides with.
 
 The "Code map" and "Extending" sections further down still describe `legacy/`; they are rewritten in M4.
 

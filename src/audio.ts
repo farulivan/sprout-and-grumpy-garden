@@ -57,6 +57,15 @@ export class GameAudio {
   private musicTimer: ReturnType<typeof setInterval> | null = null;
   private beat = 0;
 
+  // Play through an AudioContext that something else owns (Phaser's), so its unlock handling,
+  // pause-on-blur and master mute cover the synth too.
+  attach(context: AudioContext, destination: AudioNode) {
+    this.ac = context;
+    this.master = context.createGain();
+    this.master.gain.value = 0.5;
+    this.master.connect(destination);
+  }
+
   // Browsers only allow sound after a key press, click or touch, so call this from one.
   init() {
     if (!this.ac) {

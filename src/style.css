@@ -25,6 +25,11 @@ body {
 body {
   overscroll-behavior: none;
 }
+/* Phaser puts its canvas in here and sizes it to fit; #stage is sized by src/ui/layout.ts. */
+#game-root {
+  width: 100%;
+  height: 100%;
+}
 canvas {
   display: block;
   border-radius: 18px;

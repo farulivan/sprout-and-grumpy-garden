@@ -2,13 +2,12 @@
 import { H, W } from '../config';
 import { clamp } from '../sim/math';
 
-export function initLayout(stage: HTMLElement, onResize: (cssScale: number) => void) {
+export function initLayout(stage: HTMLElement) {
   const resize = () => {
     const s = Math.min(window.innerWidth / W, window.innerHeight / H) * 0.97;
     stage.style.width = Math.round(W * s) + 'px';
     stage.style.height = Math.round(H * s) + 'px';
     stage.style.setProperty('--ui', clamp(s, 0.45, 1.6).toFixed(3)); // cards + touch buttons scale with the game
-    onResize(s);
   };
   window.addEventListener('resize', resize);
   resize();

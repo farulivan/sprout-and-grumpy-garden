@@ -10,8 +10,6 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "noImplicitOverride": true,
-    "allowJs": true,
-    "checkJs": false,
     "resolveJsonModule": true,
     "isolatedModules": true,
     "moduleDetection": "force",
