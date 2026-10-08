@@ -2,9 +2,9 @@
 import { Scene, Sound } from 'phaser';
 import type { GameAudio } from '../../audio';
 import { bakeFx } from '../fx';
+import { BOSS_VIEWS } from '../views/bossViews';
 import { bakeEntities } from '../views/EntityViews';
 import { bakePlayer } from '../views/PlayerView';
-import { bakeSunny } from '../views/SunnyView';
 import { bakeWorld } from '../views/WorldView';
 import { bakeHud } from './HudScene';
 
@@ -32,7 +32,7 @@ export class BootScene extends Scene {
     void loadFont().then(() => {
       bakeWorld(this);
       bakePlayer(this);
-      bakeSunny(this);
+      for (const boss of Object.values(BOSS_VIEWS)) boss.bake(this);
       bakeEntities(this);
       bakeFx(this);
       bakeHud(this);

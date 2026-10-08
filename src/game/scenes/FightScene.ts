@@ -5,12 +5,12 @@ import { fitCamera } from '../createGame';
 import { HitboxOverlay } from '../debug';
 import { Fx } from '../fx';
 import type { GamePresenter } from '../presenter';
+import { BOSS_VIEWS, type BossView } from '../views/bossViews';
 import { HazardViews, PickupViews, ProjectileViews } from '../views/EntityViews';
 import { PlayerView } from '../views/PlayerView';
-import { SunnyView } from '../views/SunnyView';
 import { WorldView } from '../views/WorldView';
 
-// Back to front, as the original game drew them.
+// Back to front.
 const DEPTH = {
   back: 0,
   ground: 1,
@@ -27,7 +27,7 @@ const DEPTH = {
 export class FightScene extends Scene {
   hitboxes!: HitboxOverlay;
   private world!: WorldView;
-  private boss!: SunnyView; // a second boss needs its own view, picked here by fight.boss.id
+  private bosses = new Map<string, BossView>(); // one view per boss met so far; only the current one shows
   private player!: PlayerView;
   private projectiles!: ProjectileViews;
   private hazards!: HazardViews;
@@ -44,7 +44,6 @@ export class FightScene extends Scene {
   create() {
     fitCamera(this);
     this.world = new WorldView(this, DEPTH);
-    this.boss = new SunnyView(this, DEPTH.boss);
     this.hazards = new HazardViews(this, DEPTH.hazards);
     this.pickups = new PickupViews(this, DEPTH.pickups);
     this.player = new PlayerView(this, DEPTH.player);
@@ -63,7 +62,7 @@ export class FightScene extends Scene {
       alpha = this.app.alpha;
 
     this.world.sync(dt);
-    this.boss.sync(fight.boss, alpha, dt);
+    this.bossView(fight.boss.id).sync(fight.boss, alpha, dt);
     this.hazards.sync(fight.hazards, alpha);
     this.pickups.sync(fight.pickups, alpha);
     this.player.sync(fight.player, alpha, dt);
@@ -73,5 +72,15 @@ export class FightScene extends Scene {
     // While a result card is up the fight is over: particles finish at normal speed and nothing shakes.
     const still = fight.state === 'title' || fight.state === 'win' || fight.state === 'lose';
     this.fx.update(still ? dt : dt * fight.timeScale, still ? 0 : dt);
+  }
+
+  private bossView(id: keyof typeof BOSS_VIEWS): BossView {
+    let view = this.bosses.get(id);
+    if (!view) {
+      view = BOSS_VIEWS[id].create(this, DEPTH.boss);
+      this.bosses.set(id, view);
+    }
+    for (const [key, other] of this.bosses) other.setVisible(key === id);
+    return view;
   }
 }

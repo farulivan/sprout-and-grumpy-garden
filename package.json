@@ -8,9 +8,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "format": "prettier --write .",
-    "check": "tsc --noEmit && tsc --noEmit -p src/sim && vitest run && prettier --check .",
-    "legacy": "python3 -m http.server 8000 -d legacy",
-    "baseline": "node tests/legacy-baseline.mjs"
+    "check": "tsc --noEmit && tsc --noEmit -p src/sim && vitest run && prettier --check ."
   },
   "devDependencies": {
     "prettier": "^3.9.9",

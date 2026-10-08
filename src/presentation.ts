@@ -1,6 +1,6 @@
 // What each simulation event looks and sounds like. This is the one place that turns "the boss was hit"
 // into a sound, a puff of particles, a screen shake or a line of text. Whatever draws the game (the
-// Canvas 2D renderer today, Phaser next) supplies a Presenter and this table stays the same.
+// Phaser scenes in src/game) supplies a Presenter, and this table knows nothing about how it works.
 import { GROUND, W } from './config';
 import type { SimEvent } from './sim/events';
 
@@ -193,5 +193,7 @@ export function present(e: SimEvent, p: Presenter, opts: { touch: boolean }) {
     case 'win':
     case 'lose':
       break; // the app shows the result card
+    default:
+      e satisfies never; // a new event type must be given a case above
   }
 }

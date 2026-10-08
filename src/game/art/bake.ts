@@ -12,7 +12,7 @@ type Draw = (ctx: CanvasRenderingContext2D) => void;
 const origins = new Map<string, [number, number]>();
 
 // Bake a part of w x h logical pixels. (ax, ay) is where the part's own (0, 0) sits inside that box;
-// draw() then draws around (0, 0), exactly like the original canvas code did around its translate().
+// draw() then draws around (0, 0).
 export function bake(scene: Scene, key: string, w: number, h: number, ax: number, ay: number, draw: Draw) {
   const texture = scene.textures.createCanvas(key, Math.ceil(w * RES), Math.ceil(h * RES));
   if (!texture) throw new Error(`Could not create texture "${key}"`);

@@ -1,5 +1,5 @@
-// Particles and screen shake. The particle system is the original game's, moved onto pooled images:
-// every shape is baked in white and tinted, so one texture serves every colour.
+// Particles and screen shake. Particles are pooled images: every shape is baked in white and tinted,
+// so one texture serves every colour.
 import type { Cameras, GameObjects, Scene } from 'phaser';
 import { H, RES, TAU, W } from '../config';
 import type { Burst, ParticleShape } from '../presentation';

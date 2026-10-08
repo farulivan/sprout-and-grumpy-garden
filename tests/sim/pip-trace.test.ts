@@ -1,5 +1,5 @@
-// Pip must move exactly as in the original game: the fixture holds the original's per-frame inputs and
-// the positions they produced (recorded by tests/legacy-baseline.mjs).
+// Pip must move exactly as in the original vanilla-JS game: the fixture holds the original's per-frame
+// inputs and the positions they produced. See the README ("Tests") for where the fixture came from.
 import { expect, it } from 'vitest';
 import { STEP } from '../../src/config';
 import { Fight } from '../../src/sim/fight';

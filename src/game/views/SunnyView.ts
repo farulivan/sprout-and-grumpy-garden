@@ -8,6 +8,7 @@ import type { Sunny } from '../../sim/bosses/sunny';
 import { lerp, qbez } from '../../sim/math';
 import { bake, INV, part, show } from '../art/bake';
 import { circle, ellipse, fillStroke, roundRect, type FaceMood } from '../art/draw';
+import type { BossView } from './bossViews';
 import { bakeFaces, faceKey } from './faces';
 
 const PETALS = 14;
@@ -76,7 +77,8 @@ export function bakeSunny(scene: Scene) {
   bakeFaces(scene, 'sunny', 2.3, ['angry', 'surprised', 'hurt', 'sleepy', 'happy']);
 }
 
-export class SunnyView {
+export class SunnyView implements BossView {
+  private all: GameObjects.Container;
   private stem: GameObjects.Graphics;
   private soil: GameObjects.Image;
   private leaves: GameObjects.Image[];
@@ -99,9 +101,13 @@ export class SunnyView {
     this.zzz = part(scene, 'zzz').setVisible(false);
     this.soil = part(scene, 'sunny-soil');
     // one container keeps the draw order: stem, leaves, soil, head, then the bubbles on top
-    scene.add
+    this.all = scene.add
       .container(0, 0, [this.stem, ...this.leaves, this.soil, this.head, this.bubble, this.zzz])
       .setDepth(depth);
+  }
+
+  setVisible(visible: boolean) {
+    this.all.setVisible(visible);
   }
 
   sync(boss: Boss, alpha: number, dt: number) {
