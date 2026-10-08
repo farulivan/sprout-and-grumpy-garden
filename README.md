@@ -12,23 +12,29 @@ All art is drawn in code and all sound is synthesized with WebAudio.
 The game is being moved from vanilla JS + Canvas 2D to TypeScript + Vite + Phaser 4. The full plan, with the rules and risks for each step, is in [MIGRATION.md](MIGRATION.md). Work happens on the `phaser-migration` branch; `main` holds the untouched original.
 
 - [x] **M0 Safety net:** original frozen in `legacy/` (`npm run legacy`); its behaviour is recorded in `tests/fixtures/legacy-baseline.json` by `npm run baseline`
-- [ ] **M1** TypeScript + Vite + pure simulation, still drawn with Canvas 2D
-- [ ] **M2** Phaser presentation
+- [x] **M1 TypeScript + Vite + pure simulation:** all gameplay lives in `src/sim/` (no browser, no engine) and is tested against the original. The page is still drawn with Canvas 2D by the temporary `src/canvas/` layer
+- [ ] **M2 Phaser presentation** (next: step 1 in MIGRATION.md, a `FightScene` that runs the simulation with a hitbox overlay)
 - [ ] **M3** Improvements: gamepad, jump buffering, music timing, save data
 - [ ] **M4** Cleanup: delete `legacy/`, rewrite this README
 
-Until M1 lands, everything below describes the original in `legacy/`.
+How the code fits together today:
+
+- `src/sim/` is the game: `Fight.step(input)` advances exactly 1/60 s and `fight.drainEvents()` reports what happened. Nothing in it draws, plays sound or touches the DOM.
+- `src/presentation.ts` is the one table that turns those events into sounds, particles, shake and toasts, through a small `Presenter` interface.
+- `src/app.ts` runs the fixed-step loop and the screen flow (title, pause, mute, win, lose). It is renderer-agnostic.
+- `src/canvas/` (plain JS, temporary) implements the `Presenter` and draws a `Fight`. M2 replaces it with Phaser scenes in `src/game/`.
+
+The "Code map" and "Extending" sections further down still describe `legacy/`; they are rewritten in M4.
 
 ## Run it
 
-ES modules don't load from `file://`, so serve the folder:
-
 ```bash
-npm run legacy             # = python3 -m http.server 8000 -d legacy
-# then open http://localhost:8000
+npm install
+npm run dev        # play at http://localhost:5173
+npm run check      # type-check (app, then the simulation without browser types), tests, formatting
+npm run build      # static site in dist/, works from any folder on any static host
+npm run legacy     # the untouched original at http://localhost:8000, for side-by-side comparison
 ```
-
-Any static server works (`npx serve`, VS Code Live Server, etc.). To publish, upload the folder to any static host.
 
 ## Controls
 
@@ -106,7 +112,7 @@ Give it a visible warning before `hits()` can return true (a kids' game should n
 - Pip's movement, jump and fire rate: the constants at the top of `js/player.js`.
 - Invulnerability after a hit: `hurt()` in `js/player.js`.
 
-**Test without playing.** Open `index.html?debug`. `window.sprout.step(n)` advances the simulation `n` frames
+**Test without playing.** Open the game with `?debug` (for example `http://localhost:5173/?debug`). `window.sprout.step(n)` advances the simulation `n` frames
 without `requestAnimationFrame`, so it also works in background tabs and scripts:
 
 ```js

@@ -32,17 +32,34 @@ function applyInput(keys) {
 // The same object legacy/js/main.js builds, minus everything that needs a browser.
 function makeGame() {
   const game = {
-    state: 'play', t: 0, endT: 0, timeScale: 1, shake: 0, fightTime: 0, faceHits: 0,
-    player: null, boss: null, projectiles: [], hazards: [], pickups: [], particles: new Particles(), platforms,
+    state: 'play',
+    t: 0,
+    endT: 0,
+    timeScale: 1,
+    shake: 0,
+    fightTime: 0,
+    faceHits: 0,
+    player: null,
+    boss: null,
+    projectiles: [],
+    hazards: [],
+    pickups: [],
+    particles: new Particles(),
+    platforms,
     showToast() {},
     onFightStart() {},
     onBossDefeated() {
-      this.state = 'ending'; this.endT = 0; this.timeScale = 0.25;
+      this.state = 'ending';
+      this.endT = 0;
+      this.timeScale = 0.25;
       for (const p of this.projectiles) if (p.owner !== 'player') p.dead = true;
       for (const h of this.hazards) h.dead = true;
     },
     onPlayerDown() {
-      this.state = 'down'; this.endT = 0; this.boss.state = 'paused'; this.boss.co = null;
+      this.state = 'down';
+      this.endT = 0;
+      this.boss.state = 'paused';
+      this.boss.co = null;
       for (const p of this.projectiles) p.dead = true;
       for (const h of this.hazards) h.dead = true;
     },
@@ -68,30 +85,50 @@ function step(g) {
   for (const d of g.pickups) d.update(sdt);
   g.particles.update(sdt);
   if (g.state === 'play') collide(g);
-  prune(g.projectiles); prune(g.hazards); prune(g.pickups);
+  prune(g.projectiles);
+  prune(g.hazards);
+  prune(g.pickups);
   input.endFrame();
 }
 
 function collide(g) {
-  const p = g.player, b = g.boss, hb = p.hitbox;
+  const p = g.player,
+    b = g.boss,
+    hb = p.hitbox;
   for (const pr of g.projectiles) {
     if (pr.dead) continue;
     if (pr.owner === 'player') {
       if (!b.alive) continue;
-      if (circleHit(pr, b)) { pr.dead = true; if (b.hit(2)) g.faceHits++; }
-      else if (rectCircleHit(b.stemBox, pr)) { pr.dead = true; b.hit(1); }
-    } else if (p.alive && circleHit(pr, hb)) { pr.dead = true; p.hurt(); }
+      if (circleHit(pr, b)) {
+        pr.dead = true;
+        if (b.hit(2)) g.faceHits++;
+      } else if (rectCircleHit(b.stemBox, pr)) {
+        pr.dead = true;
+        b.hit(1);
+      }
+    } else if (p.alive && circleHit(pr, hb)) {
+      pr.dead = true;
+      p.hurt();
+    }
   }
   for (const h of g.hazards) if (!h.dead && p.alive && h.hits(hb)) p.hurt();
-  for (const d of g.pickups) if (!d.dead && circleHit(d, hb)) { d.dead = true; if (p.hp < p.maxHp) p.hp++; }
+  for (const d of g.pickups)
+    if (!d.dead && circleHit(d, hb)) {
+      d.dead = true;
+      if (p.hp < p.maxHp) p.hp++;
+    }
   if (!p.alive) g.onPlayerDown();
 }
 
 // ---- 1. Pip's movement: inputs are recorded per frame, so the port replays exactly the same ones. ----
 function pipTrace() {
   seed(1);
-  const g = makeGame(), p = g.player;
-  const inputs = [], states = [], shots = [], hurtFrames = [];
+  const g = makeGame(),
+    p = g.player;
+  const inputs = [],
+    states = [],
+    shots = [],
+    hurtFrames = [];
   let f = 0;
   const tick = (keys = {}) => {
     applyInput(keys);
@@ -103,27 +140,37 @@ function pipTrace() {
     states.push([round(p.x), round(p.y), round(p.vx), round(p.vy), p.onGround ? 1 : 0]);
     f++;
   };
-  const hold = (n, keys) => { for (let i = 0; i < n; i++) tick(keys); };
-  const until = (cond, keys, max = 240) => { for (let i = 0; i < max && !cond(); i++) tick(keys); };
+  const hold = (n, keys) => {
+    for (let i = 0; i < n; i++) tick(keys);
+  };
+  const until = (cond, keys, max = 240) => {
+    for (let i = 0; i < max && !cond(); i++) tick(keys);
+  };
 
-  hold(20);                                                        // stand still
-  until(() => p.x >= 310, { right: true });                        // run right
-  hold(25);                                                        // slide to a stop
-  hold(2, { jump: true }); hold(45);                               // short hop
-  hold(45, { jump: true }); hold(10);                              // full jump, lands on the low leaf
-  until(() => p.x >= 440, { right: true });                        // walk along the leaf
+  hold(20); // stand still
+  until(() => p.x >= 310, { right: true }); // run right
+  hold(25); // slide to a stop
+  hold(2, { jump: true });
+  hold(45); // short hop
+  hold(45, { jump: true });
+  hold(10); // full jump, lands on the low leaf
+  until(() => p.x >= 440, { right: true }); // walk along the leaf
   until(() => p.onGround && p.y === 292, { right: true, jump: true }); // jump across to the high leaf
   hold(10);
-  hold(30, { shoot: true });                                       // shoot straight
-  hold(30, { shoot: true, up: true });                             // shoot diagonally up
-  until(() => !p.onGround, { left: true });                        // walk off the left edge
-  hold(3, { left: true }); hold(20, { left: true, jump: true });   // coyote jump
+  hold(30, { shoot: true }); // shoot straight
+  hold(30, { shoot: true, up: true }); // shoot diagonally up
+  until(() => !p.onGround, { left: true }); // walk off the left edge
+  hold(3, { left: true });
+  hold(20, { left: true, jump: true }); // coyote jump
   until(() => p.onGround && p.y === GROUND, { left: true });
   hold(20, { left: true });
-  hurtFrames.push(f); p.hurt();                                    // knocked back mid-run
+  hurtFrames.push(f);
+  p.hurt(); // knocked back mid-run
   hold(60, { left: true });
-  until(() => p.x <= 24, { left: true }); hold(10, { left: true }); // left wall
-  until(() => p.x >= 720, { right: true, shoot: true }); hold(10, { right: true }); // arena limit
+  until(() => p.x <= 24, { left: true });
+  hold(10, { left: true }); // left wall
+  until(() => p.x >= 720, { right: true, shoot: true });
+  hold(10, { right: true }); // arena limit
   hold(20);
   return { dt: DT, keys: KEYS, inputs, hurtFrames, states, shots };
 }
@@ -137,7 +184,12 @@ function turret(n) {
     applyInput(g.player.x < 560 ? { right: true } : { shoot: true, up: true });
     step(g);
   }
-  return { won: g.state === 'ending', fightTime: round(g.fightTime), faceHits: g.faceHits, x: round(g.player.x) };
+  return {
+    won: g.state === 'ending',
+    fightTime: round(g.fightTime),
+    faceHits: g.faceHits,
+    x: round(g.player.x),
+  };
 }
 
 // ---- 3. Damage taken: Pip stands still until he is out of hearts. ----
@@ -145,7 +197,10 @@ function idle(n, phase) {
   seed(n);
   const g = makeGame();
   g.boss.phase = phase; // nothing hits the boss here, so the phase stays as set
-  for (let f = 0; f < 60 * 300 && g.state === 'play'; f++) { applyInput({}); step(g); }
+  for (let f = 0; f < 60 * 300 && g.state === 'play'; f++) {
+    applyInput({});
+    step(g);
+  }
   return round(g.fightTime);
 }
 
@@ -153,10 +208,16 @@ function idle(n, phase) {
 const HAZARD = { VineSweep: 'vine', RootSpike: 'root', PollenDrop: 'pollen' };
 function attackLog(name, phase) {
   seed(7);
-  const g = makeGame(), b = g.boss, seen = new Set(), log = [];
-  b.state = 'fight'; b.phase = phase; b.idle = 999;
+  const g = makeGame(),
+    b = g.boss,
+    seen = new Set(),
+    log = [];
+  b.state = 'fight';
+  b.phase = phase;
+  b.idle = 999;
   g.player.x = 300;
-  b.co = b[name](); b.coWait = 0;
+  b.co = b[name]();
+  b.coWait = 0;
   for (let f = 0; f < 60 * 10 && b.co; f++) {
     g.player.inv = 999;
     applyInput({});
@@ -165,7 +226,15 @@ function attackLog(name, phase) {
       if (seen.has(e)) continue;
       seen.add(e);
       const type = HAZARD[e.constructor.name] ?? e.kind;
-      log.push([f, type, round(e.x), round(e.y), round(e.vx ?? 0), round(e.vy ?? 0), round(e.speed ?? e.warn ?? 0)]);
+      log.push([
+        f,
+        type,
+        round(e.x),
+        round(e.y),
+        round(e.vx ?? 0),
+        round(e.vy ?? 0),
+        round(e.speed ?? e.warn ?? 0),
+      ]);
     }
   }
   return log;
@@ -173,7 +242,8 @@ function attackLog(name, phase) {
 
 const seeds = (n) => Array.from({ length: n }, (_, i) => i + 1);
 const mean = (a) => round(a.reduce((s, v) => s + v, 0) / a.length);
-const idle1 = seeds(50).map((n) => idle(n, 1)), idle3 = seeds(50).map((n) => idle(n, 3));
+const idle1 = seeds(50).map((n) => idle(n, 1)),
+  idle3 = seeds(50).map((n) => idle(n, 3));
 const attacks = {};
 for (const name of ['seedSpit', 'petalFan', 'vineSweep', 'pollenRain', 'rootPop'])
   for (const phase of [1, 2, 3]) attacks[`${name}@${phase}`] = attackLog(name, phase);
@@ -187,12 +257,24 @@ const data = {
 };
 
 mkdirSync(new URL('./fixtures/', import.meta.url), { recursive: true });
-const body = Object.entries(data).map(([k, v]) => `  ${JSON.stringify(k)}: ${JSON.stringify(v)}`).join(',\n');
+const body = Object.entries(data)
+  .map(([k, v]) => `  ${JSON.stringify(k)}: ${JSON.stringify(v)}`)
+  .join(',\n');
 writeFileSync(new URL('./fixtures/legacy-baseline.json', import.meta.url), `{\n${body}\n}\n`);
 
 const t = data.pipTrace;
 console.log(`pip trace: ${t.states.length} frames, ${t.shots.length} shots, hurt at frame ${t.hurtFrames}`);
-console.log('turret:', data.turret.map((r) => `${r.won ? 'won' : 'NO WIN'} ${r.fightTime}s (${r.faceHits} face hits, x=${r.x})`).join(' | '));
-console.log(`idle phase 1: mean ${data.idlePhase1.mean}s  min ${Math.min(...idle1)}  max ${Math.max(...idle1)}`);
-console.log(`idle phase 3: mean ${data.idlePhase3.mean}s  min ${Math.min(...idle3)}  max ${Math.max(...idle3)}`);
-for (const [k, v] of Object.entries(attacks)) console.log(`${k}: ${v.length} spawns, frames ${v.map((e) => e[0]).join(',')}`);
+console.log(
+  'turret:',
+  data.turret
+    .map((r) => `${r.won ? 'won' : 'NO WIN'} ${r.fightTime}s (${r.faceHits} face hits, x=${r.x})`)
+    .join(' | '),
+);
+console.log(
+  `idle phase 1: mean ${data.idlePhase1.mean}s  min ${Math.min(...idle1)}  max ${Math.max(...idle1)}`,
+);
+console.log(
+  `idle phase 3: mean ${data.idlePhase3.mean}s  min ${Math.min(...idle3)}  max ${Math.max(...idle3)}`,
+);
+for (const [k, v] of Object.entries(attacks))
+  console.log(`${k}: ${v.length} spawns, frames ${v.map((e) => e[0]).join(',')}`);

@@ -3,7 +3,19 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "format": "prettier --write .",
+    "check": "tsc --noEmit && tsc --noEmit -p src/sim && vitest run && prettier --check .",
     "legacy": "python3 -m http.server 8000 -d legacy",
     "baseline": "node tests/legacy-baseline.mjs"
+  },
+  "devDependencies": {
+    "prettier": "^3.9.9",
+    "typescript": "~7.0.2",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.3"
   }
 }

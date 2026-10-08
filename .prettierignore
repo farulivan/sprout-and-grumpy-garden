@@ -1,0 +1,5 @@
+legacy/
+dist/
+tests/fixtures/
+*.md
+package-lock.json

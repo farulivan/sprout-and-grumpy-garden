@@ -1,0 +1,6 @@
+{
+  // The simulation must run without a browser: no DOM library here, so `window` or `document` fail to compile.
+  "extends": "../../tsconfig.json",
+  "compilerOptions": { "lib": ["ES2022"], "types": [], "allowJs": false },
+  "include": ["./**/*.ts"]
+}
