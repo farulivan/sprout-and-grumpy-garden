@@ -1,39 +1,96 @@
-// What the game remembers between visits.
-// localStorage can throw (private mode, blocked storage): never let that break the game.
-const get = (key: string) => {
+// What the game remembers between visits: one versioned object in localStorage.
+// Storage can be missing or throw (private mode, blocked storage): never let that break the game.
+import type { BossId } from './sim/bosses';
+
+interface SaveData {
+  v: 1;
+  easy: boolean;
+  muted: boolean;
+  best: Partial<Record<BossId, number>>; // fastest win per boss, in seconds
+}
+type Store = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
+
+const KEY = 'sprout.save';
+// The original game kept three separate keys. They are read once, then removed.
+const OLD = { easy: 'sprout.easy', muted: 'sprout.muted', best: 'sprout.best' };
+
+export function createSave(store: Store | null) {
+  const read = (key: string) => {
+    try {
+      return store?.getItem(key) ?? null;
+    } catch {
+      return null;
+    }
+  };
+
+  function load(): SaveData {
+    const data: SaveData = { v: 1, easy: false, muted: false, best: {} };
+    try {
+      const saved = JSON.parse(read(KEY) ?? 'null') as Partial<SaveData> | null;
+      if (saved && typeof saved === 'object') {
+        data.easy = saved.easy === true;
+        data.muted = saved.muted === true;
+        for (const [boss, time] of Object.entries(saved.best ?? {}))
+          if (typeof time === 'number' && Number.isFinite(time)) data.best[boss as BossId] = time;
+        return data;
+      }
+    } catch {
+      /* unreadable save: start fresh */
+    }
+    // first run of this version: bring over what the original game stored
+    data.easy = read(OLD.easy) === '1';
+    data.muted = read(OLD.muted) === '1';
+    const oldBest = parseFloat(read(OLD.best) ?? '');
+    if (Number.isFinite(oldBest)) data.best.sunny = oldBest;
+    return data;
+  }
+
+  const data = load();
+  const write = () => {
+    try {
+      store?.setItem(KEY, JSON.stringify(data));
+      for (const key of Object.values(OLD)) store?.removeItem(key);
+    } catch {
+      /* ignore */
+    }
+  };
+
+  return {
+    get easy() {
+      return data.easy;
+    },
+    set easy(on: boolean) {
+      data.easy = on;
+      write();
+    },
+    get muted() {
+      return data.muted;
+    },
+    set muted(on: boolean) {
+      data.muted = on;
+      write();
+    },
+    // Fastest win against this boss in seconds, or null if it has never been beaten.
+    best(boss: BossId): number | null {
+      return data.best[boss] ?? null;
+    },
+    // Records the time if it beats the best so far. Returns whether it did.
+    recordWin(boss: BossId, seconds: number): boolean {
+      const best = data.best[boss];
+      if (best !== undefined && best <= seconds) return false;
+      data.best[boss] = Math.round(seconds * 10) / 10;
+      write();
+      return true;
+    },
+  };
+}
+
+function browserStorage(): Store | null {
   try {
-    return localStorage.getItem(key);
+    return globalThis.localStorage ?? null;
   } catch {
     return null;
   }
-};
-const set = (key: string, value: string) => {
-  try {
-    localStorage.setItem(key, value);
-  } catch {
-    /* ignore */
-  }
-};
+}
 
-export const save = {
-  get easy() {
-    return get('sprout.easy') === '1';
-  },
-  set easy(on: boolean) {
-    set('sprout.easy', on ? '1' : '0');
-  },
-  get muted() {
-    return get('sprout.muted') === '1';
-  },
-  set muted(on: boolean) {
-    set('sprout.muted', on ? '1' : '0');
-  },
-  // Best fight time in seconds, or null if the boss has never been beaten.
-  get best(): number | null {
-    const v = parseFloat(get('sprout.best') ?? '');
-    return Number.isFinite(v) ? v : null;
-  },
-  set best(seconds: number | null) {
-    if (seconds !== null) set('sprout.best', seconds.toFixed(1));
-  },
-};
+export const save = createSave(browserStorage());

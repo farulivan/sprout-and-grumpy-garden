@@ -122,10 +122,9 @@ export class App {
   private handle(e: SimEvent) {
     present(e, this.o.presenter, { touch: this.o.controls.touch });
     if (e.type === 'win') {
-      const best = save.best,
-        isBest = best === null || e.result.time < best;
-      if (isBest) save.best = e.result.time;
-      this.overlay.showWin(e.result, best, isBest);
+      const boss = this.fight.boss.id,
+        best = save.best(boss);
+      this.overlay.showWin(e.result, best, save.recordWin(boss, e.result.time));
     } else if (e.type === 'lose') {
       this.overlay.showLose(e.progress);
     }

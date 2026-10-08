@@ -19,7 +19,7 @@ const POOLS: Record<number, readonly SunnyAttack[]> = {
 };
 
 export class Sunny extends Boss {
-  readonly id = 'sunny';
+  readonly id = 'sunny' as const;
   readonly name = 'Sunny the Sunflower';
   readonly baseX = 790;
   readonly baseY = 230;

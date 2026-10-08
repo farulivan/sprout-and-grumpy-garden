@@ -1,6 +1,7 @@
 // What every boss shares: health, three phases, the intro, and the attack scheduler.
 // Attacks are generator functions: `yield seconds` pauses the attack. A boss subclass supplies its
 // movement, its hurtboxes and its attacks (see bosses/sunny.ts).
+import type { BossId } from './bosses';
 import type { Fight } from './fight';
 import type { Circle, Rect } from './math';
 import { Dewdrop } from './pickups';
@@ -10,7 +11,7 @@ export type Mood = 'angry' | 'surprised' | 'happy';
 export type Attack = Generator<number, void, undefined>;
 
 export abstract class Boss {
-  abstract readonly id: string;
+  abstract readonly id: BossId;
   abstract readonly name: string;
   x = 0;
   y = 0;
