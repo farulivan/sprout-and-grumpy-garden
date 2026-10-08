@@ -77,6 +77,47 @@ describe('boss', () => {
   });
 });
 
+describe('jumping', () => {
+  // Drops Pip from just above the ground and presses jump `early` steps before he lands.
+  const jumpsAfterEarlyPress = (early: number) => {
+    const fight = fighting();
+    const pip = fight.player;
+    pip.y = 400;
+    pip.onGround = false;
+    let landsIn = 0;
+    for (
+      const probe = Object.assign(new Fight({ seed: 3 }).player, { y: 400, onGround: false });
+      !probe.onGround;
+      landsIn++
+    )
+      probe.update(1 / 60, NO_INPUT);
+    for (let i = 0; i < landsIn + 2; i++) {
+      const pressed = i === landsIn - 1 - early;
+      pip.update(1 / 60, { ...NO_INPUT, jump: pressed, jumpPressed: pressed });
+    }
+    return pip.vy < 0; // moving up again = he jumped
+  };
+
+  it('remembers a jump pressed just before landing', () => {
+    expect(jumpsAfterEarlyPress(3)).toBe(true);
+  });
+  it('forgets a jump pressed too early', () => {
+    expect(jumpsAfterEarlyPress(10)).toBe(false);
+  });
+  it('still allows a jump just after walking off an edge', () => {
+    const pip = fighting().player;
+    pip.x = 440; // standing on the low leaf, near its right end
+    pip.y = 352;
+    pip.update(1 / 60, NO_INPUT);
+    expect(pip.onGround).toBe(true);
+    pip.x = 470; // one step past the end
+    pip.update(1 / 60, NO_INPUT);
+    expect(pip.onGround).toBe(false);
+    pip.update(1 / 60, { ...NO_INPUT, jump: true, jumpPressed: true });
+    expect(pip.vy).toBeLessThan(-500);
+  });
+});
+
 describe('fight', () => {
   it('gives 5 hearts, or 8 in easy mode', () => {
     expect(new Fight({ seed: 1 }).player.hp).toBe(5);

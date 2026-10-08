@@ -13,6 +13,7 @@ const SPEED = 290,
   GRAV = 2300;
 const SHOT_SPEED = 640,
   SHOT_COOLDOWN = 0.17;
+const JUMP_BUFFER = 0.1; // a jump pressed this long before landing still happens
 
 export class Player {
   x = 150;
@@ -24,6 +25,7 @@ export class Player {
   facing: 1 | -1 = 1;
   onGround = true;
   coyote = 0; // seconds left in which a jump still works after walking off an edge
+  jumpBuffer = 0; // seconds left in which an early jump press is still remembered
   jumpHeld = false;
   hp = 5;
   maxHp = 5;
@@ -65,7 +67,10 @@ export class Player {
     }
     this.vx = clamp(this.vx, -SPEED, SPEED);
 
-    if (ctrl && input.jumpPressed && (this.onGround || this.coyote > 0)) {
+    this.jumpBuffer = Math.max(0, this.jumpBuffer - dt);
+    if (input.jumpPressed) this.jumpBuffer = JUMP_BUFFER;
+    if (ctrl && this.jumpBuffer > 0 && (this.onGround || this.coyote > 0)) {
+      this.jumpBuffer = 0;
       this.vy = -JUMP_V;
       this.onGround = false;
       this.coyote = 0;
