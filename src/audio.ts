@@ -46,6 +46,10 @@ const RECIPES: Record<SfxName, (tone: Tone) => void> = {
 const NOTES = [261.6, 293.7, 329.6, 392.0, 440.0, 523.3, 587.3, 659.3]; // C pentatonic over two octaves
 const PATTERN = [0, 2, 4, 5, 4, 2, 3, 1, 0, 3, 5, 7, 5, 3, 2, 1];
 const BEAT = 0.28;
+// Music is scheduled on the audio clock a little ahead of time, so it keeps a steady beat even when the
+// page's own timers run late.
+const LOOKAHEAD = 0.2; // seconds of music to keep scheduled
+const TICK = 50; // how often to top it up, in milliseconds
 
 export class GameAudio {
   muted = false;
@@ -56,6 +60,7 @@ export class GameAudio {
   private master: GainNode | null = null;
   private musicTimer: ReturnType<typeof setInterval> | null = null;
   private beat = 0;
+  private nextBeat = 0; // audio-clock time of the next beat to schedule
 
   // Play through an AudioContext that something else owns (Phaser's), so its unlock handling,
   // pause-on-blur and master mute cover the synth too.
@@ -83,17 +88,41 @@ export class GameAudio {
 
   startMusic() {
     if (!this.ac || this.musicTimer) return;
-    this.musicTimer = setInterval(() => {
-      if (this.muted || this.paused) return;
-      this.tone(NOTES[PATTERN[this.beat % PATTERN.length]], { type: 'sine', dur: BEAT * 1.7, vol: 0.055 });
-      if (this.beat % 8 === 0)
-        this.tone(NOTES[this.beat % 16 === 0 ? 0 : 3] / 2, { type: 'triangle', dur: BEAT * 6, vol: 0.05 });
-      this.beat++;
-    }, BEAT * 1000);
+    this.nextBeat = this.ac.currentTime + 0.05;
+    this.musicTimer = setInterval(() => this.scheduleMusic(), TICK);
   }
   stopMusic() {
     if (this.musicTimer) clearInterval(this.musicTimer);
     this.musicTimer = null;
+  }
+
+  private scheduleMusic() {
+    const ac = this.ac;
+    if (!ac) return;
+    const now = ac.currentTime;
+    if (this.muted || this.paused || ac.state !== 'running') {
+      this.nextBeat = Math.max(this.nextBeat, now + 0.05); // pick up from "now" afterwards, not from the backlog
+      return;
+    }
+    if (this.nextBeat < now) this.nextBeat = now; // the timer stalled for a long time: skip what was missed
+    while (this.nextBeat < now + LOOKAHEAD) {
+      const delay = this.nextBeat - now;
+      this.tone(NOTES[PATTERN[this.beat % PATTERN.length]], {
+        type: 'sine',
+        dur: BEAT * 1.7,
+        vol: 0.055,
+        delay,
+      });
+      if (this.beat % 8 === 0)
+        this.tone(NOTES[this.beat % 16 === 0 ? 0 : 3] / 2, {
+          type: 'triangle',
+          dur: BEAT * 6,
+          vol: 0.05,
+          delay,
+        });
+      this.beat++;
+      this.nextBeat += BEAT;
+    }
   }
 
   private tone: Tone = (freq, { end = freq, type = 'square', dur = 0.12, vol = 0.2, delay = 0 } = {}) => {
