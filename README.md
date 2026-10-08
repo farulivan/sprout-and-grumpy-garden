@@ -7,12 +7,24 @@ Win by emptying Sunny's bar without losing all your hearts.
 No build step, no dependencies, no asset files: vanilla JavaScript ES modules + HTML5 Canvas.
 All art is drawn in code and all sound is synthesized with WebAudio.
 
+## Migration status
+
+The game is being moved from vanilla JS + Canvas 2D to TypeScript + Vite + Phaser 4. The full plan, with the rules and risks for each step, is in [MIGRATION.md](MIGRATION.md). Work happens on the `phaser-migration` branch; `main` holds the untouched original.
+
+- [x] **M0 Safety net:** original frozen in `legacy/` (`npm run legacy`); its behaviour is recorded in `tests/fixtures/legacy-baseline.json` by `npm run baseline`
+- [ ] **M1** TypeScript + Vite + pure simulation, still drawn with Canvas 2D
+- [ ] **M2** Phaser presentation
+- [ ] **M3** Improvements: gamepad, jump buffering, music timing, save data
+- [ ] **M4** Cleanup: delete `legacy/`, rewrite this README
+
+Until M1 lands, everything below describes the original in `legacy/`.
+
 ## Run it
 
 ES modules don't load from `file://`, so serve the folder:
 
 ```bash
-npm start                  # = python3 -m http.server 8000
+npm run legacy             # = python3 -m http.server 8000 -d legacy
 # then open http://localhost:8000
 ```
 

@@ -2,5 +2,8 @@
   "name": "sprout-vs-sunflower",
   "private": true,
   "type": "module",
-  "scripts": { "start": "python3 -m http.server 8000" }
+  "scripts": {
+    "legacy": "python3 -m http.server 8000 -d legacy",
+    "baseline": "node tests/legacy-baseline.mjs"
+  }
 }
