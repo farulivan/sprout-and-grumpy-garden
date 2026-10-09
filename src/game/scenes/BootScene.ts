@@ -3,7 +3,7 @@ import { Scene, Sound } from 'phaser';
 import type { GameAudio } from '../../audio';
 import { bakeFx } from '../fx';
 import { BOSS_VIEWS } from '../views/bossViews';
-import { bakeEntities } from '../views/EntityViews';
+import { bakeHazards } from '../views/HazardViews';
 import { bakePickups } from '../views/PickupViews';
 import { bakePlayer } from '../views/PlayerView';
 import { bakeProjectiles } from '../views/ProjectileViews';
@@ -36,7 +36,7 @@ export class BootScene extends Scene {
       bakePlayer(this);
       for (const boss of Object.values(BOSS_VIEWS)) boss.bake(this);
       bakeProjectiles(this);
-      bakeEntities(this);
+      bakeHazards(this);
       bakePickups(this);
       bakeFx(this);
       bakeHud(this);
