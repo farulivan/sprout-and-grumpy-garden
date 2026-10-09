@@ -64,7 +64,7 @@ export class FightScene extends Scene {
       alpha = this.app.alpha;
 
     this.world.sync(dt, fight, alpha);
-    this.bossView(fight.boss.id).sync(fight.boss, alpha, dt);
+    this.bossView(fight.boss.id).sync(fight, alpha, dt);
     this.hazards.sync(fight.hazards, alpha);
     this.pickups.sync(fight.pickups, alpha);
     this.player.sync(fight.player, alpha, dt);
@@ -79,7 +79,7 @@ export class FightScene extends Scene {
   private bossView(id: keyof typeof BOSS_VIEWS): BossView {
     let view = this.bosses.get(id);
     if (!view) {
-      view = BOSS_VIEWS[id].create(this, DEPTH.boss);
+      view = BOSS_VIEWS[id].create(this, DEPTH.boss, this.fx);
       this.bosses.set(id, view);
     }
     for (const [key, other] of this.bosses) other.setVisible(key === id);
