@@ -58,7 +58,7 @@ export class Sunny extends Boss {
     let name: SunnyAttack;
     do name = this.fight.rng.pick(pool);
     while (name === this.lastAttack && pool.length > 1);
-    this.lastAttack = name;
+    this.lastAttack = this.attackName = name;
     return this[name]();
   }
   attack(name: string): Attack {
