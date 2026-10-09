@@ -6,7 +6,8 @@ import { HitboxOverlay } from '../debug';
 import { Fx } from '../fx';
 import type { GamePresenter } from '../presenter';
 import { BOSS_VIEWS, type BossView } from '../views/bossViews';
-import { HazardViews, PickupViews } from '../views/EntityViews';
+import { HazardViews } from '../views/EntityViews';
+import { PickupViews } from '../views/PickupViews';
 import { PlayerView } from '../views/PlayerView';
 import { ProjectileViews } from '../views/ProjectileViews';
 import { WorldView } from '../views/WorldView';
@@ -49,7 +50,7 @@ export class FightScene extends Scene {
     this.fx = new Fx(this, DEPTH.particles, DEPTH.flash);
     this.world = new WorldView(this, DEPTH);
     this.hazards = new HazardViews(this, DEPTH.hazards);
-    this.pickups = new PickupViews(this, DEPTH.pickups);
+    this.pickups = new PickupViews(this, DEPTH.pickups, this.fx);
     this.player = new PlayerView(this, DEPTH.player, this.fx);
     this.projectiles = new ProjectileViews(this, DEPTH.projectiles);
     this.hitboxes = new HitboxOverlay(this, DEPTH.hitboxes);
@@ -67,7 +68,7 @@ export class FightScene extends Scene {
     this.world.sync(dt, fight, alpha);
     this.bossView(fight.boss.id).sync(fight, alpha, dt);
     this.hazards.sync(fight.hazards, alpha);
-    this.pickups.sync(fight.pickups, alpha);
+    this.pickups.sync(fight.pickups, alpha, dt);
     this.player.sync(fight, alpha, dt);
     this.projectiles.sync(fight.projectiles, alpha);
     this.hitboxes.sync(fight);

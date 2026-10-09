@@ -1,13 +1,11 @@
-// Things that come and go during a fight: the three hazards and the dewdrop.
-// (Seeds and petals have their own file, ProjectileViews.ts.)
+// The three hazards. (Seeds and petals, and the dewdrop, have files of their own.)
 import type { GameObjects, Scene } from 'phaser';
 import { GROUND, TAU, W } from '../../config';
 import { POLLEN_CLOUD, POLLEN_WARN, ROOT_WARN, VINE_WARN, type Hazard } from '../../sim/hazards';
 import type { PollenDrop, RootSpike, VineSweep } from '../../sim/hazards';
 import { clamp, lerp } from '../../sim/math';
-import type { Dewdrop } from '../../sim/pickups';
 import { bake, INV, part } from '../art/bake';
-import { circle, ellipse, fillStroke, heart, sparkle } from '../art/draw';
+import { circle, ellipse, fillStroke } from '../art/draw';
 import { drawFace } from '../art/face';
 import { ViewPool, type PooledView } from './pool';
 
@@ -98,27 +96,6 @@ export function bakeEntities(scene: Scene) {
   bake(scene, 'pollen-puff', 34, 34, 17, 17, (c) => {
     circle(c, 0, 0, 16);
     fillStroke(c, '#ffe066', null);
-  });
-
-  // ---- dewdrop ----
-  bake(scene, 'dewdrop', 36, 38, 18, 23, (c) => {
-    c.beginPath();
-    c.moveTo(0, -20);
-    c.bezierCurveTo(16, -2, 12, 12, 0, 12);
-    c.bezierCurveTo(-12, 12, -16, -2, 0, -20);
-    c.closePath();
-    fillStroke(c, '#8fd8ff', '#3f9ad6', 2.5);
-    c.fillStyle = '#fff';
-    ellipse(c, -4, 0, 2.5, 5, 0.3);
-    c.fill();
-    heart(c, 1, 2, 4);
-    c.fillStyle = '#ff7fa0';
-    c.fill();
-  });
-  bake(scene, 'dew-sparkle', 18, 18, 9, 9, (c) => {
-    c.fillStyle = '#fff';
-    sparkle(c, 0, 0, 8);
-    c.fill();
   });
 }
 
@@ -298,39 +275,5 @@ export class HazardViews {
   }
   sync(hazards: readonly Hazard[], alpha: number) {
     this.pool.sync(hazards, (h, view) => view.sync(h, alpha));
-  }
-}
-
-// ---------------- dewdrop ----------------
-class DewdropView implements PooledView {
-  private drop: GameObjects.Image;
-  private sparkle: GameObjects.Image;
-  constructor(scene: Scene, depth: number) {
-    this.drop = part(scene, 'dewdrop').setDepth(depth);
-    this.sparkle = part(scene, 'dew-sparkle').setDepth(depth);
-  }
-  setVisible(visible: boolean) {
-    this.drop.setVisible(visible);
-    this.sparkle.setVisible(visible);
-  }
-  sync(d: Dewdrop, alpha: number) {
-    this.setVisible(!(d.life < 3 && Math.floor(d.life * 8) % 2 === 0)); // blink before vanishing
-    const x = d.x,
-      y = lerp(d.py, d.y, alpha) + Math.sin(d.t * 4) * 3;
-    this.drop.setPosition(x, y);
-    this.sparkle.setPosition(x + 12, y - 16).setScale((INV * (5 + Math.sin(d.t * 6) * 2)) / 8);
-  }
-}
-
-export class PickupViews {
-  private pool: ViewPool<Dewdrop, DewdropView>;
-  constructor(scene: Scene, depth: number) {
-    this.pool = new ViewPool(
-      () => 'dewdrop',
-      () => new DewdropView(scene, depth),
-    );
-  }
-  sync(pickups: readonly Dewdrop[], alpha: number) {
-    this.pool.sync(pickups, (d, view) => view.sync(d, alpha));
   }
 }

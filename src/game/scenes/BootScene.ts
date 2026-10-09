@@ -4,6 +4,7 @@ import type { GameAudio } from '../../audio';
 import { bakeFx } from '../fx';
 import { BOSS_VIEWS } from '../views/bossViews';
 import { bakeEntities } from '../views/EntityViews';
+import { bakePickups } from '../views/PickupViews';
 import { bakePlayer } from '../views/PlayerView';
 import { bakeProjectiles } from '../views/ProjectileViews';
 import { bakeWorld } from '../views/WorldView';
@@ -36,6 +37,7 @@ export class BootScene extends Scene {
       for (const boss of Object.values(BOSS_VIEWS)) boss.bake(this);
       bakeProjectiles(this);
       bakeEntities(this);
+      bakePickups(this);
       bakeFx(this);
       bakeHud(this);
       this.scene.start('fight');
