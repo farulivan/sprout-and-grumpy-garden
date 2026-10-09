@@ -22,6 +22,7 @@ const DEPTH = {
   projectiles: 7,
   particles: 8,
   front: 9,
+  flash: 10,
   hitboxes: 100,
 };
 
@@ -44,12 +45,12 @@ export class FightScene extends Scene {
 
   create() {
     fitCamera(this);
+    this.fx = new Fx(this, DEPTH.particles, DEPTH.flash);
     this.world = new WorldView(this, DEPTH);
     this.hazards = new HazardViews(this, DEPTH.hazards);
     this.pickups = new PickupViews(this, DEPTH.pickups);
     this.player = new PlayerView(this, DEPTH.player);
     this.projectiles = new ProjectileViews(this, DEPTH.projectiles);
-    this.fx = new Fx(this, DEPTH.particles);
     this.hitboxes = new HitboxOverlay(this, DEPTH.hitboxes);
     this.hitboxes.visible = new URLSearchParams(location.search).has('hitboxes');
     this.presenter.fx = this.fx;
@@ -70,9 +71,9 @@ export class FightScene extends Scene {
     this.projectiles.sync(fight.projectiles, alpha);
     this.hitboxes.sync(fight);
 
-    // While a result card is up the fight is over: particles finish at normal speed and nothing shakes.
+    // Particles slow down with the fight during the win slow-motion; the camera always settles in real time.
     const still = fight.state === 'title' || fight.state === 'win' || fight.state === 'lose';
-    this.fx.update(still ? dt : dt * fight.timeScale, still ? 0 : dt);
+    this.fx.update(still ? dt : dt * fight.timeScale, dt);
   }
 
   private bossView(id: keyof typeof BOSS_VIEWS): BossView {
