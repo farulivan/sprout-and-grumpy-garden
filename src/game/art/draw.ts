@@ -17,7 +17,7 @@ export function seeded(seed: number): () => number {
   return () => rng.next();
 }
 
-// ---- path helpers (they only build the path; call fill/stroke or fillStroke after) ----
+// ---- path helpers (they only build the path; fill or stroke it afterwards) ----
 export function circle(ctx: Ctx, x: number, y: number, r: number) {
   ctx.beginPath();
   ctx.arc(x, y, r, 0, TAU);
@@ -126,17 +126,6 @@ export function radial(ctx: Ctx, x: number, y: number, r: number, stops: Stops, 
   return addStops(ctx.createRadialGradient(fx, fy, 0, x, y, r), stops);
 }
 
-// Fill + outline in one go: the "sticker" look every character uses.
-export function fillStroke(ctx: Ctx, fill: Paint, stroke: string | null, width = 3) {
-  ctx.fillStyle = fill;
-  ctx.fill();
-  if (stroke) {
-    ctx.lineWidth = width;
-    ctx.strokeStyle = stroke;
-    ctx.lineJoin = 'round';
-    ctx.stroke();
-  }
-}
 // Run paint() so that it only shows inside the shape build() makes.
 export function inside(ctx: Ctx, build: () => void, paint: () => void) {
   ctx.save();
