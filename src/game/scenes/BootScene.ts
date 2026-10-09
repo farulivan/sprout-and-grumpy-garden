@@ -5,6 +5,7 @@ import { bakeFx } from '../fx';
 import { BOSS_VIEWS } from '../views/bossViews';
 import { bakeEntities } from '../views/EntityViews';
 import { bakePlayer } from '../views/PlayerView';
+import { bakeProjectiles } from '../views/ProjectileViews';
 import { bakeWorld } from '../views/WorldView';
 import { bakeHud } from './HudScene';
 
@@ -33,6 +34,7 @@ export class BootScene extends Scene {
       bakeWorld(this);
       bakePlayer(this);
       for (const boss of Object.values(BOSS_VIEWS)) boss.bake(this);
+      bakeProjectiles(this);
       bakeEntities(this);
       bakeFx(this);
       bakeHud(this);

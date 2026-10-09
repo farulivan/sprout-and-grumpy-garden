@@ -1,44 +1,17 @@
-// Everything that comes and goes during a fight: seeds and petals, the three hazards, and the dewdrop.
+// Things that come and go during a fight: the three hazards and the dewdrop.
+// (Seeds and petals have their own file, ProjectileViews.ts.)
 import type { GameObjects, Scene } from 'phaser';
 import { GROUND, TAU, W } from '../../config';
 import { POLLEN_CLOUD, POLLEN_WARN, ROOT_WARN, VINE_WARN, type Hazard } from '../../sim/hazards';
 import type { PollenDrop, RootSpike, VineSweep } from '../../sim/hazards';
 import { clamp, lerp } from '../../sim/math';
 import type { Dewdrop } from '../../sim/pickups';
-import type { Projectile } from '../../sim/projectile';
 import { bake, INV, part } from '../art/bake';
 import { circle, ellipse, fillStroke, heart, sparkle } from '../art/draw';
 import { drawFace } from '../art/face';
 import { ViewPool, type PooledView } from './pool';
 
 export function bakeEntities(scene: Scene) {
-  // ---- projectiles ----
-  // Pip's seed: green drop with a leaf tail, pointing right
-  bake(scene, 'shot-sprout', 26, 20, 15, 10, (c) => {
-    ellipse(c, -7, 0, 6, 3);
-    fillStroke(c, '#b6ea7f', null);
-    circle(c, 0, 0, 7);
-    fillStroke(c, '#8fdc5b', '#4f9d3d', 2.5);
-    c.fillStyle = '#fff';
-    circle(c, -2, -2.5, 2);
-    c.fill();
-  });
-  // striped sunflower seed
-  bake(scene, 'shot-bossSeed', 22, 28, 11, 14, (c) => {
-    ellipse(c, 0, 0, 11 * 0.75, 11);
-    fillStroke(c, '#6b4a2e', '#3f2a18', 2.5);
-    c.strokeStyle = '#e9d8b5';
-    c.lineWidth = 2;
-    c.beginPath();
-    c.moveTo(0, -8);
-    c.lineTo(0, 8);
-    c.stroke();
-  });
-  bake(scene, 'shot-petal', 32, 18, 16, 9, (c) => {
-    ellipse(c, 0, 0, 13, 6.5);
-    fillStroke(c, '#ffd23f', '#d98f1a', 2.5);
-  });
-
   // ---- shared bits ----
   bake(scene, 'dirt-mound', 96, 52, 48, 26, (c) => {
     ellipse(c, 0, 0, 44, 22);
@@ -147,31 +120,6 @@ export function bakeEntities(scene: Scene) {
     sparkle(c, 0, 0, 8);
     c.fill();
   });
-}
-
-// ---------------- projectiles ----------------
-const SPIN = { sprout: 0, bossSeed: 6, petal: 5 }; // radians per second
-
-export class ProjectileViews {
-  private pool: ViewPool<Projectile, GameObjects.Image>;
-  private spin = new WeakMap<Projectile, number>(); // each one starts at its own random angle
-
-  constructor(scene: Scene, depth: number) {
-    this.pool = new ViewPool(
-      (p) => p.kind,
-      (p) => part(scene, `shot-${p.kind}`).setDepth(depth),
-    );
-  }
-
-  sync(projectiles: readonly Projectile[], alpha: number) {
-    this.pool.sync(projectiles, (p, image, fresh) => {
-      if (fresh) this.spin.set(p, Math.random() * TAU);
-      image.setPosition(lerp(p.px, p.x, alpha), lerp(p.py, p.y, alpha));
-      image.setRotation(
-        p.kind === 'sprout' ? Math.atan2(p.vy, p.vx) : this.spin.get(p)! + p.t * SPIN[p.kind],
-      );
-    });
-  }
 }
 
 // ---------------- hazards ----------------

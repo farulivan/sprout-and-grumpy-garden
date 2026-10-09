@@ -6,8 +6,9 @@ import { HitboxOverlay } from '../debug';
 import { Fx } from '../fx';
 import type { GamePresenter } from '../presenter';
 import { BOSS_VIEWS, type BossView } from '../views/bossViews';
-import { HazardViews, PickupViews, ProjectileViews } from '../views/EntityViews';
+import { HazardViews, PickupViews } from '../views/EntityViews';
 import { PlayerView } from '../views/PlayerView';
+import { ProjectileViews } from '../views/ProjectileViews';
 import { WorldView } from '../views/WorldView';
 
 // Back to front.
