@@ -21,6 +21,7 @@ const DEPTH = {
   player: 6,
   projectiles: 7,
   particles: 8,
+  front: 9,
   hitboxes: 100,
 };
 
@@ -61,7 +62,7 @@ export class FightScene extends Scene {
       fight = this.app.fight,
       alpha = this.app.alpha;
 
-    this.world.sync(dt);
+    this.world.sync(dt, fight, alpha);
     this.bossView(fight.boss.id).sync(fight.boss, alpha, dt);
     this.hazards.sync(fight.hazards, alpha);
     this.pickups.sync(fight.pickups, alpha);
