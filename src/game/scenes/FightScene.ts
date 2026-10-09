@@ -49,7 +49,7 @@ export class FightScene extends Scene {
     this.world = new WorldView(this, DEPTH);
     this.hazards = new HazardViews(this, DEPTH.hazards);
     this.pickups = new PickupViews(this, DEPTH.pickups);
-    this.player = new PlayerView(this, DEPTH.player);
+    this.player = new PlayerView(this, DEPTH.player, this.fx);
     this.projectiles = new ProjectileViews(this, DEPTH.projectiles);
     this.hitboxes = new HitboxOverlay(this, DEPTH.hitboxes);
     this.hitboxes.visible = new URLSearchParams(location.search).has('hitboxes');
@@ -67,7 +67,7 @@ export class FightScene extends Scene {
     this.bossView(fight.boss.id).sync(fight, alpha, dt);
     this.hazards.sync(fight.hazards, alpha);
     this.pickups.sync(fight.pickups, alpha);
-    this.player.sync(fight.player, alpha, dt);
+    this.player.sync(fight, alpha, dt);
     this.projectiles.sync(fight.projectiles, alpha);
     this.hitboxes.sync(fight);
 
