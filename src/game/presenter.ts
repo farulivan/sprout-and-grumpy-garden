@@ -20,6 +20,8 @@ export interface ToastTarget {
 export class GamePresenter implements Presenter {
   fx: FxTarget | null = null;
   hud: ToastTarget | null = null;
+  // Set by whoever runs the fight loop (the App), which is the only thing that can hold it still.
+  onHitStop: (seconds: number) => void = () => {};
 
   constructor(private audio: GameAudio) {}
 
@@ -44,6 +46,9 @@ export class GamePresenter implements Presenter {
   }
   punch(amount: number) {
     this.fx?.punch(amount);
+  }
+  hitStop(seconds: number) {
+    this.onHitStop(seconds);
   }
   toast(text: string, seconds?: number, tone?: ToastTone) {
     this.hud?.toast(text, seconds, tone);

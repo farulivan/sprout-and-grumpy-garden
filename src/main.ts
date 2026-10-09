@@ -34,6 +34,8 @@ const app = new App({
   onMute: (muted) => (game.sound.mute = muted),
 });
 
+presenter.onHitStop = (seconds) => app.hitStop(seconds);
+
 initLayout(document.getElementById('stage') as HTMLElement);
 const fightScene = new FightScene(app, presenter);
 const game = createGame('game-root', [new BootScene(audio), fightScene, new HudScene(app, presenter)]);

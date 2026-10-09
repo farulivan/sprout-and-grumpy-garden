@@ -65,6 +65,7 @@ export interface Presenter {
   shake(px: number): void;
   flash(alpha: number, color?: string): void; // a wash of light over the whole screen
   punch(amount: number): void; // the camera jolts in by this fraction and settles
+  hitStop(seconds: number): void; // the fight holds still for a moment so a hit lands
   toast(text: string, seconds?: number, tone?: ToastTone): void;
 }
 
@@ -105,6 +106,7 @@ export function present(e: SimEvent, p: Presenter, opts: { touch: boolean }) {
     case 'playerHurt':
       p.sfx('hurt');
       p.shake(9);
+      p.hitStop(0.07);
       p.flash(0.16, '#ff7f9c');
       p.ring(e.x, e.y, { color: '#ff9bb0', from: 10, to: 70, life: 0.35 });
       p.burst(e.x, e.y, {
@@ -200,6 +202,7 @@ export function present(e: SimEvent, p: Presenter, opts: { touch: boolean }) {
       const shed = PETAL_COLOR[e.phase - 2]; // he sheds the petals of the phase he just left
       p.sfx('roar');
       p.shake(12);
+      p.hitStop(0.12);
       p.punch(0.045);
       p.flash(0.28, '#fff1c2');
       p.ring(e.x, e.y, { color: shed, from: 50, to: 300, life: 0.6 });
