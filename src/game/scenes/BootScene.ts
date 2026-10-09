@@ -1,6 +1,7 @@
 // Runs once: waits for the font, bakes every texture, then starts the fight scene.
 import { Scene, Sound } from 'phaser';
 import type { GameAudio } from '../../audio';
+import { finishBaking } from '../art/bake';
 import { bakeFx } from '../fx';
 import { BOSS_VIEWS } from '../views/bossViews';
 import { bakeHazards } from '../views/HazardViews';
@@ -40,6 +41,7 @@ export class BootScene extends Scene {
       bakePickups(this);
       bakeFx(this);
       bakeHud(this);
+      finishBaking(this);
       this.scene.start('fight');
     });
   }

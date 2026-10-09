@@ -1,6 +1,11 @@
-// All art is drawn in code. Each piece ("part") is drawn once at startup into its own texture with the
-// Canvas 2D helpers in draw.ts, then views move, rotate and scale those parts every frame.
-// To use drawn sprite art instead, load an atlas with the same keys and skip the bake step.
+// All art is drawn in code. Each piece ("part") is drawn once at startup with the Canvas 2D helpers in
+// draw.ts, then views move, rotate and scale those parts every frame.
+//
+// Small parts are packed together into a few big shared textures (an atlas). That matters for speed: the
+// graphics card draws everything that shares a texture in one go, so a hundred parts on one atlas cost
+// about as much as one. Big parts (whole background layers) keep a texture of their own.
+//
+// To use drawn sprite art instead, load an atlas whose frames have the same keys and skip the bake step.
 import type { GameObjects, Scene } from 'phaser';
 import { RES } from '../../config';
 
@@ -13,12 +18,47 @@ export const INV = 1 / RES;
 // full-screen layer costs a quarter of the memory. Parts baked this way are scaled by unit(key).
 export const SOFT = 1;
 
+const PAGE = 2048; // width and height of an atlas page, in texture pixels (every device supports this)
+const SOLO = 512; // a part with a side longer than this many texture pixels gets a texture of its own
+const GUTTER = 2; // empty pixels around each part on a page, so neighbours never bleed into each other
+
 type Draw = (ctx: CanvasRenderingContext2D) => void;
-const origins = new Map<string, [number, number]>();
-const units = new Map<string, number>();
+interface Baked {
+  texture: string;
+  frame?: string; // set when the part lives on an atlas page
+  origin: [number, number];
+  unit: number;
+}
+interface Job {
+  key: string;
+  pw: number; // size in texture pixels
+  ph: number;
+  res: number;
+  ax: number;
+  ay: number;
+  draw: Draw;
+}
+const baked = new Map<string, Baked>();
+let queue: Job[] = [];
+let packed = false; // once the atlas is drawn, anything baked later gets a texture of its own
+
+function paint(ctx: CanvasRenderingContext2D, job: Job, x: number, y: number) {
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(x, y, job.pw, job.ph);
+  ctx.clip(); // a part may only draw inside its own box
+  ctx.translate(x, y);
+  ctx.scale(job.res, job.res);
+  ctx.translate(job.ax, job.ay);
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  job.draw(ctx);
+  ctx.restore();
+}
 
 // Bake a part of w x h logical pixels. (ax, ay) is where the part's own (0, 0) sits inside that box;
 // draw() then draws around (0, 0). res = texture pixels per logical pixel.
+// Small parts are only queued here; finishBaking() draws them onto the atlas.
 export function bake(
   scene: Scene,
   key: string,
@@ -29,34 +69,103 @@ export function bake(
   draw: Draw,
   res = RES,
 ) {
-  const texture = scene.textures.createCanvas(key, Math.ceil(w * res), Math.ceil(h * res));
+  if (baked.has(key)) throw new Error(`Part "${key}" is baked twice`);
+  const job: Job = { key, pw: Math.ceil(w * res), ph: Math.ceil(h * res), res, ax, ay, draw };
+  const part: Baked = { texture: key, origin: [ax / w, ay / h], unit: 1 / res };
+  baked.set(key, part);
+  if (!packed && job.pw <= SOLO && job.ph <= SOLO) {
+    queue.push(job);
+    return;
+  }
+  const texture = scene.textures.createCanvas(key, job.pw, job.ph);
   if (!texture) throw new Error(`Could not create texture "${key}"`);
-  const ctx = texture.getContext();
-  ctx.scale(res, res);
-  ctx.translate(ax, ay);
-  ctx.lineJoin = 'round';
-  ctx.lineCap = 'round';
-  draw(ctx);
+  paint(texture.getContext(), job, 0, 0);
   texture.refresh();
-  origins.set(key, [ax / w, ay / h]);
-  units.set(key, 1 / res);
+}
+
+// Call once after every bake(): packs the queued parts onto atlas pages and draws them.
+export function finishBaking(scene: Scene) {
+  // Tallest first, in rows ("shelves"): simple, and it wastes little space when heights are sorted.
+  const jobs = queue.sort((a, b) => b.ph - a.ph);
+  queue = [];
+  packed = true;
+  // Each part is drawn on this scratch canvas first and copied onto its page from there. (Drawing it
+  // straight onto the page and copying edge pixels within the page is far slower: every copy from a
+  // canvas to itself makes the browser duplicate the whole page first.)
+  const scratch = document.createElement('canvas');
+  scratch.width = scratch.height = SOLO;
+  const pen = scratch.getContext('2d')!;
+  let page = -1,
+    ctx: CanvasRenderingContext2D | null = null,
+    x = PAGE, // forces the first part to open a row, and that row to open a page
+    y = PAGE,
+    rowH = 0;
+  const pages: { refresh(): unknown }[] = [];
+  for (const job of jobs) {
+    const { pw, ph } = job,
+      w = pw + GUTTER * 2,
+      h = ph + GUTTER * 2;
+    if (x + w > PAGE) {
+      x = 0;
+      y += rowH;
+      rowH = h;
+    }
+    if (y + h > PAGE) {
+      const texture = scene.textures.createCanvas(`atlas-${++page}`, PAGE, PAGE);
+      if (!texture) throw new Error('Could not create an atlas page');
+      pages.push(texture);
+      ctx = texture.getContext();
+      x = y = 0;
+      rowH = h;
+    }
+    const px = x + GUTTER,
+      py = y + GUTTER,
+      to = ctx!;
+    pen.clearRect(0, 0, SOLO, SOLO);
+    paint(pen, job, 0, 0);
+    to.drawImage(scratch, 0, 0, pw, ph, px, py, pw, ph);
+    // Repeat the part's outermost pixels once into the gutter. When a part is stretched (a 4-pixel white
+    // square over the whole screen, say), the smoothing at its edges then blends with more of itself
+    // instead of with the empty gutter.
+    to.drawImage(scratch, 0, 0, pw, 1, px, py - 1, pw, 1);
+    to.drawImage(scratch, 0, ph - 1, pw, 1, px, py + ph, pw, 1);
+    to.drawImage(scratch, 0, 0, 1, ph, px - 1, py, 1, ph);
+    to.drawImage(scratch, pw - 1, 0, 1, ph, px + pw, py, 1, ph);
+    const texture = scene.textures.get(`atlas-${page}`);
+    texture.add(job.key, 0, px, py, pw, ph);
+    const part = baked.get(job.key)!;
+    part.texture = texture.key;
+    part.frame = job.key;
+    x += w;
+  }
+  for (const texture of pages) texture.refresh();
+}
+
+function get(key: string): Baked {
+  const part = baked.get(key);
+  if (!part) throw new Error(`No baked part "${key}"`);
+  return part;
 }
 
 // The scale at which a baked part appears at its logical size (INV unless it was baked with its own res).
 export function unit(key: string): number {
-  const u = units.get(key);
-  if (u === undefined) throw new Error(`No baked part "${key}"`);
-  return u;
+  return get(key).unit;
 }
 
 // An image of a baked part, pivoting on the part's own (0, 0).
 export function part(scene: Scene, key: string, x = 0, y = 0): GameObjects.Image {
-  const origin = origins.get(key);
-  if (!origin) throw new Error(`No baked part "${key}"`);
-  return scene.add.image(x, y, key).setOrigin(origin[0], origin[1]).setScale(unit(key));
+  const p = get(key);
+  return scene.add.image(x, y, p.texture, p.frame).setOrigin(p.origin[0], p.origin[1]).setScale(p.unit);
 }
 
-// Change which part an image shows (for parts baked with the same size and origin, like faces).
+// Which part an image is showing.
+const shown = (image: GameObjects.Image) =>
+  image.frame.name === '__BASE' ? image.texture.key : image.frame.name;
+
+// Change which part an image shows. It keeps its scale, so swap between parts baked at the same size
+// (faces, the petals of each phase, particle shapes).
 export function show(image: GameObjects.Image, key: string) {
-  if (image.texture.key !== key) image.setTexture(key);
+  if (shown(image) === key) return;
+  const p = get(key);
+  image.setTexture(p.texture, p.frame).setOrigin(p.origin[0], p.origin[1]);
 }
