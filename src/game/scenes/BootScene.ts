@@ -1,5 +1,5 @@
 // Runs once: waits for the font, bakes every texture, then starts the fight scene.
-import { Scene, Sound } from 'phaser';
+import { Scene, Sound, WEBGL, type Renderer } from 'phaser';
 import type { GameAudio } from '../../audio';
 import { finishBaking } from '../art/bake';
 import { bakeFx } from '../fx';
@@ -31,6 +31,13 @@ export class BootScene extends Scene {
     if (this.sound instanceof Sound.WebAudioSoundManager)
       this.audio.attach(this.sound.context, this.sound.destination);
     this.sound.mute = this.audio.muted;
+
+    // Draw with one texture per batch, on every device (Phaser already does on phones and tablets).
+    // Left alone on desktop, it builds a separate shader for each number of textures a batch happens to
+    // use, and each first build drops a frame or more in the middle of the fight. Nearly all the art
+    // shares a few atlas textures (see art/bake.ts), so this costs very few extra draw calls.
+    if (this.renderer.type === WEBGL)
+      (this.renderer as Renderer.WebGL.WebGLRenderer).renderNodes.setMaxParallelTextureUnits(1);
 
     void loadFont().then(() => {
       bakeWorld(this);
