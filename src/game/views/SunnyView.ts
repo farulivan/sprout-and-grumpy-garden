@@ -7,7 +7,8 @@ import type { Boss } from '../../sim/boss';
 import type { Sunny } from '../../sim/bosses/sunny';
 import { lerp, qbez } from '../../sim/math';
 import { bake, INV, part, show } from '../art/bake';
-import { circle, ellipse, fillStroke, roundRect, type FaceMood } from '../art/draw';
+import { circle, ellipse, fillStroke, roundRect } from '../art/draw';
+import type { FaceMood } from '../art/face';
 import type { BossView } from './bossViews';
 import { bakeFaces, faceKey } from './faces';
 

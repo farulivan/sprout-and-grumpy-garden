@@ -1,7 +1,7 @@
 // The shared cute face, baked once per size, mood and blink.
 import type { Scene } from 'phaser';
 import { bake } from '../art/bake';
-import { drawFace, type FaceMood } from '../art/draw';
+import { drawFace, type FaceMood } from '../art/face';
 
 export const faceKey = (who: string, mood: FaceMood, blink = false) =>
   `face-${who}-${mood}${blink ? '-blink' : ''}`;

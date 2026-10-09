@@ -7,7 +7,8 @@ import { clamp, lerp } from '../../sim/math';
 import type { Dewdrop } from '../../sim/pickups';
 import type { Projectile } from '../../sim/projectile';
 import { bake, INV, part } from '../art/bake';
-import { circle, drawFace, ellipse, fillStroke, heart, sparkle } from '../art/draw';
+import { circle, ellipse, fillStroke, heart, sparkle } from '../art/draw';
+import { drawFace } from '../art/face';
 import { ViewPool, type PooledView } from './pool';
 
 export function bakeEntities(scene: Scene) {

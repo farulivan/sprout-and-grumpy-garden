@@ -4,7 +4,8 @@ import { GROUND } from '../../config';
 import { clamp, lerp } from '../../sim/math';
 import type { Player } from '../../sim/player';
 import { bake, INV, part, show } from '../art/bake';
-import { circle, ellipse, fillStroke, roundRect, type FaceMood } from '../art/draw';
+import { circle, ellipse, fillStroke, roundRect } from '../art/draw';
+import type { FaceMood } from '../art/face';
 import { bakeFaces, faceKey } from './faces';
 
 const FEET = [
