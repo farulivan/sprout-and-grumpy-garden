@@ -3,7 +3,12 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#123f2c" />
     <title>Sprout &amp; the Grumpy Garden</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🌻%3C/text%3E%3C/svg%3E"
+    />
     <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body>
@@ -11,8 +16,22 @@
     <div id="stage">
       <div id="game-root"></div>
       <div id="hud-btns">
-        <button id="btn-mute" class="icon-btn" aria-label="Sound on or off">🔊</button>
-        <button id="btn-pause" class="icon-btn" aria-label="Pause">⏸</button>
+        <button id="btn-mute" class="icon-btn" aria-label="Sound on or off">
+          <svg class="ico-on" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" />
+            <path class="wave" d="M15 9.2a4 4 0 0 1 0 5.6M17.6 6.8a7.4 7.4 0 0 1 0 10.4" />
+          </svg>
+          <svg class="ico-off" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" />
+            <path class="wave" d="M15.5 9.5l5 5M20.5 9.5l-5 5" />
+          </svg>
+        </button>
+        <button id="btn-pause" class="icon-btn" aria-label="Pause">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="6.5" y="5.5" width="4" height="13" rx="1.6" />
+            <rect x="13.5" y="5.5" width="4" height="13" rx="1.6" />
+          </svg>
+        </button>
       </div>
       <div id="touch" aria-hidden="true">
         <div id="t-move" class="tbtn"><span>◀</span><span>▶</span></div>
@@ -21,9 +40,90 @@
       </div>
       <div id="overlay" class="screen">
         <div class="card" id="title-card">
-          <div class="badge">🌱</div>
-          <h1>Sprout &amp; the<br />Grumpy Garden</h1>
-          <p class="chapter">Chapter 1 · The Grumpy Sunflower</p>
+          <h1 class="logo" aria-label="Sprout and the Grumpy Garden">
+            <svg viewBox="0 0 460 168" role="img" aria-hidden="true">
+              <defs>
+                <linearGradient id="logo-green" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#f1ffb0" />
+                  <stop offset="0.55" stop-color="#a9ec62" />
+                  <stop offset="1" stop-color="#63c245" />
+                </linearGradient>
+                <linearGradient id="logo-gold" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#fff7a8" />
+                  <stop offset="0.5" stop-color="#ffd23f" />
+                  <stop offset="1" stop-color="#ff9a2e" />
+                </linearGradient>
+              </defs>
+              <g transform="rotate(-3 230 84)">
+                <!-- a sprout growing out of the first line -->
+                <g transform="translate(86 26)">
+                  <path
+                    d="M0 22 Q-2 10 1 0"
+                    fill="none"
+                    stroke="#1c5f2a"
+                    stroke-width="7"
+                    stroke-linecap="round"
+                  />
+                  <path
+                    d="M0 22 Q-2 10 1 0"
+                    fill="none"
+                    stroke="#7fd65a"
+                    stroke-width="3"
+                    stroke-linecap="round"
+                  />
+                  <path
+                    d="M1 2 C-8 -14 -26 -12 -30 -2 C-20 6 -6 8 1 2Z"
+                    fill="#8ee05f"
+                    stroke="#1c5f2a"
+                    stroke-width="3.5"
+                    stroke-linejoin="round"
+                  />
+                  <path
+                    d="M1 2 C8 -16 28 -16 33 -5 C24 6 8 8 1 2Z"
+                    fill="#b6f07c"
+                    stroke="#1c5f2a"
+                    stroke-width="3.5"
+                    stroke-linejoin="round"
+                  />
+                </g>
+                <g
+                  font-family="Fredoka, sans-serif"
+                  font-weight="700"
+                  text-anchor="middle"
+                  stroke-linejoin="round"
+                  paint-order="stroke"
+                >
+                  <text x="230" y="76" font-size="50" fill="#134a20" stroke="#134a20" stroke-width="12">
+                    Sprout &amp; the
+                  </text>
+                  <text
+                    x="230"
+                    y="70"
+                    font-size="50"
+                    fill="url(#logo-green)"
+                    stroke="#1c5f2a"
+                    stroke-width="10"
+                  >
+                    Sprout &amp; the
+                  </text>
+                  <text x="230" y="146" font-size="68" fill="#4a2206" stroke="#4a2206" stroke-width="14">
+                    Grumpy Garden
+                  </text>
+                  <text
+                    x="230"
+                    y="139"
+                    font-size="68"
+                    fill="url(#logo-gold)"
+                    stroke="#6b3408"
+                    stroke-width="12"
+                  >
+                    Grumpy Garden
+                  </text>
+                </g>
+              </g>
+            </svg>
+          </h1>
+          <p class="chapter"><span>Chapter 1 · The Grumpy Sunflower</span></p>
           <p class="sub">
             Sunny the Sunflower woke up grumpy and is blocking the garden path! Help little Pip cheer him up
             with a shower of seeds.
@@ -31,27 +131,29 @@
           <div class="controls touch-only">
             <div>Slide on <b>◀ ▶</b> to move, tap <b>Jump</b> to hop.</div>
             <div>Pip shoots all by itself! Tap <b>⬆</b> to aim up.</div>
-            <div class="tip">Face shots do double damage!</div>
           </div>
-          <div class="controls keys-only">
-            <div><kbd>←</kbd><kbd>→</kbd> or <kbd>A</kbd><kbd>D</kbd> move</div>
-            <div><kbd>Space</kbd> or <kbd>Z</kbd> jump (hold for higher)</div>
-            <div><kbd>X</kbd> or <kbd>J</kbd> shoot (hold) &nbsp;·&nbsp; hold <kbd>↑</kbd> to aim up</div>
-            <div><kbd>P</kbd> pause &nbsp;·&nbsp; <kbd>M</kbd> sound</div>
-            <div class="tip">Face shots do double damage!</div>
+          <div class="controls keys keys-only">
+            <div><kbd>←</kbd><kbd>→</kbd> or <kbd>A</kbd><kbd>D</kbd> <b>move</b></div>
+            <div><kbd>Space</kbd> or <kbd>Z</kbd> <b>jump</b> <small>hold = higher</small></div>
+            <div><kbd>X</kbd> or <kbd>J</kbd> <b>shoot</b> <small>hold</small></div>
+            <div><kbd>↑</kbd> <b>aim up</b> <small>hold</small></div>
+            <div class="wide"><kbd>P</kbd> pause &nbsp;·&nbsp; <kbd>M</kbd> sound</div>
           </div>
           <div class="controls pad-only">
             <div>🎮 Stick or d-pad to move · <b>A</b> jump · <b>X</b> shoot · <b>Start</b> pause</div>
           </div>
-          <label class="easy"><input type="checkbox" class="easy-toggle" /> 🌱 Easy mode (8 hearts)</label>
-          <button id="btn-start" class="btn">Play!</button>
+          <p class="tip">⭐ Face shots do double damage!</p>
+          <div class="actions">
+            <label class="easy"><input type="checkbox" class="easy-toggle" /> 🌱 Easy mode (8 hearts)</label>
+            <button id="btn-start" class="btn big">Play!</button>
+          </div>
         </div>
         <div class="card hidden" id="win-card">
           <div class="badge">🌻</div>
           <h1>You did it!</h1>
           <p class="sub">Sunny feels sunny again and the garden path is open. What a hero, Pip!</p>
           <div class="stars" id="win-stars"></div>
-          <p class="stats" id="win-stats"></p>
+          <div class="stats" id="win-stats"></div>
           <button id="btn-again" class="btn">Play again</button>
           <p class="hint keys-only">or press <kbd>Enter</kbd></p>
         </div>
@@ -59,11 +161,14 @@
           <div class="badge">😴</div>
           <h1>Pip needs a nap</h1>
           <p class="sub">
-            Sunny is still grumpy… but you've got this! Watch for the <b>!</b> bubble, then hop or scoot away.
+            Sunny is still grumpy… but you've got this! Watch for the <b class="bang">!</b> bubble, then hop
+            or scoot away.
           </p>
-          <p class="stats" id="lose-progress"></p>
-          <label class="easy"><input type="checkbox" class="easy-toggle" /> 🌱 Easy mode (8 hearts)</label>
-          <button id="btn-retry" class="btn">Try again</button>
+          <div class="stats" id="lose-progress"></div>
+          <div class="actions">
+            <label class="easy"><input type="checkbox" class="easy-toggle" /> 🌱 Easy mode (8 hearts)</label>
+            <button id="btn-retry" class="btn">Try again</button>
+          </div>
           <p class="hint keys-only">or press <kbd>Enter</kbd></p>
         </div>
         <div class="card hidden" id="pause-card">
