@@ -80,31 +80,6 @@ export function bakeAir(scene: Scene) {
     },
     SOFT,
   );
-  // darkens the corners; baked white so it can be tinted to suit the weather
-  bake(
-    scene,
-    'vignette',
-    W / 2,
-    H / 2,
-    0,
-    0,
-    (c) => {
-      c.translate(W / 4, H / 4);
-      c.scale(1, H / W);
-      c.fillStyle = radial(c, 0, 0, W * 0.3, [
-        [0, 'rgba(255,255,255,0)'],
-        [0.58, 'rgba(255,255,255,0)'],
-        [0.82, 'rgba(255,255,255,0.42)'],
-        [1, 'rgba(255,255,255,0.9)'],
-      ]);
-      c.fillRect(-W, -W, W * 2, W * 2);
-    },
-    0.5,
-  );
-  bake(scene, 'white', 4, 4, 0, 0, (c) => {
-    c.fillStyle = '#fff';
-    c.fillRect(0, 0, 4, 4);
-  });
 
   // right wing, hinged at (0, 0)
   WING_COLORS.forEach(([light, mid, dark], i) =>

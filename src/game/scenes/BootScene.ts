@@ -2,6 +2,7 @@
 import { Scene, Sound, WEBGL, type Renderer } from 'phaser';
 import type { GameAudio } from '../../audio';
 import { finishBaking } from '../art/bake';
+import { bakeShared } from '../art/shared';
 import { bakeFx } from '../fx';
 import { BOSS_VIEWS } from '../views/bossViews';
 import { bakeHazards } from '../views/HazardViews';
@@ -40,6 +41,7 @@ export class BootScene extends Scene {
       (this.renderer as Renderer.WebGL.WebGLRenderer).renderNodes.setMaxParallelTextureUnits(1);
 
     void loadFont().then(() => {
+      bakeShared(this);
       bakeWorld(this);
       bakePlayer(this);
       for (const boss of Object.values(BOSS_VIEWS)) boss.bake(this);

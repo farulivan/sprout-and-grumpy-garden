@@ -2,10 +2,11 @@
 // the storm clouds that roll in from above, and the rainbow that comes out when Sunny cheers up.
 import { BlendModes, type GameObjects, type Scene } from 'phaser';
 import { GROUND, H, TAU, W } from '../../../config';
-import { bake, INV, part, show, SOFT } from '../../art/bake';
+import { bake, INV, part, show, SOFT, unit } from '../../art/bake';
 import { rgba } from '../../art/color';
 import { circle, glow, linear, radial, roundRect, seeded, type Ctx, type Stops } from '../../art/draw';
 import type { FaceMood } from '../../art/face';
+import { HAZY } from '../../art/shared';
 import { bakeFaces, faceKey } from '../faces';
 import { MOODS, type Mood, type Weather } from './weather';
 
@@ -150,7 +151,7 @@ export function bakeSky(scene: Scene) {
           5 + rand() * 7,
         );
     },
-    SOFT,
+    HAZY,
   );
 
   bake(
@@ -169,7 +170,7 @@ export function bakeSky(scene: Scene) {
       ]);
       c.fillRect(-190, -190, 380, 380);
     },
-    SOFT,
+    HAZY,
   );
   bake(
     scene,
@@ -196,7 +197,7 @@ export function bakeSky(scene: Scene) {
         c.fill();
       }
     },
-    SOFT,
+    HAZY,
   );
   bake(scene, 'sun-disc', 104, 104, 52, 52, (c) => {
     circle(c, 0, 0, 43);
@@ -258,6 +259,8 @@ export class Sky {
   private glow: GameObjects.Image;
   private rays: GameObjects.Image;
   private rays2: GameObjects.Image;
+  private glowUnit: number; // the glow and the rays are baked small: these scales show them at full size
+  private raysUnit: number;
   private disc: GameObjects.Image;
   private face: GameObjects.Image;
   private clouds: Cloud[];
@@ -267,9 +270,14 @@ export class Sky {
   constructor(scene: Scene, layer: GameObjects.Container) {
     const sky = (mood: Mood) => part(scene, `sky-${mood}`, -PAD, 0).setScale((W + PAD * 2) / 8, 1);
     this.skies = { calm: sky('calm'), grumpy: sky('grumpy'), stormy: sky('stormy'), bloom: sky('bloom') };
-    this.wisps = [0, 1].map((i) => part(scene, 'sky-wisps', i * 640, 20 + i * 30).setScale(1.6, 1.2));
+    const wisp = unit('sky-wisps');
+    this.wisps = [0, 1].map((i) =>
+      part(scene, 'sky-wisps', i * 640, 20 + i * 30).setScale(wisp * 1.6, wisp * 1.2),
+    );
+    this.raysUnit = unit('sun-rays');
     this.rainbow = part(scene, 'rainbow', 430, 500).setAlpha(0);
     this.glow = part(scene, 'sun-glow', SUN.x, SUN.y).setBlendMode(BlendModes.ADD);
+    this.glowUnit = unit('sun-glow');
     this.rays = part(scene, 'sun-rays', SUN.x, SUN.y).setBlendMode(BlendModes.ADD);
     this.rays2 = part(scene, 'sun-rays', SUN.x, SUN.y).setBlendMode(BlendModes.ADD);
     this.disc = part(scene, 'sun-disc', SUN.x, SUN.y);
@@ -333,19 +341,19 @@ export class Sky {
       .setVisible(shining)
       .setPosition(sx, sy)
       .setAlpha(Math.min(1, sun * 0.9))
-      .setScale(pulse * (0.9 + sun * 0.12));
+      .setScale(this.glowUnit * pulse * (0.9 + sun * 0.12));
     this.rays
       .setVisible(shining)
       .setPosition(sx, sy)
       .setRotation(t * 0.05)
       .setAlpha(Math.min(1, sun * 0.34))
-      .setScale(0.92 + sun * 0.1);
+      .setScale(this.raysUnit * (0.92 + sun * 0.1));
     this.rays2
       .setVisible(shining)
       .setPosition(sx, sy)
       .setRotation(-t * 0.033 + 0.2)
       .setAlpha(Math.min(1, sun * 0.17))
-      .setScale(1.25 + Math.sin(t * 0.9) * 0.04);
+      .setScale(this.raysUnit * (1.25 + Math.sin(t * 0.9) * 0.04));
     const shade = Math.round(150 + 105 * Math.min(1, sun));
     this.disc
       .setPosition(sx, sy + Math.sin(t * 0.9) * 1.5)

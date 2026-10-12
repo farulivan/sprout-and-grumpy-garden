@@ -2,7 +2,7 @@
 // he grows from, and the little signs that float around him (the "!" bubble, sleepy z's, the angry mark).
 import type { Scene } from 'phaser';
 import { TAU } from '../../../config';
-import { bake, SOFT } from '../../art/bake';
+import { bake } from '../../art/bake';
 import { mix, rgba } from '../../art/color';
 import {
   circle,
@@ -18,12 +18,17 @@ import {
   volume,
   type Ctx,
 } from '../../art/draw';
+import { HAZY } from '../../art/shared';
 import { bakeSunnyFaces } from './face';
 
 export const HEAD_R = 58; // matches the simulation's weak-spot circle
 export const FRONT_LEN = 62,
   BACK_LEN = 70;
 export const OUTLINE = '#1c5f2a';
+// Half the stem's width where it leaves the soil and where it meets the head.
+export const STEM_HALF = [15.5, 10.5] as const;
+const STEM_LEN = 64,
+  STEM_EDGE = 3.2; // thickness of its outline
 
 // One set per phase (he gets hotter as he gets grumpier), and the last for when he has cheered up.
 export const PETAL_SETS = [
@@ -32,6 +37,11 @@ export const PETAL_SETS = [
   { base: '#d63620', mid: '#f7622c', tip: '#ff9a44', edge: '#8a2210' },
   { base: '#ffb42c', mid: '#ffdc4c', tip: '#fff4a6', edge: '#c07610' },
 ] as const;
+
+export const PETAL_KEYS = {
+  front: PETAL_SETS.map((_, i) => `sunny-petal-front-${i}`),
+  back: PETAL_SETS.map((_, i) => `sunny-petal-back-${i}`),
+};
 
 function drawPetal(c: Ctx, len: number, wid: number, set: (typeof PETAL_SETS)[number], back: boolean) {
   const tone = (color: string) => (back ? mix(color, set.edge, 0.3) : color);
@@ -142,12 +152,10 @@ function drawSoil(c: Ctx) {
 
 export function bakeSunny(scene: Scene) {
   PETAL_SETS.forEach((set, i) => {
-    bake(scene, `sunny-petal-front-${i}`, FRONT_LEN + 8, 40, 4, 20, (c) =>
+    bake(scene, PETAL_KEYS.front[i], FRONT_LEN + 8, 40, 4, 20, (c) =>
       drawPetal(c, FRONT_LEN, 16.5, set, false),
     );
-    bake(scene, `sunny-petal-back-${i}`, BACK_LEN + 8, 42, 4, 21, (c) =>
-      drawPetal(c, BACK_LEN, 17.5, set, true),
-    );
+    bake(scene, PETAL_KEYS.back[i], BACK_LEN + 8, 42, 4, 21, (c) => drawPetal(c, BACK_LEN, 17.5, set, true));
   });
   bake(scene, 'sunny-disc', 128, 128, 64, 64, drawDisc);
   bake(scene, 'sunny-flash', 128, 128, 64, 64, (c) => {
@@ -157,6 +165,26 @@ export function bakeSunny(scene: Scene) {
       [1, 'rgba(255,255,255,0)'],
     ]);
     c.fillRect(-64, -64, 128, 128);
+  });
+  // The stem, laid out straight with the soil end on the left; SunnyView bends it along a curve as a
+  // ribbon. The top of the strip becomes his left side, the lit one.
+  bake(scene, 'sunny-stem', STEM_LEN, 40, 0, 20, (c) => {
+    // a band along the stem between two offsets across it (-1 = lit edge, 1 = shaded edge)
+    const band = (from: number, to: number, extra: number, color: string) => {
+      const [soil, head] = STEM_HALF;
+      c.beginPath();
+      c.moveTo(0, from * soil - extra);
+      c.lineTo(STEM_LEN, from * head - extra);
+      c.lineTo(STEM_LEN, to * head + extra);
+      c.lineTo(0, to * soil + extra);
+      c.closePath();
+      c.fillStyle = color;
+      c.fill();
+    };
+    band(-1, 1, STEM_EDGE, OUTLINE);
+    band(-1, 1, 0, '#57b847');
+    band(0.35, 1, 0, '#3f9a3c');
+    band(-0.72, -0.3, 0, '#a5e878');
   });
   bake(scene, 'sunny-leaf', 100, 64, 8, 32, drawLeaf);
   bake(scene, 'sunny-soil', 132, 46, 66, 20, drawSoil);
@@ -176,7 +204,7 @@ export function bakeSunny(scene: Scene) {
       ]);
       c.fillRect(-210, -210, 420, 420);
     },
-    SOFT,
+    HAZY,
   );
   bakeSunnyFaces(scene);
 

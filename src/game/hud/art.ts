@@ -1,13 +1,17 @@
 // The parts of the heads-up display: glossy hearts, the wooden frame of the boss's bar with Sunny's
 // portrait on the end, and the soft shapes that sit behind text so it reads against any sky.
 import type { Scene } from 'phaser';
-import { H, TAU, W } from '../../config';
+import { TAU } from '../../config';
 import { bake, SOFT } from '../art/bake';
 import { circle, glow, heart, inside, leaf, line, linear, radial, roundRect } from '../art/draw';
 import { drawFace } from '../art/face';
+import { HAZY } from '../art/shared';
 
 export const BAR_W = 380,
   BAR_H = 22;
+// The coloured bar inside the track.
+export const FILL_W = BAR_W - 5,
+  FILL_H = BAR_H - 5;
 
 export function bakeHud(scene: Scene) {
   const heartShape = (c: CanvasRenderingContext2D) => heart(c, 0, 0, 12.5);
@@ -47,6 +51,15 @@ export function bakeHud(scene: Scene) {
     c.fillStyle = linear(c, 0, 0, 0, BAR_H, ['#1d110a', '#3b2516']);
     c.fill();
     line(c, '#1a0e06', 2);
+  });
+  // The round end of the coloured bar: the right half of a disc, with (0, 0) in the middle of its flat
+  // side. The bar itself is the shared white square stretched between two of these.
+  bake(scene, 'bar-cap', FILL_H / 2 + 1, FILL_H, 0, FILL_H / 2, (c) => {
+    c.beginPath();
+    c.arc(0, 0, FILL_H / 2, -Math.PI / 2, Math.PI / 2);
+    c.closePath();
+    c.fillStyle = '#fff';
+    c.fill();
   });
   // What lies over the fill: a glassy shine, and notches where Sunny's phases change.
   bake(scene, 'bar-gloss', BAR_W + 28, BAR_H + 30, 14, 12, (c) => {
@@ -115,26 +128,6 @@ export function bakeHud(scene: Scene) {
         c.fill();
       }
     },
-    SOFT,
-  );
-  // red creeping in from the corners of the screen when Pip is on the last heart
-  bake(
-    scene,
-    'hud-danger',
-    W / 2,
-    H / 2,
-    0,
-    0,
-    (c) => {
-      c.translate(W / 4, H / 4);
-      c.scale(1, H / W);
-      c.fillStyle = radial(c, 0, 0, W * 0.3, [
-        [0, 'rgba(255,40,80,0)'],
-        [0.6, 'rgba(255,40,80,0)'],
-        [1, 'rgba(255,40,80,0.9)'],
-      ]);
-      c.fillRect(-W, -W, W * 2, W * 2);
-    },
-    0.5,
+    HAZY,
   );
 }

@@ -113,6 +113,9 @@ export function finishBaking(scene: Scene) {
     if (y + h > PAGE) {
       const texture = scene.textures.createCanvas(`atlas-${++page}`, PAGE, PAGE);
       if (!texture) throw new Error('Could not create an atlas page');
+      // Everything still works on two pages, but each one is 16 MB of video memory, and parts on
+      // different pages cannot be drawn in one go. Worth knowing the moment it happens.
+      if (page > 0) console.warn(`The art no longer fits on one atlas page: opening page ${page + 1}.`);
       pages.push(texture);
       ctx = texture.getContext();
       x = y = 0;
@@ -156,6 +159,32 @@ export function unit(key: string): number {
 export function part(scene: Scene, key: string, x = 0, y = 0): GameObjects.Image {
   const p = get(key);
   return scene.add.image(x, y, p.texture, p.frame).setOrigin(p.origin[0], p.origin[1]).setScale(p.unit);
+}
+
+// A ribbon of a baked part that bends along a line of points: Sunny's stem, the vine. The part's
+// length is spread along the points, first to last, and its height is the ribbon's thickness. It is one
+// strip whose corners are moved in place, so following a curve that changes every frame costs almost
+// nothing. (A shape rebuilt with Graphics is cut into triangles again every frame.)
+export class Ribbon {
+  readonly rope: GameObjects.Rope;
+  private points: { x: number; y: number }[];
+  private perWorld: number; // the rope works in texture pixels
+
+  constructor(scene: Scene, key: string, points: number) {
+    const p = get(key);
+    this.points = Array.from({ length: points }, () => ({ x: 0, y: 0 }));
+    this.rope = scene.add.rope(0, 0, p.texture, p.frame, this.points, true).setScale(p.unit);
+    this.perWorld = 1 / p.unit;
+  }
+  // Put point i at a world position. Call bend() once all the points are placed.
+  set(i: number, x: number, y: number) {
+    const point = this.points[i];
+    point.x = x * this.perWorld;
+    point.y = y * this.perWorld;
+  }
+  bend() {
+    this.rope.setDirty();
+  }
 }
 
 // Which part an image is showing.

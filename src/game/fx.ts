@@ -154,10 +154,6 @@ export function bakeFx(scene: Scene) {
     },
     SOFT,
   );
-  bake(scene, 'fx-white', 4, 4, 0, 0, (c) => {
-    c.fillStyle = '#fff';
-    c.fillRect(0, 0, 4, 4);
-  });
 }
 
 interface Particle {
@@ -206,7 +202,7 @@ export class Fx {
     frontDepth: number,
   ) {
     this.camera = scene.cameras.main;
-    this.light = part(scene, 'fx-white', -60, -60)
+    this.light = part(scene, 'white', -60, -60)
       .setDisplaySize(W + 120, H + 120)
       .setBlendMode(BlendModes.ADD)
       .setDepth(frontDepth)

@@ -6,9 +6,9 @@ import { H, RES, TAU, W } from '../../config';
 import type { ToastTone } from '../../presentation';
 import type { Fight } from '../../sim/fight';
 import { clamp } from '../../sim/math';
-import { INV, part, show } from '../art/bake';
+import { INV, part, show, unit } from '../art/bake';
 import { fitCamera } from '../createGame';
-import { BAR_H, BAR_W } from '../hud/art';
+import { BAR_H, BAR_W, FILL_H, FILL_W } from '../hud/art';
 import type { GamePresenter } from '../presenter';
 
 export { bakeHud } from '../hud/art';
@@ -30,6 +30,14 @@ const heartbeat = (t: number) => {
   return u < 0.5 ? Math.max(0, Math.sin(u * TAU * 2)) : 0;
 };
 
+// One coloured bar inside the boss's track: two round ends and a stretch of colour between them.
+interface Fill {
+  left: GameObjects.Image;
+  mid: GameObjects.Image;
+  right: GameObjects.Image;
+}
+const FILL_X = (BAR_W - FILL_W) / 2; // where the coloured bar starts inside the track
+
 interface Heart {
   slot: GameObjects.Image; // the empty outline, always there
   full: GameObjects.Image;
@@ -44,12 +52,15 @@ export class HudScene extends Scene {
   private danger!: GameObjects.Image;
   private hearts: Heart[] = [];
   private bar!: GameObjects.Container;
-  private barFill!: GameObjects.Graphics;
+  private lagFill!: Fill; // pale: where the boss's health was a moment ago
+  private hpFill!: Fill;
+  private hitFill!: Fill; // white: flashes over the bar when a hit lands
   private barIcon!: GameObjects.Image;
   private bossName!: GameObjects.Text;
   private toastPlate!: GameObjects.Image;
   private toastText!: GameObjects.Text;
   private burst!: GameObjects.Image;
+  private burstUnit = 1; // the rays are baked small: this is the scale that shows them at full size
   private ready!: GameObjects.Text;
   private go!: GameObjects.Text;
   private naps: GameObjects.Image[] = [];
@@ -91,7 +102,7 @@ export class HudScene extends Scene {
         })
         .setShadow(0, 3, 'rgba(20,10,5,0.35)', 0, true, true);
 
-    this.danger = part(this, 'hud-danger').setDisplaySize(W, H).setAlpha(0);
+    this.danger = part(this, 'vignette').setDisplaySize(W, H).setTint(0xff2850).setAlpha(0);
     for (let i = 0; i < MAX_HEARTS; i++)
       this.hearts.push({
         slot: part(this, 'heart-empty'),
@@ -102,14 +113,21 @@ export class HudScene extends Scene {
         pop: 0,
       });
 
-    this.barFill = this.add.graphics();
+    const fill = (): Fill => ({
+      left: part(this, 'bar-cap'),
+      mid: part(this, 'white'),
+      right: part(this, 'bar-cap'),
+    });
+    this.lagFill = fill();
+    this.hpFill = fill();
+    this.hitFill = fill();
     this.barIcon = part(this, 'bar-icon-angry', -18, BAR_H / 2);
     this.bossName = text(14, '600', '#ffffff', '#38200f', 4)
       .setOrigin(0, 0)
       .setPosition(16, BAR_H + 3);
     this.bar = this.add.container(BAR_X, BAR_Y, [
       part(this, 'bar-back'),
-      this.barFill,
+      ...[this.lagFill, this.hpFill, this.hitFill].flatMap((f) => [f.left, f.mid, f.right]),
       part(this, 'bar-gloss'),
       this.barIcon,
       this.bossName,
@@ -119,6 +137,7 @@ export class HudScene extends Scene {
     this.toastPlate = part(this, 'toast-plate', 400, 112);
     this.toastText = text(22, '700', '#fff', '#1f6b2f', 6).setOrigin(0.5).setPosition(400, 112);
     this.burst = part(this, 'go-burst', W / 2, H / 2 - 50).setBlendMode(BlendModes.ADD);
+    this.burstUnit = unit('go-burst');
     this.ready = text(72, '700', '#ffffff', '#2f8a3a', 12).setOrigin(0.5).setText('Ready?');
     this.go = text(96, '700', '#fff7c2', '#e8641c', 14).setOrigin(0.5).setText('GO!');
     for (let i = 0; i < 3; i++) this.naps.push(part(this, 'zzz'));
@@ -211,7 +230,7 @@ export class HudScene extends Scene {
         .setAlpha(clamp((1 - u) * 3, 0, 1));
       this.burst
         .setRotation(this.clock * 0.9)
-        .setScale(0.6 + u * 0.7)
+        .setScale(this.burstUnit * (0.6 + u * 0.7))
         .setAlpha(clamp((1 - u) * 1.6, 0, 1) * 0.9);
     }
 
@@ -281,16 +300,9 @@ export class HudScene extends Scene {
     }
     this.iconPop = Math.max(0, this.iconPop - dt * 1.4);
 
-    const span = BAR_W - 5,
-      h = BAR_H - 5,
-      g = this.barFill.clear();
-    const bar = (frac: number, color: number, alpha: number) => {
-      const w = span * frac;
-      if (w > 0.5) g.fillStyle(color, alpha).fillRoundedRect(2.5, 2.5, w, h, Math.min(h / 2, w / 2));
-    };
-    bar(this.lag, 0xfff3cf, 0.95);
-    bar(k, PHASE_COLOR[Math.min(b.phase, 3) - 1], 1);
-    if (b.flash > 0) bar(k, 0xffffff, (b.flash / 0.12) * 0.6);
+    this.setFill(this.lagFill, this.lag, 0xfff3cf, 0.95);
+    this.setFill(this.hpFill, k, PHASE_COLOR[Math.min(b.phase, 3) - 1], 1);
+    this.setFill(this.hitFill, k, 0xffffff, (b.flash / 0.12) * 0.6);
 
     this.bar.setPosition(
       BAR_X + (Math.random() - 0.5) * 5 * this.barShake,
@@ -303,5 +315,35 @@ export class HudScene extends Scene {
         b.alive ? Math.sin(this.clock * 40) * 0.2 * this.iconPop : Math.sin(this.clock * 4) * 0.15,
       );
     if (this.bossName.text !== b.name) this.bossName.setText(b.name);
+  }
+
+  // Show `frac` of the track in one colour. The ends are half-discs; a bar shorter than it is tall
+  // squeezes them, so it stays rounded all the way down to nothing.
+  private setFill(f: Fill, frac: number, color: number, alpha: number) {
+    const w = FILL_W * frac,
+      on = w > 0.5 && alpha > 0;
+    f.left.setVisible(on);
+    f.mid.setVisible(on);
+    f.right.setVisible(on);
+    if (!on) return;
+    const r = Math.min(FILL_H / 2, w / 2),
+      squeeze = (INV * r) / (FILL_H / 2),
+      y = BAR_H / 2;
+    f.left
+      .setPosition(FILL_X + r, y)
+      .setScale(-squeeze, INV)
+      .setTint(color)
+      .setAlpha(alpha);
+    f.right
+      .setPosition(FILL_X + w - r, y)
+      .setScale(squeeze, INV)
+      .setTint(color)
+      .setAlpha(alpha);
+    // the stretch overlaps each end by a quarter pixel, so no seam can show between them
+    f.mid
+      .setPosition(FILL_X + r - 0.25, y - FILL_H / 2)
+      .setDisplaySize(w - 2 * r + 0.5, FILL_H)
+      .setTint(color)
+      .setAlpha(alpha);
   }
 }

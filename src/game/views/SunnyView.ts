@@ -8,10 +8,10 @@ import type { Boss } from '../../sim/boss';
 import type { Sunny } from '../../sim/bosses/sunny';
 import type { Fight } from '../../sim/fight';
 import { lerp, qbez } from '../../sim/math';
-import { INV, part, show } from '../art/bake';
+import { INV, part, Ribbon, show, unit } from '../art/bake';
 import type { FxTarget } from '../presenter';
 import type { BossView } from './bossViews';
-import { bakeSunny, HEAD_R } from './sunny/art';
+import { bakeSunny, HEAD_R, PETAL_KEYS, STEM_HALF } from './sunny/art';
 import { EYE, eyesKey, eyesOpen, sunnyFaceKey, type SunnyFace } from './sunny/face';
 
 export { bakeSunny };
@@ -30,7 +30,8 @@ const easeOutBack = (u: number) => 1 + 2.70158 * Math.pow(u - 1, 3) + 1.70158 * 
 export class SunnyView implements BossView {
   private all: GameObjects.Container;
   private halo: GameObjects.Image;
-  private stem: GameObjects.Graphics;
+  private haloUnit: number; // the halo is baked small: this is the scale that shows it at full size
+  private stem: Ribbon;
   private soil: GameObjects.Image;
   private leaves: GameObjects.Image[];
   private head: GameObjects.Container;
@@ -44,8 +45,6 @@ export class SunnyView implements BossView {
   private snore: GameObjects.Image;
   private warn: GameObjects.Image;
   private zzz: GameObjects.Image[];
-  // points along the stem, bottom to top: position, the sideways direction there, and half the width
-  private spine = Array.from({ length: STEM_STEPS + 1 }, () => ({ x: 0, y: 0, nx: 0, ny: 0, w: 0 }));
 
   private seen: Boss | null = null;
   private blink = 1 + Math.random() * 3;
@@ -68,7 +67,8 @@ export class SunnyView implements BossView {
     private fx: FxTarget,
   ) {
     this.halo = part(scene, 'sunny-halo').setBlendMode(BlendModes.ADD);
-    this.stem = scene.add.graphics();
+    this.haloUnit = unit('sunny-halo');
+    this.stem = new Ribbon(scene, 'sunny-stem', STEM_STEPS + 1);
     this.leaves = STEM_LEAVES.map(([, side]) => part(scene, 'sunny-leaf').setScale(side * INV, INV));
     this.soil = part(scene, 'sunny-soil');
     for (let i = 0; i < PETALS; i++) {
@@ -96,7 +96,15 @@ export class SunnyView implements BossView {
     this.zzz = [0, 1, 2].map(() => part(scene, 'zzz').setVisible(false));
     // one container keeps the draw order: glow, stem, leaves, soil, head, then the signs on top
     this.all = scene.add
-      .container(0, 0, [this.halo, this.stem, ...this.leaves, this.soil, this.head, this.warn, ...this.zzz])
+      .container(0, 0, [
+        this.halo,
+        this.stem.rope,
+        ...this.leaves,
+        this.soil,
+        this.head,
+        this.warn,
+        ...this.zzz,
+      ])
       .setDepth(depth);
   }
 
@@ -144,34 +152,27 @@ export class SunnyView implements BossView {
       cx = b.baseX + (hx - b.baseX) * 0.3,
       cy = (GROUND + hy) / 2 + 30,
       y1 = hy + 34;
-    this.spine.forEach((s, i) => {
-      const u = i / STEM_STEPS,
-        dx = 2 * (1 - u) * (cx - x0) + 2 * u * (hx - cx),
-        dy = 2 * (1 - u) * (cy - y0) + 2 * u * (y1 - cy),
-        len = Math.hypot(dx, dy) || 1;
-      s.x = qbez(x0, cx, hx, u);
-      s.y = qbez(y0, cy, y1, u);
-      s.nx = -dy / len;
-      s.ny = dx / len;
-      s.w = lerp(15.5, 10.5, u);
-    });
-    this.stem.clear();
-    this.ribbon(-1, 1, 3.2, 0x1c5f2a);
-    this.ribbon(-1, 1, 0, 0x57b847);
-    this.ribbon(0.35, 1, 0, 0x3f9a3c); // shaded side
-    this.ribbon(-0.72, -0.3, 0, 0xa5e878); // lit side
+    for (let i = 0; i <= STEM_STEPS; i++) {
+      const u = i / STEM_STEPS;
+      this.stem.set(i, qbez(x0, cx, hx, u), qbez(y0, cy, y1, u));
+    }
+    this.stem.bend();
     this.soil.setPosition(b.baseX, GROUND + 3);
 
     // ---- leaves: he uses them like arms ----
-    STEM_LEAVES.forEach(([u, side], i) => {
-      const s = this.spine[Math.round(u * STEM_STEPS)];
-      const raise = windup * 0.55 + b.puff * 0.5 + roar * 0.7 + this.rage * 0.6;
-      const wave = happy * Math.sin(t * 7 + i * Math.PI) * 0.4;
-      const rest = asleep ? 0.3 : -0.85;
+    const raise = windup * 0.55 + b.puff * 0.5 + roar * 0.7 + this.rage * 0.6,
+      rest = asleep ? 0.3 : -0.85;
+    for (let i = 0; i < STEM_LEAVES.length; i++) {
+      const [up, side] = STEM_LEAVES[i],
+        u = Math.round(up * STEM_STEPS) / STEM_STEPS, // a leaf sprouts from one of the stem's points
+        wave = happy * Math.sin(t * 7 + i * Math.PI) * 0.4;
       this.leaves[i]
-        .setPosition(s.x + side * s.w * 0.6, s.y)
-        .setRotation(side * (rest - raise + wave + Math.sin(t * 1.6 + u * 5) * 0.1));
-    });
+        .setPosition(
+          qbez(x0, cx, hx, u) + side * lerp(STEM_HALF[0], STEM_HALF[1], u) * 0.6,
+          qbez(y0, cy, y1, u),
+        )
+        .setRotation(side * (rest - raise + wave + Math.sin(t * 1.6 + up * 5) * 0.1));
+    }
 
     // ---- head ----
     const tilt = asleep
@@ -192,9 +193,11 @@ export class SunnyView implements BossView {
     const flare =
       b.puff * 0.24 + roar * 0.3 + this.rage * 0.26 + happy * 0.2 + windup * gathering - (asleep ? 0.13 : 0);
     this.spin += dt * happy * 0.5; // a happy sunflower turns like a pinwheel
+    const backKey = PETAL_KEYS.back[set],
+      frontKey = PETAL_KEYS.front[set];
     for (let i = 0; i < PETALS; i++) {
-      this.petal(this.back[i], `sunny-petal-back-${set}`, (i + 0.5) / PETALS, 1, flare, asleep, t);
-      this.petal(this.front[i], `sunny-petal-front-${set}`, i / PETALS, 0, flare, asleep, t);
+      this.petal(this.back[i], backKey, (i + 0.5) / PETALS, 1, flare, asleep, t);
+      this.petal(this.front[i], frontKey, i / PETALS, 0, flare, asleep, t);
     }
 
     // ---- face ----
@@ -242,7 +245,7 @@ export class SunnyView implements BossView {
     this.halo
       .setPosition(hx, hy)
       .setAlpha(Math.min(1, 0.14 + happy * 0.55 + windup * 0.12))
-      .setScale(0.62 + happy * 0.5 + Math.sin(t * 2) * 0.02);
+      .setScale(this.haloUnit * (0.62 + happy * 0.5 + Math.sin(t * 2) * 0.02));
     const warning = b.telegraph > 0;
     this.warn
       .setVisible(warning)
@@ -327,24 +330,5 @@ export class SunnyView implements BossView {
       .setRotation(a + sag)
       .setScale(INV * (1 + flare + wave), INV * (1 + flare * 0.25))
       .setTint((v << 16) | (v << 8) | v);
-  }
-
-  // Fill a strip of the stem between two offsets across its width (-1 = left edge, 1 = right edge),
-  // grown by `extra` pixels on both sides.
-  private ribbon(from: number, to: number, extra: number, color: number) {
-    const g = this.stem,
-      pts = this.spine;
-    g.fillStyle(color).beginPath();
-    pts.forEach((s, i) => {
-      const d = from * s.w - extra;
-      if (i) g.lineTo(s.x + s.nx * d, s.y + s.ny * d);
-      else g.moveTo(s.x + s.nx * d, s.y + s.ny * d);
-    });
-    for (let i = pts.length - 1; i >= 0; i--) {
-      const s = pts[i],
-        d = to * s.w + extra;
-      g.lineTo(s.x + s.nx * d, s.y + s.ny * d);
-    }
-    g.closePath().fillPath();
   }
 }

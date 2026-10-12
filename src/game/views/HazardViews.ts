@@ -3,11 +3,11 @@
 // warnings all speak the same language: an orange "!" badge, or an orange ring on the ground.
 import { BlendModes, type GameObjects, type Scene } from 'phaser';
 import { GROUND, TAU, W } from '../../config';
-import { POLLEN_CLOUD, POLLEN_WARN, ROOT_WARN, VINE_WARN, type Hazard } from '../../sim/hazards';
-import type { PollenDrop, RootSpike, VineSweep } from '../../sim/hazards';
+import { POLLEN_CLOUD, POLLEN_WARN, ROOT_WARN, VINE_WARN, VineSweep, type Hazard } from '../../sim/hazards';
+import type { PollenDrop, RootSpike } from '../../sim/hazards';
 import { clamp, lerp } from '../../sim/math';
 import type { Burst } from '../../presentation';
-import { bake, INV, part, SOFT } from '../art/bake';
+import { bake, INV, part, Ribbon, SOFT } from '../art/bake';
 import {
   blob,
   circle,
@@ -18,6 +18,7 @@ import {
   line,
   linear,
   radial,
+  roundRect,
   seeded,
   volume,
   type Ctx,
@@ -45,6 +46,9 @@ const DUST: Burst = {
   alpha: 0.7,
   drag: 0.8,
 };
+const DUST_PUFF: Burst = { ...DUST, n: 1 };
+const DUST_KICKED: Burst = { ...DUST, n: 1, dir: UP - 0.6 }; // thrown back by something sliding left
+const DUST_BURST: Burst = { ...DUST, n: 5, speed: 110 };
 const CLODS: Burst = {
   n: 8,
   shape: 'clod',
@@ -56,6 +60,22 @@ const CLODS: Burst = {
   dir: UP,
   spread: 1.5,
 };
+
+// The vine is drawn longer than the part of it that hurts: a tail trails behind, ending in a round tip.
+const VINE = new VineSweep(),
+  VINE_TAIL = 56,
+  VINE_HALF = (VINE.h - 6) / 2, // half its thickness, outline included
+  VINE_LEN = VINE.w + VINE_TAIL + VINE_HALF,
+  VINE_POINTS = Math.round(VINE_LEN / 10) + 1;
+
+// The "!" badge pops in, then bounces. Every badge is drawn on the marks layer, in front of Pip, so a
+// warning can never hide behind the hero.
+function showMark(mark: GameObjects.Image, x: number, y: number, t: number) {
+  mark
+    .setVisible(true)
+    .setPosition(x, y - Math.abs(Math.sin(t * 8.5)) * 7)
+    .setScale(INV * 1.3 * easeOutBack(Math.min(1, t / 0.18)));
+}
 
 // A heap of pushed-up earth with its base on y = 0.
 function drawMound(c: Ctx, w: number, h: number, rand01: () => number) {
@@ -106,6 +126,24 @@ export function bakeHazards(scene: Scene) {
   });
 
   // ---- vine ----
+  // Its body laid out straight, head end on the left, round tip of the tail on the right. VineView
+  // bends it into a wave as a ribbon.
+  bake(scene, 'vine-body', VINE_LEN, VINE.h, 0, VINE.h / 2, (c) => {
+    const inner = VINE_HALF - 3.5,
+      body = () => roundRect(c, -40, -inner, VINE_LEN + 40 - 3.5, inner * 2, inner);
+    roundRect(c, -40, -VINE_HALF, VINE_LEN + 40, VINE_HALF * 2, VINE_HALF);
+    c.fillStyle = OUTLINE;
+    c.fill();
+    body();
+    c.fillStyle = '#4caf45';
+    c.fill();
+    inside(c, body, () => {
+      c.fillStyle = '#2f8a3a'; // shaded belly
+      c.fillRect(-40, 3, VINE_LEN + 40, 6);
+      c.fillStyle = '#9be36b'; // sunlit back
+      c.fillRect(-40, -7.75, VINE_LEN + 40, 4.5);
+    });
+  });
   bake(scene, 'vine-leaf', 34, 24, 5, 12, (c) => {
     const shape = () => leaf(c, 0, 0, 25, 9, 0, 0.5, 0.8);
     shape();
@@ -304,108 +342,98 @@ interface HazardView extends PooledView {
 
 // A vine slithers in from the right. Before it moves, a mound of earth rumbles at the edge.
 class VineView implements HazardView {
-  private body: GameObjects.Graphics;
+  private body: Ribbon;
   private mound: GameObjects.Image;
   private mark: GameObjects.Image;
   private clods: GameObjects.Image[];
   private thorns: GameObjects.Image[];
   private leaves: GameObjects.Image[];
   private head: GameObjects.Image;
+  private rumbling: GameObjects.Image[]; // shown during the warning
+  private sliding: { setVisible(visible: boolean): unknown }[]; // shown once it moves
   private all: GameObjects.Container;
   private dustT = 0;
 
   constructor(
     scene: Scene,
     depth: number,
+    markDepth: number,
     private fx: FxTarget,
   ) {
-    this.body = scene.add.graphics();
+    this.body = new Ribbon(scene, 'vine-body', VINE_POINTS);
     this.mound = part(scene, 'dirt-mound');
-    this.mark = part(scene, 'warn-mark');
+    this.mark = part(scene, 'warn-mark').setDepth(markDepth);
     this.clods = [0, 1, 2, 3].map(() => part(scene, 'dirt-clod'));
     this.thorns = [0, 1, 2, 3, 4].map(() => part(scene, 'vine-thorn'));
     this.leaves = [0, 1, 2].map(() => part(scene, 'vine-leaf'));
     this.head = part(scene, 'vine-head');
+    this.rumbling = [this.mound, ...this.clods];
+    this.sliding = [...this.thorns, this.body.rope, ...this.leaves, this.head];
+    // thorns go under the body so their feet are hidden; leaves and the head sit on top of it
     this.all = scene.add
-      .container(0, 0, [
-        this.mound,
-        ...this.clods,
-        this.mark,
-        ...this.thorns,
-        this.body,
-        ...this.leaves,
-        this.head,
-      ])
+      .container(0, 0, [this.mound, ...this.clods, ...this.thorns, this.body.rope, ...this.leaves, this.head])
       .setDepth(depth);
   }
   setVisible(visible: boolean) {
     this.all.setVisible(visible);
+    if (!visible) this.mark.setVisible(false);
   }
   sync(h: Hazard, alpha: number, dt: number) {
     const v = h as VineSweep;
     const warning = v.warn > 0;
-    this.mound.setVisible(warning);
+    for (const img of this.rumbling) img.setVisible(warning);
+    for (const piece of this.sliding) piece.setVisible(!warning);
     this.mark.setVisible(warning);
-    for (const c of this.clods) c.setVisible(warning);
-    this.body.setVisible(!warning);
-    for (const part of [...this.thorns, ...this.leaves, this.head]) part.setVisible(!warning);
     this.dustT -= dt;
 
     if (warning) {
       const k = 1 - v.warn / VINE_WARN,
         jx = rand(-1.5, 1.5);
       this.mound.setPosition(W - 46 + jx, GROUND + 3).setScale(INV, INV * (0.4 + 0.6 * k));
-      this.mark
-        .setPosition(W - 46, GROUND - 46 - Math.abs(Math.sin(v.t * 9)) * 7)
-        .setScale(INV * 1.25 * easeOutBack(Math.min(1, v.t / 0.18)));
-      this.clods.forEach((c, i) =>
-        c.setPosition(W - 74 + i * 18 + jx, GROUND - 8 - Math.abs(Math.sin(v.t * 20 + i * 1.7)) * 16 * k),
-      );
+      showMark(this.mark, W - 46, GROUND - 46, v.t);
+      for (let i = 0; i < this.clods.length; i++)
+        this.clods[i].setPosition(
+          W - 74 + i * 18 + jx,
+          GROUND - 8 - Math.abs(Math.sin(v.t * 20 + i * 1.7)) * 16 * k,
+        );
       if (this.dustT <= 0) {
         this.dustT = 0.1;
-        this.fx.burst(W - 46 + rand(-30, 30), GROUND, { ...DUST, n: 1 });
+        this.fx.burst(W - 46 + rand(-30, 30), GROUND, DUST_PUFF);
       }
       return;
     }
 
     const mid = v.y + v.h / 2,
       x0 = lerp(v.px, v.x, alpha),
-      tail = x0 + v.w + 56;
-    const wave = (x: number) => mid + Math.sin(x * 0.07 + v.t * 10) * 4;
-    this.body.clear();
-    // outline, body, shaded belly, sunlit back
-    for (const [color, width, dy] of [
-      [0x1c5f2a, v.h - 6, 0],
-      [0x4caf45, v.h - 13, 0],
-      [0x2f8a3a, 6, 6],
-      [0x9be36b, 4.5, -5.5],
-    ]) {
-      this.body
-        .lineStyle(width, color)
-        .beginPath()
-        .moveTo(tail, wave(tail) + dy);
-      for (let x = tail; x >= x0; x -= 10) this.body.lineTo(x, wave(x) + dy);
-      this.body.strokePath();
-      if (!dy) this.body.fillStyle(color).fillCircle(tail, wave(tail), width / 2); // rounded tail
+      ripple = v.t * 10;
+    for (let i = 0; i < VINE_POINTS; i++) {
+      const x = x0 + (VINE_LEN * i) / (VINE_POINTS - 1);
+      this.body.set(i, x, mid + Math.sin(x * 0.07 + ripple) * 4);
     }
-    this.thorns.forEach((thorn, i) => {
+    this.body.bend();
+    for (let i = 0; i < this.thorns.length; i++) {
       const x = x0 + 36 + i * 31;
-      thorn.setPosition(x, wave(x) - 12).setRotation(Math.cos(x * 0.07 + v.t * 10) * 0.25);
-    });
-    this.leaves.forEach((l, i) => {
+      this.thorns[i]
+        .setPosition(x, mid + Math.sin(x * 0.07 + ripple) * 4 - 12)
+        .setRotation(Math.cos(x * 0.07 + ripple) * 0.25);
+    }
+    for (let i = 0; i < this.leaves.length; i++) {
       const x = x0 + 52 + i * 46;
-      l.setPosition(x, wave(x) - 10).setRotation(-0.9 + Math.sin(v.t * 9 + i * 2) * 0.25);
-    });
-    this.head.setPosition(x0 - 6, wave(x0) - 5).setRotation(Math.sin(v.t * 10) * 0.08);
+      this.leaves[i]
+        .setPosition(x, mid + Math.sin(x * 0.07 + ripple) * 4 - 10)
+        .setRotation(-0.9 + Math.sin(v.t * 9 + i * 2) * 0.25);
+    }
+    this.head
+      .setPosition(x0 - 6, mid + Math.sin(x0 * 0.07 + ripple) * 4 - 5)
+      .setRotation(Math.sin(ripple) * 0.08);
     if (this.dustT <= 0) {
       this.dustT = 0.07;
-      this.fx.burst(x0 - 16, GROUND, { ...DUST, n: 1, dir: UP - 0.6 });
+      this.fx.burst(x0 - 16, GROUND, DUST_KICKED);
     }
   }
 }
 
-// A root bursts up at a marked spot. The ground cracks and a "!" bounces over it first. Roots come up
-// under Pip, so the "!" is drawn in front of Pip: behind, Pip's own body would hide the warning.
+// A root bursts up at a marked spot. The ground cracks and a "!" bounces over it first.
 class RootView implements HazardView {
   private crack: GameObjects.Image;
   private mark: GameObjects.Image;
@@ -443,15 +471,13 @@ class RootView implements HazardView {
       this.crack
         .setPosition(r.x + rand(-2, 2) * k, GROUND + 3)
         .setScale(INV * (0.45 + 0.75 * k), INV * (0.8 + 0.4 * k));
-      this.mark
-        .setPosition(r.x, GROUND - 34 - Math.abs(Math.sin(r.t * 8)) * 7)
-        .setScale(INV * 1.35 * easeOutBack(Math.min(1, r.t / 0.18)));
+      showMark(this.mark, r.x, GROUND - 34, r.t);
       return;
     }
     if (!this.out) {
       this.out = true; // it has just broken through
       this.fx.burst(r.x, GROUND, CLODS);
-      this.fx.burst(r.x, GROUND, { ...DUST, n: 5, speed: 110 });
+      this.fx.burst(r.x, GROUND, DUST_BURST);
       this.fx.ring(r.x, GROUND - 6, { color: '#f0d9b0', from: 10, to: 54, life: 0.3, glow: false });
       this.fx.shake(3);
     }
@@ -565,13 +591,13 @@ class PollenView implements HazardView {
 export class HazardViews {
   private pool: ViewPool<Hazard, HazardView>;
 
-  // markDepth = in front of Pip, for a warning that must never be hidden.
+  // markDepth = in front of Pip, where the "!" badges go.
   constructor(scene: Scene, depth: number, markDepth: number, fx: FxTarget) {
     this.pool = new ViewPool<Hazard, HazardView>(
       (h) => h.kind,
       (h) =>
         h.kind === 'vine'
-          ? new VineView(scene, depth, fx)
+          ? new VineView(scene, depth, markDepth, fx)
           : h.kind === 'root'
             ? new RootView(scene, depth, markDepth, fx)
             : new PollenView(scene, depth, fx),
