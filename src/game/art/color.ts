@@ -24,8 +24,15 @@ export function rgba(color: string, alpha: number): string {
   return `rgba(${r},${g},${b},${alpha})`;
 }
 
-// '#rgb' or '#rrggbb' to the number Phaser wants.
+// '#rgb' or '#rrggbb' to the number Phaser wants. Each colour is worked out once and remembered:
+// effects ask for the same few colours many times a second.
+const tints = new Map<string, number>();
 export function hex(color: string): number {
-  const [r, g, b] = rgb(color);
-  return (r << 16) | (g << 8) | b;
+  let tint = tints.get(color);
+  if (tint === undefined) {
+    const [r, g, b] = rgb(color);
+    tint = (r << 16) | (g << 8) | b;
+    tints.set(color, tint);
+  }
+  return tint;
 }

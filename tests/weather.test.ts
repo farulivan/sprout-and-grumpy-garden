@@ -54,3 +54,19 @@ it('ends up in the same weather however long each frame is', () => {
   for (let i = 0; i < 20; i++) choppy.update('grumpy', 1 / 20);
   expect(choppy.weight.grumpy).toBeCloseTo(smooth.weight.grumpy, 6);
 });
+
+it('comes to rest once it has turned, and stirs again when the mood changes', () => {
+  const weather = new Weather();
+  for (let i = 0; i < 900; i++) weather.update('stormy', 1 / 60); // fifteen seconds: long settled
+  expect(weather.weight).toEqual({ calm: 0, grumpy: 0, stormy: 1, bloom: 0 }); // exactly, not nearly
+  expect(weather.look.ceiling).toBe(1);
+
+  const resting = { ...weather.look };
+  weather.update('stormy', 1 / 60);
+  expect(weather.look).toEqual(resting);
+
+  weather.update('bloom', 1 / 60);
+  expect(weather.weight.bloom).toBeGreaterThan(0);
+  expect(weather.weight.stormy).toBeLessThan(1);
+  expect(weather.look.rainbow).toBeGreaterThan(0);
+});

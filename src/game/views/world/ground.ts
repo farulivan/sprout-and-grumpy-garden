@@ -33,22 +33,18 @@ const EDGE = 24,
   GX1 = W + EDGE,
   GW = W + EDGE * 2;
 
-// [x, kind, size]
-const TUFTS = Array.from(
-  { length: 26 },
-  (_, i) => [14 + i * 37 + ((i * 53) % 19), i % TUFT_KINDS, 0.8 + ((i * 7) % 5) * 0.09] as const,
-);
-// [x, kind, size, only after the garden blooms]: most of them wait for that
-const FLOWERS = Array.from(
-  { length: 40 },
-  (_, i) =>
-    [
-      10 + i * 24 + ((i * 37) % 17),
-      (i * 3) % FLOWER_KINDS,
-      0.62 + ((i * 11) % 6) * 0.06,
-      i % 4 !== 0,
-    ] as const,
-);
+const TUFTS = Array.from({ length: 26 }, (_, i) => ({
+  x: 14 + i * 37 + ((i * 53) % 19),
+  kind: i % TUFT_KINDS,
+  size: 0.8 + ((i * 7) % 5) * 0.09,
+}));
+const FLOWERS = Array.from({ length: 40 }, (_, i) => ({
+  x: 10 + i * 24 + ((i * 37) % 17),
+  kind: (i * 3) % FLOWER_KINDS,
+  size: 0.62 + ((i * 11) % 6) * 0.06,
+  late: i % 4 !== 0, // most of them only sprout once the garden blooms
+  due: 0.35 + (i / 40) * 0.5, // how far the bloom must have come before this one does: they pop up in turn
+}));
 
 const capTop = (x: number) => GROUND - 5 + Math.sin(x * 0.045) * 1.6 + Math.sin(x * 0.13 + 1) * 1.1;
 
@@ -437,66 +433,83 @@ export class Ground {
   private leafShadows: GameObjects.Image[];
   private front: GameObjects.Image;
   private branch: GameObjects.Image;
+  private tinted: GameObjects.Image[]; // everything here that takes the weather's tint
+  private tint = 0xffffff; // the tint they have now
 
   constructor(scene: Scene, depth: { ground: number; platforms: number; front: number }) {
     this.soil = part(scene, 'bg-ground').setDepth(depth.ground);
     this.leafShadows = platforms.map((p) =>
       part(scene, 'platform-shadow', p.x + p.w / 2, GROUND + 4).setDepth(depth.ground),
     );
-    this.tufts = TUFTS.map(([x, kind, size]) =>
+    this.tufts = TUFTS.map(({ x, kind, size }) =>
       part(scene, `tuft-${kind}`, x, GROUND - 2)
         .setScale(INV * size)
         .setDepth(depth.ground),
     );
-    this.flowers = FLOWERS.map(([x, kind]) =>
-      part(scene, `flower-${kind}`, x, GROUND - 1).setDepth(depth.ground),
+    this.flowers = FLOWERS.map(({ x, kind, late }) =>
+      part(scene, `flower-${kind}`, x, GROUND - 1)
+        .setDepth(depth.ground)
+        .setVisible(!late),
     );
-    this.grown = FLOWERS.map(([, , , late]) => (late ? 0 : 1));
+    this.grown = FLOWERS.map(({ late }) => (late ? 0 : 1));
     this.stalks = platforms.map((p, i) =>
       part(scene, `stalk-${i}`, p.x + p.w / 2, p.y + 8).setDepth(depth.platforms),
     );
     this.leaves = platforms.map((_, i) => part(scene, `platform-${i}`).setDepth(depth.platforms));
     this.front = part(scene, 'fg-grass', 0, H + 6).setDepth(depth.front);
     this.branch = part(scene, 'fg-branch', W, 0).setDepth(depth.front);
+    this.tinted = [
+      this.soil,
+      ...this.tufts,
+      ...this.flowers,
+      ...this.stalks,
+      ...this.leaves,
+      this.front,
+      this.branch,
+    ];
   }
 
   sync(t: number, dt: number, weather: Weather, pan: number) {
     const { look, weight } = weather,
       wind = look.wind,
       gust = 1 + wind * 2.5;
-    this.soil.setTint(look.groundTint);
-    TUFTS.forEach(([x], i) =>
-      this.tufts[i]
-        .setRotation(Math.sin(t * (1.6 + wind * 2) + x * 0.08) * 0.07 * gust - wind * 0.22)
-        .setTint(look.groundTint),
-    );
-    // Half the flowers are always out. The rest pop up, one after another, when the garden blooms.
-    FLOWERS.forEach(([x, , size, late], i) => {
-      const want = late ? (weight.bloom > 0.35 + (i / FLOWERS.length) * 0.5 ? 1 : 0) : 1;
-      this.grown[i] += (want - this.grown[i]) * Math.min(1, dt * 7);
-      const g = this.grown[i],
-        pop = g * (1 + Math.sin(g * Math.PI) * 0.35), // overshoots on the way up
-        droop = wind * 0.3 - weight.bloom * 0.05;
+    // The weather only turns now and then: retint the seventy-odd parts when it does, not every frame.
+    if (look.groundTint !== this.tint) {
+      this.tint = look.groundTint;
+      for (const img of this.tinted) img.setTint(this.tint);
+    }
+
+    const tuftSway = t * (1.6 + wind * 2),
+      lean = wind * 0.22;
+    for (let i = 0; i < TUFTS.length; i++)
+      this.tufts[i].setRotation(Math.sin(tuftSway + TUFTS[i].x * 0.08) * 0.07 * gust - lean);
+
+    // A few flowers are always out. The rest pop up, one after another, when the garden blooms.
+    const ease = Math.min(1, dt * 7),
+      flowerSway = t * (1.3 + wind * 2),
+      droop = wind * 0.3 - weight.bloom * 0.05;
+    for (let i = 0; i < FLOWERS.length; i++) {
+      const f = FLOWERS[i],
+        want = f.late && weight.bloom <= f.due ? 0 : 1;
+      let g = this.grown[i];
+      if (g === 0 && !want) continue; // still under the ground and staying there: nothing to move
+      g += (want - g) * ease;
+      if (!want && g < 0.02) g = 0; // gone back under
+      this.grown[i] = g;
       this.flowers[i]
-        .setVisible(g > 0.02)
-        .setScale(INV * size * pop)
-        .setRotation(Math.sin(t * (1.3 + wind * 2) + x * 0.11) * 0.09 * gust - droop)
-        .setTint(look.groundTint);
-    });
-    platforms.forEach((p, i) => {
-      const bob = Math.sin(t * 1.5 + p.x) * 2;
-      this.leaves[i]
-        .setPosition(p.x + p.w / 2, p.y + bob)
-        .setRotation(Math.sin(t * 1.1 + p.x) * 0.012)
-        .setTint(look.groundTint);
-      this.stalks[i].setTint(look.groundTint);
+        .setVisible(g > 0)
+        .setScale(INV * f.size * g * (1 + Math.sin(g * Math.PI) * 0.35)) // overshoots on the way up
+        .setRotation(Math.sin(flowerSway + f.x * 0.11) * 0.09 * gust - droop);
+    }
+
+    for (let i = 0; i < platforms.length; i++) {
+      const p = platforms[i],
+        bob = Math.sin(t * 1.5 + p.x) * 2;
+      this.leaves[i].setPosition(p.x + p.w / 2, p.y + bob).setRotation(Math.sin(t * 1.1 + p.x) * 0.012);
       this.leafShadows[i].setAlpha(0.8 + bob * 0.04);
-    });
+    }
     // things in front of the fight slide the other way from things behind it
-    this.front.setX(-pan * 20).setTint(look.groundTint);
-    this.branch
-      .setX(W - pan * 26)
-      .setRotation(Math.sin(t * 0.8) * 0.02 * gust)
-      .setTint(look.groundTint);
+    this.front.setX(-pan * 20);
+    this.branch.setX(W - pan * 26).setRotation(Math.sin(t * 0.8) * 0.02 * gust);
   }
 }

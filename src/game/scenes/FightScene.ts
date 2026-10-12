@@ -33,6 +33,7 @@ export class FightScene extends Scene {
   hitboxes!: HitboxOverlay;
   private world!: WorldView;
   private bosses = new Map<string, BossView>(); // one view per boss met so far; only the current one shows
+  private showing = '';
   private player!: PlayerView;
   private projectiles!: ProjectileViews;
   private hazards!: HazardViews;
@@ -85,7 +86,10 @@ export class FightScene extends Scene {
       view = BOSS_VIEWS[id].create(this, DEPTH.boss, this.fx);
       this.bosses.set(id, view);
     }
-    for (const [key, other] of this.bosses) other.setVisible(key === id);
+    if (id !== this.showing) {
+      this.showing = id;
+      for (const [key, other] of this.bosses) other.setVisible(key === id);
+    }
     return view;
   }
 }

@@ -91,8 +91,10 @@ export class Weather {
   // How much of each mood is showing; always adds up to 1.
   readonly weight: Record<Mood, number> = { calm: 1, grumpy: 0, stormy: 0, bloom: 0 };
   readonly look: Look = { ...LOOKS.calm };
+  private settled: Mood | null = 'calm'; // the mood the weather has fully turned to, if it has
 
   update(mood: Mood, dt: number) {
+    if (mood === this.settled) return; // nothing to blend until the mood changes
     const k = 1 - Math.exp(-dt * SPEED);
     let total = 0;
     for (const m of MOODS) {
@@ -118,6 +120,15 @@ export class Weather {
         b += (c & 255) * w;
       }
       this.look[key] = (Math.round(r) << 16) | (Math.round(g) << 8) | Math.round(b);
+    }
+
+    // The blend only creeps toward its goal, so call it done once it is too close to tell.
+    if (this.weight[mood] > 0.9995) {
+      for (const m of MOODS) this.weight[m] = m === mood ? 1 : 0;
+      Object.assign(this.look, LOOKS[mood]);
+      this.settled = mood;
+    } else {
+      this.settled = null;
     }
   }
 }
