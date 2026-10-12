@@ -19,6 +19,8 @@ const MAX_HEARTS = 8;
 const BAR_X = W / 2 - BAR_W / 2 + 30,
   BAR_Y = 20;
 const PHASE_COLOR = [0xffd23f, 0xffa42e, 0xff5f3c]; // the bar heats up with Sunny
+// Every letter, digit and mark a toast might use.
+const WARM_UP = 'Sphinx of black quartz, judge my vow! SUPER +1 ↑ ⬆ 0123456789';
 const TONES: Record<ToastTone, { size: number; color: string; stroke: string }> = {
   info: { size: 22, color: '#ffffff', stroke: '#1f6b2f' },
   alert: { size: 27, color: '#fff4d6', stroke: '#b3331a' },
@@ -58,7 +60,11 @@ export class HudScene extends Scene {
   private barIcon!: GameObjects.Image;
   private bossName!: GameObjects.Text;
   private toastPlate!: GameObjects.Image;
-  private toastText!: GameObjects.Text;
+  // One line of text per tone, each styled once. Text is drawn on a canvas of its own that has to be sent
+  // to the graphics card again whenever it changes, and every change of style counts: restyling one line
+  // for each toast sent it four times in a frame, enough to drop that frame.
+  private toasts!: Record<ToastTone, GameObjects.Text>;
+  private toastText!: GameObjects.Text; // the one showing
   private burst!: GameObjects.Image;
   private burstUnit = 1; // the rays are baked small: this is the scale that shows them at full size
   private ready!: GameObjects.Text;
@@ -89,18 +95,20 @@ export class HudScene extends Scene {
     fitCamera(this);
     // resolution: text is drawn on its own canvas, which has to be as sharp as the zoomed camera
     const text = (size: number, weight: string, color: string, stroke: string, thickness: number) =>
-      this.add
-        .text(0, 0, '', {
-          fontFamily: FONT,
-          fontSize: `${size}px`,
-          fontStyle: weight,
-          color,
-          stroke,
-          strokeThickness: thickness,
-          padding: { x: 6, y: 6 },
-          resolution: RES,
-        })
-        .setShadow(0, 3, 'rgba(20,10,5,0.35)', 0, true, true);
+      this.add.text(0, 0, '', {
+        fontFamily: FONT,
+        fontSize: `${size}px`,
+        fontStyle: weight,
+        color,
+        stroke,
+        strokeThickness: thickness,
+        padding: { x: 6, y: 6 },
+        resolution: RES,
+      });
+    // A drop shadow, for text that is drawn once and never changes. On a canvas a shadow is slow to
+    // draw (4-13 ms for one line here against 1.5 ms without), so the toasts, which change during the
+    // fight, go without: they have a dark patch behind them instead.
+    const shadowed = (t: GameObjects.Text) => t.setShadow(0, 3, 'rgba(20,10,5,0.35)', 0, true, true);
 
     this.danger = part(this, 'vignette').setDisplaySize(W, H).setTint(0xff2850).setAlpha(0);
     for (let i = 0; i < MAX_HEARTS; i++)
@@ -122,7 +130,7 @@ export class HudScene extends Scene {
     this.hpFill = fill();
     this.hitFill = fill();
     this.barIcon = part(this, 'bar-icon-angry', -18, BAR_H / 2);
-    this.bossName = text(14, '600', '#ffffff', '#38200f', 4)
+    this.bossName = shadowed(text(14, '600', '#ffffff', '#38200f', 4))
       .setOrigin(0, 0)
       .setPosition(16, BAR_H + 3);
     this.bar = this.add.container(BAR_X, BAR_Y, [
@@ -135,11 +143,25 @@ export class HudScene extends Scene {
 
     // centred over the open sky left of the boss, so it never covers the "!" warning bubble
     this.toastPlate = part(this, 'toast-plate', 400, 112);
-    this.toastText = text(22, '700', '#fff', '#1f6b2f', 6).setOrigin(0.5).setPosition(400, 112);
+    const line = (tone: ToastTone) =>
+      text(TONES[tone].size, '700', TONES[tone].color, TONES[tone].stroke, 6)
+        .setOrigin(0.5)
+        .setPosition(400, 112)
+        .setVisible(false);
+    this.toasts = { info: line('info'), alert: line('alert'), good: line('good') };
+    this.toastText = this.toasts.info;
+    // The first thing a line of text ever draws costs several times what later ones do (the browser has
+    // not drawn that typeface at that size yet). Pay that now, while the game is still starting, instead
+    // of in the frame the first toast pops up.
+    for (const toast of Object.values(this.toasts)) toast.setText(WARM_UP).setText('');
     this.burst = part(this, 'go-burst', W / 2, H / 2 - 50).setBlendMode(BlendModes.ADD);
     this.burstUnit = unit('go-burst');
-    this.ready = text(72, '700', '#ffffff', '#2f8a3a', 12).setOrigin(0.5).setText('Ready?');
-    this.go = text(96, '700', '#fff7c2', '#e8641c', 14).setOrigin(0.5).setText('GO!');
+    this.ready = shadowed(text(72, '700', '#ffffff', '#2f8a3a', 12))
+      .setOrigin(0.5)
+      .setText('Ready?');
+    this.go = shadowed(text(96, '700', '#fff7c2', '#e8641c', 14))
+      .setOrigin(0.5)
+      .setText('GO!');
     for (let i = 0; i < 3; i++) this.naps.push(part(this, 'zzz'));
 
     this.all = this.add.container(0, 0, [
@@ -147,7 +169,7 @@ export class HudScene extends Scene {
       ...this.hearts.flatMap((h) => [h.slot, h.full, h.ghost]),
       this.bar,
       this.toastPlate,
-      this.toastText,
+      ...Object.values(this.toasts),
       this.burst,
       this.ready,
       this.go,
@@ -157,8 +179,8 @@ export class HudScene extends Scene {
   }
 
   toast(text: string, seconds = 2.4, tone: ToastTone = 'info') {
-    const look = TONES[tone];
-    this.toastText.setText(text).setFontSize(look.size).setColor(look.color).setStroke(look.stroke, 6);
+    this.toastText.setVisible(false);
+    this.toastText = this.toasts[tone].setText(text); // redrawn only if the words have changed
     this.toastT = seconds;
     this.toastAge = 0;
     this.toastTone = tone;
