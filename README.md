@@ -12,14 +12,17 @@ code when the game starts, and every sound is synthesized with WebAudio.
 ## Run it
 
 ```bash
-npm install
-npm run dev        # play at http://localhost:5173
-npm run build      # static site in dist/; upload that folder to any static host
-npm run preview    # serve dist/ locally to check the build
-npm run check      # type-check, tests and formatting; run it before committing
+pnpm install
+pnpm dev        # play at http://localhost:5173
+pnpm build      # static site in dist/; upload that folder to any static host
+pnpm preview    # serve dist/ locally to check the build
+pnpm check      # type-check, tests and formatting; run it before committing
 ```
 
-Needs Node 22 (22.12 or newer) or Node 24.
+Needs Node 22 (22.12 or newer) or Node 24, and [pnpm](https://pnpm.io). The pnpm version is pinned in
+`package.json`; run `corepack enable` once and the right one is fetched for you. pnpm is the only package
+manager for this project: `pnpm-lock.yaml` is the one lockfile, npm refuses to install here, and other
+managers' lockfiles are ignored by git so a second one can never be committed.
 
 ## Controls
 
@@ -193,7 +196,7 @@ instead of baking; the views keep working.
 
 ## Tests
 
-`npm run check` type-checks the app, type-checks `src/sim/` a second time without browser types, runs the
+`pnpm check` type-checks the app, type-checks `src/sim/` a second time without browser types, runs the
 tests and checks formatting.
 
 The simulation tests compare this version with the original vanilla-JS game, using

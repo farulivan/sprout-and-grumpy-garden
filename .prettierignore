@@ -1,4 +1,4 @@
 dist/
 tests/fixtures/
 *.md
-package-lock.json
+pnpm-lock.yaml

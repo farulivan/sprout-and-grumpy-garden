@@ -2,3 +2,9 @@ node_modules/
 dist/
 .DS_Store
 *.log
+# pnpm is this project's package manager (see "packageManager" in package.json).
+# Another manager's lockfile must never be committed next to pnpm-lock.yaml.
+package-lock.json
+yarn.lock
+bun.lock
+bun.lockb
