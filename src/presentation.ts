@@ -52,7 +52,6 @@ export interface Ring {
   from?: number; // starting radius
   to?: number;
   life?: number;
-  glow?: boolean;
 }
 // How a line of text is dressed: plain advice, a warning, or good news.
 export type ToastTone = 'info' | 'alert' | 'good';

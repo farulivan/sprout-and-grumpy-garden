@@ -297,11 +297,11 @@ export class Sky {
 
     layer.add([
       ...Object.values(this.skies),
-      ...this.wisps,
       this.glow,
       this.rays2,
       this.rays,
       this.rainbow,
+      ...this.wisps,
       this.disc,
       this.face,
       ...this.clouds.map((c) => c.image),

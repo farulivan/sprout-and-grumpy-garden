@@ -27,6 +27,7 @@ const RING_R = 30,
   BIG_RING_FROM = 100; // rings that grow beyond this radius use the big one
 const MAX_PARTICLES = 420; // beyond this, new bursts are dropped rather than slowing the game down
 const rand = (a: number, b: number) => a + Math.random() * (b - a);
+let BIG_RING_UNIT = 1; // set when the big ring is baked
 
 // Shapes are grey where they should take the tint a little darker, white where they should stay bright.
 const SHAPES: Record<ParticleShape, [w: number, h: number, draw: (c: Ctx) => void]> = {
@@ -154,10 +155,16 @@ export function bakeFx(scene: Scene) {
     },
     SOFT,
   );
+  BIG_RING_UNIT = unit('fx-ring-big');
 }
 
+// A particle keeps its image for life: when it dies both go back on a spare pile to be used again, so a
+// busy fight creates nothing new. Glowing particles (drawn as light, on a layer of their own just above
+// the others) and plain ones never swap roles. Kept apart like this, each kind is drawn in one go however
+// they were mixed when they were thrown.
 interface Particle {
   image: GameObjects.Image;
+  glow: boolean;
   shape: ParticleShape;
   x: number;
   y: number;
@@ -185,14 +192,15 @@ interface Wave {
 
 export class Fx {
   private particles: Particle[] = [];
-  private spare: GameObjects.Image[] = [];
+  private spare: { plain: Particle[]; glow: Particle[] } = { plain: [], glow: [] };
   private waves: Wave[] = [];
-  private spareRings: Record<'small' | 'big', GameObjects.Image[]> = { small: [], big: [] };
+  private spareWaves: { small: Wave[]; big: Wave[] } = { small: [], big: [] };
   private light: GameObjects.Image;
   private lightA = 0;
   private shakePx = 0;
   private punchK = 0;
   private camera: Cameras.Scene2D.Camera;
+  private glowDepth: number;
   // People who ask their device for less motion get a gentler shake, a fainter flash and no camera jolt.
   private gentle = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 
@@ -202,6 +210,7 @@ export class Fx {
     frontDepth: number,
   ) {
     this.camera = scene.cameras.main;
+    this.glowDepth = depth + 0.1;
     this.light = part(scene, 'white', -60, -60)
       .setDisplaySize(W + 120, H + 120)
       .setBlendMode(BlendModes.ADD)
@@ -212,33 +221,30 @@ export class Fx {
   burst(x: number, y: number, b: Burst) {
     const { n = 8, color = '#fff', colors, speed = 120, size = 4, life = 0.5, gravity = 300 } = b;
     const { shape = 'circle', spread = TAU, dir = 0, glow = false, alpha = 1, drag = 0, radius = 0 } = b;
+    const key = `fx-${shape}`,
+      flutters = shape === 'leaf' || shape === 'petal' || shape === 'confetti',
+      spare = glow ? this.spare.glow : this.spare.plain;
     for (let i = 0; i < n && this.particles.length < MAX_PARTICLES; i++) {
       const a = dir + (Math.random() - 0.5) * spread,
         s = speed * rand(0.4, 1),
         from = radius ? rand(0, TAU) : 0,
         off = radius ? Math.sqrt(Math.random()) * radius : 0;
-      const image = this.spare.pop() ?? part(this.scene, 'fx-circle').setDepth(this.depth);
-      show(image, `fx-${shape}`);
-      image
-        .setTint(hex(colors ? colors[i % colors.length] : color))
-        .setBlendMode(glow ? BlendModes.ADD : BlendModes.NORMAL)
-        .setVisible(true);
-      const p: Particle = {
-        image,
-        shape,
-        x: x + Math.cos(from) * off,
-        y: y + Math.sin(from) * off,
-        vx: Math.cos(a) * s,
-        vy: Math.sin(a) * s,
-        life: life * rand(0.75, 1),
-        max: life,
-        size: size * rand(0.6, 1.3),
-        alpha,
-        gravity,
-        drag: drag || (shape === 'leaf' || shape === 'petal' || shape === 'confetti' ? 0.6 : 0),
-        rot: rand(0, TAU),
-        vr: rand(-6, 6),
-      };
+      const p = spare.pop() ?? this.newParticle(glow);
+      show(p.image, key);
+      p.image.setTint(hex(colors ? colors[i % colors.length] : color)).setVisible(true);
+      p.shape = shape;
+      p.x = x + Math.cos(from) * off;
+      p.y = y + Math.sin(from) * off;
+      p.vx = Math.cos(a) * s;
+      p.vy = Math.sin(a) * s;
+      p.life = life * rand(0.75, 1);
+      p.max = life;
+      p.size = size * rand(0.6, 1.3);
+      p.alpha = alpha;
+      p.gravity = gravity;
+      p.drag = drag || (flutters ? 0.6 : 0);
+      p.rot = rand(0, TAU);
+      p.vr = rand(-6, 6);
       this.particles.push(p);
       this.place(p);
     }
@@ -246,16 +252,16 @@ export class Fx {
 
   // A circle of light that spreads out from a point: the "thump" of a hit.
   ring(x: number, y: number, r: Ring) {
-    const { color = '#fff', from = 8, to = 60, life = 0.3, glow = true } = r;
+    const { color = '#fff', from = 8, to = 60, life = 0.3 } = r;
     const big = to > BIG_RING_FROM;
-    const image = (
-      this.spareRings[big ? 'big' : 'small'].pop() ??
-      part(this.scene, big ? 'fx-ring-big' : 'fx-ring').setDepth(this.depth)
-    )
-      .setTint(hex(color))
-      .setBlendMode(glow ? BlendModes.ADD : BlendModes.NORMAL)
-      .setVisible(true);
-    this.waves.push({ image, big, x, y, life, max: life, from, to });
+    const w = (big ? this.spareWaves.big : this.spareWaves.small).pop() ?? this.newWave(big);
+    w.image.setTint(hex(color)).setVisible(true);
+    w.x = x;
+    w.y = y;
+    w.life = w.max = life;
+    w.from = from;
+    w.to = to;
+    this.waves.push(w);
   }
 
   // A wash of light over the whole screen that fades at once.
@@ -276,19 +282,22 @@ export class Fx {
   clear() {
     for (const p of this.particles) this.retire(p);
     this.particles.length = 0;
-    for (const w of this.waves) this.spareRings[w.big ? 'big' : 'small'].push(w.image.setVisible(false));
+    for (const w of this.waves) this.retireWave(w);
     this.waves.length = 0;
     this.shakePx = this.punchK = this.lightA = 0;
   }
 
   // dt drives the particles (slowed during the win slow-motion); realDt settles the camera in real time.
   update(dt: number, realDt: number) {
-    for (let i = this.particles.length - 1; i >= 0; i--) {
-      const p = this.particles[i];
+    const particles = this.particles;
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
       p.life -= dt;
       if (p.life <= 0) {
         this.retire(p);
-        this.particles.splice(i, 1);
+        // fill the gap with the last one (already moved this frame) rather than shifting the whole list
+        particles[i] = particles[particles.length - 1];
+        particles.pop();
         continue;
       }
       p.vy += p.gravity * dt;
@@ -303,19 +312,21 @@ export class Fx {
       this.place(p);
     }
 
-    for (let i = this.waves.length - 1; i >= 0; i--) {
-      const w = this.waves[i];
+    const waves = this.waves;
+    for (let i = waves.length - 1; i >= 0; i--) {
+      const w = waves[i];
       w.life -= dt;
       if (w.life <= 0) {
-        this.spareRings[w.big ? 'big' : 'small'].push(w.image.setVisible(false));
-        this.waves.splice(i, 1);
+        this.retireWave(w);
+        waves[i] = waves[waves.length - 1];
+        waves.pop();
         continue;
       }
       const k = 1 - w.life / w.max, // 0 = just born, 1 = gone
         r = w.from + (w.to - w.from) * (1 - Math.pow(1 - k, 3));
       w.image
         .setPosition(w.x, w.y)
-        .setScale(w.big ? (unit('fx-ring-big') * r) / BIG_RING_R : (INV * r) / RING_R)
+        .setScale(w.big ? (BIG_RING_UNIT * r) / BIG_RING_R : (INV * r) / RING_R)
         .setAlpha((1 - k) * (1 - k));
     }
 
@@ -376,8 +387,40 @@ export class Fx {
       .setAlpha(p.alpha * (p.shape === 'puff' ? k : fade));
   }
 
+  private newParticle(glow: boolean): Particle {
+    const image = part(this.scene, 'fx-circle')
+      .setDepth(glow ? this.glowDepth : this.depth)
+      .setBlendMode(glow ? BlendModes.ADD : BlendModes.NORMAL);
+    return {
+      image,
+      glow,
+      shape: 'circle',
+      x: 0,
+      y: 0,
+      vx: 0,
+      vy: 0,
+      life: 0,
+      max: 1,
+      size: 0,
+      alpha: 1,
+      gravity: 0,
+      drag: 0,
+      rot: 0,
+      vr: 0,
+    };
+  }
   private retire(p: Particle) {
     p.image.setVisible(false);
-    this.spare.push(p.image);
+    (p.glow ? this.spare.glow : this.spare.plain).push(p);
+  }
+  private newWave(big: boolean): Wave {
+    const image = part(this.scene, big ? 'fx-ring-big' : 'fx-ring')
+      .setDepth(this.glowDepth)
+      .setBlendMode(BlendModes.ADD);
+    return { image, big, x: 0, y: 0, life: 0, max: 1, from: 0, to: 0 };
+  }
+  private retireWave(w: Wave) {
+    w.image.setVisible(false);
+    (w.big ? this.spareWaves.big : this.spareWaves.small).push(w);
   }
 }

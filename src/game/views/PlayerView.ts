@@ -2,7 +2,7 @@
 // The simulation moves Pip. This view adds the life: feet that run, tuck and dangle, a sprout that trails
 // behind like a ponytail, a lean into the run, the blaster swinging up to aim, a flop onto the back for
 // the nap, and a cheer when Sunny blooms.
-import { BlendModes, TintModes, type GameObjects, type Scene } from 'phaser';
+import { TintModes, type GameObjects, type Scene } from 'phaser';
 import { GROUND } from '../../config';
 import type { Fight } from '../../sim/fight';
 import { clamp, lerp } from '../../sim/math';
@@ -164,13 +164,12 @@ export class PlayerView {
     this.shadow = part(scene, 'pip-shadow').setDepth(depth - 0.2);
     this.halo = part(scene, 'pip-halo')
       .setDepth(depth - 0.1)
-      .setBlendMode(BlendModes.ADD)
-      .setAlpha(0.24);
+      .setAlpha(0.3);
     this.feet = [part(scene, 'pip-foot'), part(scene, 'pip-foot')];
     this.leaves = [part(scene, 'pip-leaf', 1, -14), part(scene, 'pip-leaf', 1, -14)];
     this.sprout = scene.add.container(0, -48, [part(scene, 'pip-stalk'), ...this.leaves]);
     this.face = part(scene, faceKey('pip', 'happy'), 1, -27);
-    this.muzzle = part(scene, 'pip-flash', 30, 0).setBlendMode(BlendModes.ADD).setVisible(false);
+    this.muzzle = part(scene, 'pip-flash', 30, 0).setVisible(false);
     const blaster = part(scene, 'pip-blaster');
     this.arm = scene.add.container(SHOULDER.x, SHOULDER.y, [blaster, this.muzzle]);
     const backHand = part(scene, 'pip-hand', -18, -22);

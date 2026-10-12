@@ -478,7 +478,7 @@ class RootView implements HazardView {
       this.out = true; // it has just broken through
       this.fx.burst(r.x, GROUND, CLODS);
       this.fx.burst(r.x, GROUND, DUST_BURST);
-      this.fx.ring(r.x, GROUND - 6, { color: '#f0d9b0', from: 10, to: 54, life: 0.3, glow: false });
+      this.fx.ring(r.x, GROUND - 6, { color: '#f0d9b0', from: 10, to: 54, life: 0.3 });
       this.fx.shake(3);
     }
     // it shoots out thin and settles to its full width, shivering while it stands
@@ -504,17 +504,25 @@ class PollenView implements HazardView {
     depth: number,
     private fx: FxTarget,
   ) {
-    this.beam = part(scene, 'pollen-beam').setBlendMode(BlendModes.ADD);
+    // The beam and the glow are light: they sit on a layer of their own just under the rest, so the
+    // light of every pollen ball on screen is drawn in one go (see ProjectileViews).
+    this.beam = part(scene, 'pollen-beam')
+      .setBlendMode(BlendModes.ADD)
+      .setDepth(depth - 0.05);
+    this.glow = part(scene, 'pollen-glow')
+      .setBlendMode(BlendModes.ADD)
+      .setDepth(depth - 0.05);
     this.target = part(scene, 'pollen-target');
-    this.glow = part(scene, 'pollen-glow').setBlendMode(BlendModes.ADD);
     this.ball = part(scene, 'pollen-ball');
     this.puffs = [0, 1, 2, 3, 4].map(() => part(scene, 'pollen-puff'));
-    this.all = scene.add
-      .container(0, 0, [this.beam, this.target, this.glow, this.ball, ...this.puffs])
-      .setDepth(depth);
+    this.all = scene.add.container(0, 0, [this.target, this.ball, ...this.puffs]).setDepth(depth);
   }
   setVisible(visible: boolean) {
     this.all.setVisible(visible);
+    if (!visible) {
+      this.beam.setVisible(false);
+      this.glow.setVisible(false);
+    }
   }
   sync(h: Hazard, alpha: number, dt: number, fresh: boolean) {
     const d = h as PollenDrop;

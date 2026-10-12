@@ -164,7 +164,10 @@ export class Air {
     layer.add([...this.shafts, ...this.gusts.map((g) => g.image), ...this.butterflies.map((b) => b.root)]);
 
     this.motes = Array.from({ length: MOTES }, () => ({
-      image: part(scene, 'mote').setBlendMode(BlendModes.ADD).setTint(0xfff3c4).setDepth(depth.front),
+      image: part(scene, 'mote')
+        .setBlendMode(BlendModes.ADD)
+        .setTint(0xfff3c4)
+        .setDepth(depth.front + 0.2),
       x: this.rand() * W,
       y: this.rand() * GROUND,
       vx: -4 + this.rand() * 10,
@@ -172,7 +175,7 @@ export class Air {
       phase: this.rand() * 6.28,
       size: 0.16 + this.rand() * 0.32,
     }));
-    const cover = (key: string) => part(scene, key).setDepth(depth.front);
+    const cover = (key: string) => part(scene, key).setDepth(depth.front + 0.1);
     this.dusk = cover('white')
       .setDisplaySize(W + 80, H + 80)
       .setPosition(-40, -40)

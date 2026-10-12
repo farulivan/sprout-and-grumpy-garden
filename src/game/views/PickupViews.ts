@@ -52,6 +52,7 @@ class DewdropView implements PooledView {
   private glow: GameObjects.Image;
   private drop: GameObjects.Image;
   private sparkles: GameObjects.Image[];
+  private parts: GameObjects.Image[];
   private pingT = 0;
 
   constructor(
@@ -59,13 +60,17 @@ class DewdropView implements PooledView {
     depth: number,
     private fx: FxTarget,
   ) {
+    // the glow is light, so it goes on a layer of its own just under the drop (see ProjectileViews)
+    this.glow = part(scene, 'dew-glow')
+      .setBlendMode(BlendModes.ADD)
+      .setDepth(depth - 0.05);
     this.shadow = part(scene, 'dew-shadow').setDepth(depth);
-    this.glow = part(scene, 'dew-glow').setBlendMode(BlendModes.ADD).setDepth(depth);
     this.drop = part(scene, 'dewdrop').setDepth(depth);
-    this.sparkles = [0, 1].map(() => part(scene, 'dew-sparkle').setBlendMode(BlendModes.ADD).setDepth(depth));
+    this.sparkles = [0, 1].map(() => part(scene, 'dew-sparkle').setDepth(depth));
+    this.parts = [this.glow, this.shadow, this.drop, ...this.sparkles];
   }
   setVisible(visible: boolean) {
-    for (const img of [this.shadow, this.glow, this.drop, ...this.sparkles]) img.setVisible(visible);
+    for (const img of this.parts) img.setVisible(visible);
   }
   sync(d: Dewdrop, alpha: number, dt: number) {
     this.setVisible(!(d.life < 3 && Math.floor(d.life * 8) % 2 === 0)); // blink before vanishing

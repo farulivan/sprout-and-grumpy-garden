@@ -95,11 +95,17 @@ class ShotView implements PooledView {
   private turn = Math.random() * TAU; // each one starts at its own angle
 
   constructor(scene: Scene, kind: ProjectileKind, depth: number) {
+    // Halos, streaks and the shots themselves each get a layer of their own, a hair apart. Sprites that
+    // glow cannot be drawn in the same go as ones that don't, so interleaving them (halo, shot, streak,
+    // shot...) would cost a separate draw for every one; in layers, each kind is drawn together.
     this.under =
       kind === 'sprout'
-        ? part(scene, 'shot-trail').setBlendMode(BlendModes.ADD)
-        : part(scene, 'shot-halo').setTint(kind === 'petal' ? 0xfff3b0 : 0xffe9c8);
-    this.under.setDepth(depth);
+        ? part(scene, 'shot-trail')
+            .setBlendMode(BlendModes.ADD)
+            .setDepth(depth - 0.01)
+        : part(scene, 'shot-halo')
+            .setTint(kind === 'petal' ? 0xfff3b0 : 0xffe9c8)
+            .setDepth(depth - 0.02);
     this.body = part(scene, `shot-${kind}`).setDepth(depth);
   }
 

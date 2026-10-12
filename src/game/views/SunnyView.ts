@@ -78,7 +78,7 @@ export class SunnyView implements BossView {
     this.eyes = part(scene, eyesKey('grumpy1'));
     this.pupils = [-1, 1].map(() => part(scene, 'sunny-pupil'));
     this.face = part(scene, sunnyFaceKey('sleep'));
-    this.flash = part(scene, 'sunny-flash').setBlendMode(BlendModes.ADD).setVisible(false);
+    this.flash = part(scene, 'sunny-flash').setVisible(false);
     this.vein = part(scene, 'sunny-vein', 37, -42).setVisible(false);
     this.snore = part(scene, 'sunny-bubble', 4, 30).setVisible(false);
     this.head = scene.add.container(0, 0, [
