@@ -70,3 +70,28 @@ it('keeps working when storage is missing or throws', () => {
     expect(save.best('sunny')).toBe(40);
   }
 });
+
+it('a build with a save slot keeps its own save and leaves the main one alone', () => {
+  const store = memoryStore();
+  const main = createSave(store);
+  main.recordWin('sunny', 50);
+
+  const old = createSave(store, 'v1'); // another copy of the game, on the same domain
+  expect(old.best('sunny')).toBe(null);
+  old.easy = true;
+  old.recordWin('sunny', 61);
+  expect([...store.items.keys()].sort()).toEqual(['sprout.save', 'sprout.save.v1']);
+
+  const again = createSave(store);
+  expect([again.easy, again.best('sunny')]).toEqual([false, 50]);
+  expect(createSave(store, 'v1').best('sunny')).toBe(61);
+});
+
+it("a build with a save slot leaves the original game's keys untouched", () => {
+  const store = memoryStore({ 'sprout.easy': '1', 'sprout.best': '52.4' });
+  const slotted = createSave(store, 'v1');
+  expect([slotted.easy, slotted.best('sunny')]).toEqual([false, null]);
+  slotted.muted = true;
+  expect(store.items.get('sprout.best')).toBe('52.4');
+  expect(createSave(store).best('sunny')).toBe(52.4); // still there for the main save to bring over
+});
