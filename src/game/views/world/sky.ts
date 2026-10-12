@@ -2,11 +2,10 @@
 // the storm clouds that roll in from above, and the rainbow that comes out when Sunny cheers up.
 import { BlendModes, type GameObjects, type Scene } from 'phaser';
 import { GROUND, H, TAU, W } from '../../../config';
-import { bake, INV, part, show, SOFT, unit } from '../../art/bake';
+import { bake, HAZY, INV, part, show, SOFT, unit } from '../../art/bake';
 import { rgba } from '../../art/color';
 import { circle, glow, linear, radial, roundRect, seeded, type Ctx, type Stops } from '../../art/draw';
 import type { FaceMood } from '../../art/face';
-import { HAZY } from '../../art/shared';
 import { bakeFaces, faceKey } from '../faces';
 import { MOODS, type Mood, type Weather } from './weather';
 

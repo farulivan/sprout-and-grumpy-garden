@@ -5,6 +5,7 @@ import { TAU } from '../../config';
 import { lerp } from '../../sim/math';
 import type { Projectile, ProjectileKind } from '../../sim/projectile';
 import { bake, part, SOFT } from '../art/bake';
+import { PIP_LINE } from '../art/color';
 import { circle, glow, inside, leaf, line, linear, radial, type Ctx } from '../art/draw';
 import { ViewPool, type PooledView } from './pool';
 
@@ -26,7 +27,7 @@ export function bakeProjectiles(scene: Scene) {
     shape();
     c.fillStyle = radial(c, 0, 0, 12, ['#ffffff', '#dcff8e', '#86dc44'], 2, -2);
     c.fill();
-    line(c, '#226a2e', 2.4);
+    line(c, PIP_LINE, 2.4);
     circle(c, 2.5, -2.6, 1.9);
     c.fillStyle = '#fff';
     c.fill();

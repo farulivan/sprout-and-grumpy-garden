@@ -3,10 +3,12 @@
 // behind like a ponytail, a lean into the run, the blaster swinging up to aim, a flop onto the back for
 // the nap, and a cheer when Sunny blooms.
 import { TintModes, type GameObjects, type Scene } from 'phaser';
-import { GROUND } from '../../config';
+import { GROUND, UP } from '../../config';
+import { DUST, type Burst } from '../../presentation';
 import type { Fight } from '../../sim/fight';
 import { clamp, lerp } from '../../sim/math';
 import { bake, INV, part, show, SOFT } from '../art/bake';
+import { EARTH_LINE, PIP_LINE } from '../art/color';
 import {
   circle,
   ellipse,
@@ -25,11 +27,21 @@ import type { FaceMood } from '../art/face';
 import type { FxTarget } from '../presenter';
 import { bakeFaces, faceKey } from './faces';
 
-const OUTLINE = '#226a2e';
-const WOOD_LINE = '#4a2a14';
 const RUN_SPEED = 290; // Pip's top speed in the simulation, for scaling the lean and the trailing sprout
 const SHOULDER = { x: 17, y: -25 }; // out to the side, so the blaster never hides Pip's face
-const UP = -Math.PI / 2;
+// The dust kicked up behind Pip's heels, for each way Pip can be running.
+const heelDust = (facing: number): Burst => ({
+  ...DUST,
+  n: 1,
+  speed: 34,
+  dir: UP - facing * 0.9,
+  spread: 0.6,
+  gravity: -20,
+  life: 0.36,
+  size: 4.5,
+  alpha: 0.55,
+});
+const HEEL_DUST = { left: heelDust(-1), right: heelDust(1) };
 
 const body = (c: Ctx) => {
   c.beginPath();
@@ -48,7 +60,7 @@ export function bakePlayer(scene: Scene) {
   bake(scene, 'pip-foot', 26, 20, 13, 11, (c) => {
     volume(c, () => ellipse(c, 0, 0, 8.5, 5.6), 0, 0, 8.5, 5.6, {
       fill: linear(c, 0, -6, 0, 6, ['#d59c60', '#8c5730']),
-      stroke: WOOD_LINE,
+      stroke: EARTH_LINE,
       width: 2.6,
       light: 0.4,
       dark: 0.2,
@@ -68,7 +80,7 @@ export function bakePlayer(scene: Scene) {
       () => glow(c, 1, -24, 21, '#f6ffd6', 0.6, 19),
     );
     body(c);
-    line(c, OUTLINE, 3.4);
+    line(c, PIP_LINE, 3.4);
   });
   bake(scene, 'pip-stalk', 16, 24, 8, 21, (c) => {
     const path = () => {
@@ -77,7 +89,7 @@ export function bakePlayer(scene: Scene) {
       c.quadraticCurveTo(-2, -6, 1, -14);
     };
     path();
-    line(c, OUTLINE, 6);
+    line(c, PIP_LINE, 6);
     path();
     line(c, '#7fd65a', 2.8);
   });
@@ -88,7 +100,7 @@ export function bakePlayer(scene: Scene) {
     c.fill();
     inside(c, shape, () => glow(c, 11, -4, 9, '#ffffff', 0.4, 3));
     shape();
-    line(c, OUTLINE, 2.6);
+    line(c, PIP_LINE, 2.6);
     c.beginPath();
     c.moveTo(3, 0);
     c.lineTo(15, 0);
@@ -98,13 +110,13 @@ export function bakePlayer(scene: Scene) {
     circle(c, 0, 0, 5.2);
     c.fillStyle = '#a5e560';
     c.fill();
-    line(c, OUTLINE, 2.4);
+    line(c, PIP_LINE, 2.4);
   });
   // The seed blaster: an acorn cup held in one hand. (0, 0) is the shoulder it swings from.
   bake(scene, 'pip-blaster', 42, 28, 8, 14, (c) => {
     volume(c, () => roundRect(c, 5, -7.5, 17, 15, 5.5), 13, 0, 9, 7.5, {
       fill: linear(c, 0, -8, 0, 8, ['#e0aa6a', '#9a6234']),
-      stroke: WOOD_LINE,
+      stroke: EARTH_LINE,
       width: 2.6,
       light: 0.45,
       dark: 0.25,
@@ -114,16 +126,16 @@ export function bakePlayer(scene: Scene) {
       c.beginPath();
       c.moveTo(x, -7);
       c.quadraticCurveTo(x + 3, 0, x, 7);
-      line(c, WOOD_LINE, 1.3, 0.45);
+      line(c, EARTH_LINE, 1.3, 0.45);
     }
     ellipse(c, 22.5, 0, 3.4, 7.2);
     c.fillStyle = '#2c180c';
     c.fill();
-    line(c, WOOD_LINE, 2.4);
+    line(c, EARTH_LINE, 2.4);
     circle(c, 3, 1, 5.4);
     c.fillStyle = '#b3ee6a';
     c.fill();
-    line(c, OUTLINE, 2.4);
+    line(c, PIP_LINE, 2.4);
   });
   bake(scene, 'pip-flash', 48, 48, 24, 24, (c) => {
     glow(c, 0, 0, 22, '#eaffb0', 0.9);
@@ -289,18 +301,7 @@ export class PlayerView {
       this.dustT -= dt;
       if (this.dustT <= 0) {
         this.dustT = 0.13;
-        this.fx.burst(x - p.facing * 10, y - 1, {
-          n: 1,
-          shape: 'puff',
-          color: '#f4ead0',
-          speed: 34,
-          dir: UP - p.facing * 0.9,
-          spread: 0.6,
-          gravity: -20,
-          life: 0.36,
-          size: 4.5,
-          alpha: 0.55,
-        });
+        this.fx.burst(x - p.facing * 10, y - 1, p.facing > 0 ? HEEL_DUST.right : HEEL_DUST.left);
       }
     }
   }

@@ -3,12 +3,13 @@
 // else here is acting: the recoil when a seed lands, the wind-up before an attack, the tantrum when he
 // changes phase, the eyes that follow Pip, and the pinwheel of petals once he has cheered up.
 import { BlendModes, type GameObjects, type Scene } from 'phaser';
-import { GROUND, TAU } from '../../config';
+import { GROUND, TAU, UP } from '../../config';
 import type { Boss } from '../../sim/boss';
 import type { Sunny } from '../../sim/bosses/sunny';
 import type { Fight } from '../../sim/fight';
 import { lerp, qbez } from '../../sim/math';
 import { INV, part, Ribbon, show, unit } from '../art/bake';
+import { easeOutBack, rand } from '../motion';
 import type { FxTarget } from '../presenter';
 import type { BossView } from './bossViews';
 import { bakeSunny, HEAD_R, PETAL_KEYS, STEM_HALF } from './sunny/art';
@@ -23,9 +24,6 @@ const STEM_LEAVES = [
   [0.3, -1],
   [0.47, 1],
 ] as const; // [how far up the stem, which side]
-const UP = -Math.PI / 2;
-const rand = (a: number, b: number) => a + Math.random() * (b - a);
-const easeOutBack = (u: number) => 1 + 2.70158 * Math.pow(u - 1, 3) + 1.70158 * Math.pow(u - 1, 2);
 
 export class SunnyView implements BossView {
   private all: GameObjects.Container;

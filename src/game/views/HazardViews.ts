@@ -2,15 +2,17 @@
 // and pollen dropping out of the sky. Each one shows where it will strike before it can hurt, and the
 // warnings all speak the same language: an orange "!" badge, or an orange ring on the ground.
 import { BlendModes, type GameObjects, type Scene } from 'phaser';
-import { GROUND, TAU, W } from '../../config';
+import { GROUND, TAU, UP, W } from '../../config';
 import { POLLEN_CLOUD, POLLEN_WARN, ROOT_WARN, VINE_WARN, VineSweep, type Hazard } from '../../sim/hazards';
 import type { PollenDrop, RootSpike } from '../../sim/hazards';
 import { clamp, lerp } from '../../sim/math';
-import type { Burst } from '../../presentation';
+import { DUST, type Burst } from '../../presentation';
 import { bake, INV, part, Ribbon, SOFT } from '../art/bake';
+import { EARTH_LINE, LEAF_LINE } from '../art/color';
 import {
   blob,
   circle,
+  FONT,
   ellipse,
   glow,
   inside,
@@ -24,28 +26,11 @@ import {
   type Ctx,
 } from '../art/draw';
 import { drawFace } from '../art/face';
+import { easeOutBack, rand } from '../motion';
 import type { FxTarget } from '../presenter';
 import { ViewPool, type PooledView } from './pool';
 
-const OUTLINE = '#1c5f2a';
-const EARTH_LINE = '#4a2a14';
-const UP = -Math.PI / 2;
 const POLLEN_FALL = (GROUND - 14 + 30) / 520; // seconds a pollen ball takes to reach the ground
-const rand = (a: number, b: number) => a + Math.random() * (b - a);
-const easeOutBack = (u: number) => 1 + 2.70158 * Math.pow(u - 1, 3) + 1.70158 * Math.pow(u - 1, 2);
-const DUST: Burst = {
-  n: 2,
-  shape: 'puff',
-  color: '#f0e2c4',
-  speed: 60,
-  size: 6,
-  life: 0.45,
-  gravity: -30,
-  dir: UP,
-  spread: 2,
-  alpha: 0.7,
-  drag: 0.8,
-};
 const DUST_PUFF: Burst = { ...DUST, n: 1 };
 const DUST_KICKED: Burst = { ...DUST, n: 1, dir: UP - 0.6 }; // thrown back by something sliding left
 const DUST_BURST: Burst = { ...DUST, n: 5, speed: 110 };
@@ -112,7 +97,7 @@ export function bakeHazards(scene: Scene) {
     c.fillStyle = linear(c, 0, -12, 0, 12, ['#ffffff', '#ffeecd']);
     c.fill();
     c.fillStyle = '#ff4d2e';
-    c.font = 'bold 21px Fredoka, sans-serif';
+    c.font = `bold 21px ${FONT}`;
     c.textAlign = 'center';
     c.textBaseline = 'middle';
     c.fillText('!', 0, 1);
@@ -132,7 +117,7 @@ export function bakeHazards(scene: Scene) {
     const inner = VINE_HALF - 3.5,
       body = () => roundRect(c, -40, -inner, VINE_LEN + 40 - 3.5, inner * 2, inner);
     roundRect(c, -40, -VINE_HALF, VINE_LEN + 40, VINE_HALF * 2, VINE_HALF);
-    c.fillStyle = OUTLINE;
+    c.fillStyle = LEAF_LINE;
     c.fill();
     body();
     c.fillStyle = '#4caf45';
@@ -151,7 +136,7 @@ export function bakeHazards(scene: Scene) {
     c.fill();
     inside(c, shape, () => glow(c, 14, -5, 11, '#ffffff', 0.4, 4));
     shape();
-    line(c, OUTLINE, 2.6);
+    line(c, LEAF_LINE, 2.6);
     c.beginPath();
     c.moveTo(3, 0);
     c.lineTo(20, 0);
@@ -166,7 +151,7 @@ export function bakeHazards(scene: Scene) {
     c.closePath();
     c.fillStyle = linear(c, -5, 0, 5, 0, ['#fff7d0', '#e2c98c']);
     c.fill();
-    line(c, OUTLINE, 2.2);
+    line(c, LEAF_LINE, 2.2);
   });
   // the vine's head leads the way, facing left
   bake(scene, 'vine-head', 66, 58, 34, 30, (c) => {
@@ -178,11 +163,11 @@ export function bakeHazards(scene: Scene) {
       leaf(c, 6, 0, len, 8.5, rot, 0.5, 0.8);
       c.fillStyle = linear(c, 6, 0, 30, 0, ['#3d9a3c', '#7fd65a']);
       c.fill();
-      line(c, OUTLINE, 2.6);
+      line(c, LEAF_LINE, 2.6);
     }
     volume(c, () => circle(c, 0, 0, 19), 0, 0, 19, 19, {
       fill: radial(c, 0, 0, 21, ['#bdf086', '#6cc551', '#3f9a3c'], -6, -7),
-      stroke: OUTLINE,
+      stroke: LEAF_LINE,
       width: 3,
       light: 0.3,
       dark: 0.34,
@@ -237,7 +222,7 @@ export function bakeHazards(scene: Scene) {
       leaf(c, 3, -98, 13, 4.6, rot, 0.5, 0.8);
       c.fillStyle = '#8ade5c';
       c.fill();
-      line(c, OUTLINE, 2);
+      line(c, LEAF_LINE, 2);
     }
   });
   bake(scene, 'root-mound', 84, 28, 42, 21, (c) => drawMound(c, 72, 14, seeded(53)));

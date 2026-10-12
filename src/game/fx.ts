@@ -5,6 +5,7 @@ import { BlendModes, type Cameras, type GameObjects, type Scene } from 'phaser';
 import { H, RES, TAU, W } from '../config';
 import type { Burst, ParticleShape, Ring } from '../presentation';
 import { bake, hex, INV, part, show, SOFT, unit } from './art/bake';
+import { rand } from './motion';
 import {
   blob,
   circle,
@@ -26,7 +27,6 @@ const RING_R = 30,
   BIG_RING_R = 190,
   BIG_RING_FROM = 100; // rings that grow beyond this radius use the big one
 const MAX_PARTICLES = 420; // beyond this, new bursts are dropped rather than slowing the game down
-const rand = (a: number, b: number) => a + Math.random() * (b - a);
 let BIG_RING_UNIT = 1; // set when the big ring is baked
 
 // Shapes are grey where they should take the tint a little darker, white where they should stay bright.

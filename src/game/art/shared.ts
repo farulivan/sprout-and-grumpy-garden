@@ -1,12 +1,8 @@
 // Parts that more than one view uses. They are baked first, so every view can count on them.
 import type { Scene } from 'phaser';
 import { H, W } from '../../config';
-import { bake } from './bake';
+import { bake, HAZY } from './bake';
 import { radial } from './draw';
-
-// The resolution for the biggest, softest glows: half of SOFT. They are only blurs of colour, so nobody
-// can tell, and at full size they would crowd the small parts off the atlas page.
-export const HAZY = 0.5;
 
 export function bakeShared(scene: Scene) {
   // A white square. Stretch and tint it for any flat wash or bar of colour.

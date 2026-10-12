@@ -6,6 +6,8 @@ import { Rng } from '../../sim/rng';
 import { rgba } from './color';
 
 export type Ctx = CanvasRenderingContext2D;
+// The game's one typeface. BootScene waits for it to load before anything is baked.
+export const FONT = 'Fredoka, sans-serif';
 export type Paint = string | CanvasGradient;
 // Gradient stops: colours spread evenly, or [position, colour] pairs.
 export type Stops = readonly (string | readonly [number, string])[];

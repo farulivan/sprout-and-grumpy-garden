@@ -8,7 +8,7 @@ import { INK } from '../../art/face';
 
 // grumpy1-3 = his resting face in each phase; puff = breathing in before an attack; shout = attacking.
 export type SunnyFace = 'sleep' | 'grumpy1' | 'grumpy2' | 'grumpy3' | 'puff' | 'shout' | 'ouch' | 'happy';
-export const SUNNY_FACES: readonly SunnyFace[] = [
+const SUNNY_FACES: readonly SunnyFace[] = [
   'sleep',
   'grumpy1',
   'grumpy2',

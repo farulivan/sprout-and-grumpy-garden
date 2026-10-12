@@ -17,6 +17,9 @@ export const INV = 1 / RES;
 // Big soft things (glows, haze, far hills) are baked smaller than that: nobody can tell, and a
 // full-screen layer costs a quarter of the memory. Parts baked this way are scaled by unit(key).
 export const SOFT = 1;
+// The biggest, softest glows are baked at half of that again. They are only blurs of colour, and at
+// full size they would crowd the small parts off the atlas page.
+export const HAZY = 0.5;
 
 const PAGE = 2048; // width and height of an atlas page, in texture pixels (every device supports this)
 const SOLO = 512; // a part with a side longer than this many texture pixels gets a texture of its own

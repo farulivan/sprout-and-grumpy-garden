@@ -2,6 +2,11 @@
 // and plain numbers (0xrrggbb) once Phaser tints something with them.
 type RGB = [number, number, number];
 
+// The pens things are outlined with. Sharing them is what makes separate drawings look like one hand.
+export const LEAF_LINE = '#1c5f2a'; // plants
+export const PIP_LINE = '#226a2e'; // Pip, and Pip's seeds: a friendlier green
+export const EARTH_LINE = '#4a2a14'; // soil, wood
+
 function rgb(color: string): RGB {
   const h = color.slice(1);
   const n = parseInt(h.length === 3 ? [...h].map((c) => c + c).join('') : h, 16);

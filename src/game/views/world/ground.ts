@@ -6,7 +6,7 @@ import type { GameObjects, Scene } from 'phaser';
 import { GROUND, H, TAU, W } from '../../../config';
 import { platforms } from '../../../sim/arena';
 import { bake, INV, part, SOFT } from '../../art/bake';
-import { mix } from '../../art/color';
+import { LEAF_LINE, mix } from '../../art/color';
 import {
   blade,
   circle,
@@ -23,7 +23,6 @@ import {
 import type { Weather } from './weather';
 
 const GROUND_TOP = GROUND - 30; // the tallest baked blade stays below this
-const OUTLINE = '#1c5f2a';
 const TUFT_KINDS = 3,
   FLOWER_KINDS = 5;
 const FRONT_PAD = 44;
@@ -251,7 +250,7 @@ function drawLeafPlatform(c: Ctx, w: number) {
   c.closePath();
   c.fillStyle = linear(c, 0, 6, 0, 28, ['#3f9f42', '#277a35']);
   c.fill();
-  line(c, OUTLINE, 3.2);
+  line(c, LEAF_LINE, 3.2);
   // top
   const top = () => {
     c.beginPath();
@@ -285,7 +284,7 @@ function drawLeafPlatform(c: Ctx, w: number) {
     }
   });
   top();
-  line(c, OUTLINE, 3.2);
+  line(c, LEAF_LINE, 3.2);
   // a dewdrop
   circle(c, -w * 0.27, 3.5, 3);
   c.fillStyle = 'rgba(214,244,255,0.9)';
@@ -321,10 +320,10 @@ function drawStalk(c: Ctx, drop: number, lean: number) {
     leaf(c, x, y, 20, 6.5, side > 0 ? -0.5 : Math.PI + 0.5);
     c.fillStyle = linear(c, x - 20, y, x + 20, y, ['#9be36b', '#58b548']);
     c.fill();
-    line(c, OUTLINE, 2.2);
+    line(c, LEAF_LINE, 2.2);
   }
   path();
-  line(c, OUTLINE, 9);
+  line(c, LEAF_LINE, 9);
   path();
   line(c, '#57b547', 5.4);
   c.save();

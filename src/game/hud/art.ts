@@ -2,10 +2,9 @@
 // portrait on the end, and the soft shapes that sit behind text so it reads against any sky.
 import type { Scene } from 'phaser';
 import { TAU } from '../../config';
-import { bake, SOFT } from '../art/bake';
+import { bake, HAZY, SOFT } from '../art/bake';
 import { circle, glow, heart, inside, leaf, line, linear, radial, roundRect } from '../art/draw';
 import { drawFace } from '../art/face';
-import { HAZY } from '../art/shared';
 
 export const BAR_W = 380,
   BAR_H = 22;

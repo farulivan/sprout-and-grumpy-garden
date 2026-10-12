@@ -2,11 +2,13 @@
 // he grows from, and the little signs that float around him (the "!" bubble, sleepy z's, the angry mark).
 import type { Scene } from 'phaser';
 import { TAU } from '../../../config';
-import { bake } from '../../art/bake';
-import { mix, rgba } from '../../art/color';
+import { bake, HAZY } from '../../art/bake';
+import { EARTH_LINE, LEAF_LINE, mix, rgba } from '../../art/color';
 import {
   circle,
+  type Ctx,
   ellipse,
+  FONT,
   glow,
   inside,
   leaf,
@@ -16,22 +18,19 @@ import {
   roundRect,
   seeded,
   volume,
-  type Ctx,
 } from '../../art/draw';
-import { HAZY } from '../../art/shared';
 import { bakeSunnyFaces } from './face';
 
 export const HEAD_R = 58; // matches the simulation's weak-spot circle
-export const FRONT_LEN = 62,
+const FRONT_LEN = 62, // how long a petal is in the front ring, and in the back one
   BACK_LEN = 70;
-export const OUTLINE = '#1c5f2a';
 // Half the stem's width where it leaves the soil and where it meets the head.
 export const STEM_HALF = [15.5, 10.5] as const;
 const STEM_LEN = 64,
   STEM_EDGE = 3.2; // thickness of its outline
 
 // One set per phase (he gets hotter as he gets grumpier), and the last for when he has cheered up.
-export const PETAL_SETS = [
+const PETAL_SETS = [
   { base: '#ff9d1a', mid: '#ffc62e', tip: '#ffe45c', edge: '#b3600d' },
   { base: '#f06a16', mid: '#ff982c', tip: '#ffc24a', edge: '#a3440a' },
   { base: '#d63620', mid: '#f7622c', tip: '#ff9a44', edge: '#8a2210' },
@@ -128,7 +127,7 @@ function drawLeaf(c: Ctx) {
     }
   });
   shape();
-  line(c, OUTLINE, 3.2);
+  line(c, LEAF_LINE, 3.2);
 }
 
 function drawSoil(c: Ctx) {
@@ -136,7 +135,7 @@ function drawSoil(c: Ctx) {
   glow(c, 0, 9, 62, '#2a1608', 0.4, 9);
   volume(c, () => ellipse(c, 0, 0, 50, 13), 0, 0, 50, 13, {
     fill: linear(c, 0, -13, 0, 13, ['#b87a48', '#8a5530']),
-    stroke: '#4a2a14',
+    stroke: EARTH_LINE,
     width: 3,
     light: 0.3,
     dark: 0.3,
@@ -181,7 +180,7 @@ export function bakeSunny(scene: Scene) {
       c.fillStyle = color;
       c.fill();
     };
-    band(-1, 1, STEM_EDGE, OUTLINE);
+    band(-1, 1, STEM_EDGE, LEAF_LINE);
     band(-1, 1, 0, '#57b847');
     band(0.35, 1, 0, '#3f9a3c');
     band(-0.72, -0.3, 0, '#a5e878');
@@ -227,14 +226,14 @@ export function bakeSunny(scene: Scene) {
     c.fillStyle = '#ff4d2e';
     c.strokeStyle = '#a82408';
     c.lineWidth = 2.5;
-    c.font = 'bold 44px Fredoka, sans-serif';
+    c.font = `bold 44px ${FONT}`;
     c.textAlign = 'center';
     c.textBaseline = 'middle';
     c.strokeText('!', 0, 0);
     c.fillText('!', 0, 0);
   });
   bake(scene, 'zzz', 32, 36, 16, 18, (c) => {
-    c.font = 'bold 28px Fredoka, sans-serif';
+    c.font = `bold 28px ${FONT}`;
     c.textAlign = 'center';
     c.textBaseline = 'middle';
     c.lineWidth = 5;

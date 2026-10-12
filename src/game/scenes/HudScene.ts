@@ -7,8 +7,10 @@ import type { ToastTone } from '../../presentation';
 import type { Fight } from '../../sim/fight';
 import { clamp } from '../../sim/math';
 import { INV, part, show, unit } from '../art/bake';
+import { FONT } from '../art/draw';
 import { fitCamera } from '../createGame';
 import { BAR_H, BAR_W, FILL_H, FILL_W } from '../hud/art';
+import { easeOutBack } from '../motion';
 import type { GamePresenter } from '../presenter';
 
 export { bakeHud } from '../hud/art';
@@ -16,14 +18,12 @@ export { bakeHud } from '../hud/art';
 const MAX_HEARTS = 8;
 const BAR_X = W / 2 - BAR_W / 2 + 30,
   BAR_Y = 20;
-const FONT = 'Fredoka, sans-serif';
 const PHASE_COLOR = [0xffd23f, 0xffa42e, 0xff5f3c]; // the bar heats up with Sunny
 const TONES: Record<ToastTone, { size: number; color: string; stroke: string }> = {
   info: { size: 22, color: '#ffffff', stroke: '#1f6b2f' },
   alert: { size: 27, color: '#fff4d6', stroke: '#b3331a' },
   good: { size: 24, color: '#ffffff', stroke: '#1f79a8' },
 };
-const easeOutBack = (u: number) => 1 + 2.70158 * Math.pow(u - 1, 3) + 1.70158 * Math.pow(u - 1, 2);
 // Two quick thumps, then a rest: 0..1.
 const heartbeat = (t: number) => {
   const u = (t * 1.5) % 1;

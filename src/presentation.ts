@@ -1,7 +1,7 @@
 // What each simulation event looks and sounds like. This is the one place that turns "the boss was hit"
 // into a sound, a puff of particles, a screen shake or a line of text. Whatever draws the game (the
 // Phaser scenes in src/game) supplies a Presenter, and this table knows nothing about how it works.
-import { GROUND, W } from './config';
+import { GROUND, UP, W } from './config';
 import type { SimEvent } from './sim/events';
 
 export type SfxName =
@@ -69,10 +69,10 @@ export interface Presenter {
 }
 
 // The petals Sunny sheds when he leaves a phase: yellow, then orange, then red.
-export const PETAL_COLOR = ['#ffc62e', '#ff982c', '#f7622c'];
+const PETAL_COLOR = ['#ffc62e', '#ff982c', '#f7622c'];
 const CONFETTI = ['#ffd23f', '#ff8fb1', '#8fd8ff', '#b48cff', '#7ccf63', '#ffffff'];
-const UP = -Math.PI / 2;
-const DUST: Burst = {
+// The puff of dust that anything landing, sliding or digging kicks up. Views reuse it for theirs.
+export const DUST: Burst = {
   n: 5,
   shape: 'puff',
   color: '#f4ead0',
