@@ -27,6 +27,10 @@ const RING_R = 30,
   BIG_RING_R = 190,
   BIG_RING_FROM = 100; // rings that grow beyond this radius use the big one
 const MAX_PARTICLES = 420; // beyond this, new bursts are dropped rather than slowing the game down
+// How many of each are made up front. A whole fight never has more alive at once than about 125 plain
+// particles, 45 glowing ones, 3 rings and 2 big rings (all at the win), so with these ready no burst has
+// to create anything mid-fight, least of all at the big moments. More are made if a fight outdoes this.
+const READY = { plain: 128, glow: 48, rings: 4, bigRings: 2 };
 let BIG_RING_UNIT = 1; // set when the big ring is baked
 
 // Shapes are grey where they should take the tint a little darker, white where they should stay bright.
@@ -216,6 +220,10 @@ export class Fx {
       .setBlendMode(BlendModes.ADD)
       .setDepth(frontDepth)
       .setVisible(false);
+    for (let i = 0; i < READY.plain; i++) this.retire(this.newParticle(false));
+    for (let i = 0; i < READY.glow; i++) this.retire(this.newParticle(true));
+    for (let i = 0; i < READY.rings; i++) this.retireWave(this.newWave(false));
+    for (let i = 0; i < READY.bigRings; i++) this.retireWave(this.newWave(true));
   }
 
   burst(x: number, y: number, b: Burst) {
