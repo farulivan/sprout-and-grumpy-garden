@@ -29,6 +29,7 @@ export abstract class Boss {
   puff = 0;
   happy = 0; // 0 -> 1 after being cheered up
   mood: Mood = 'angry';
+  attackName = ''; // the attack in progress, '' between attacks; only drives how the boss is drawn
   protected co: Attack | null = null;
   protected coWait = 0;
   protected idle = 1.2;
@@ -78,6 +79,7 @@ export abstract class Boss {
   protected startPhase() {
     const f = this.fight;
     this.co = null;
+    this.attackName = '';
     this.inv = 1.4;
     this.telegraph = 0;
     this.mood = 'angry';
@@ -91,6 +93,7 @@ export abstract class Boss {
     this.alive = false;
     this.state = 'defeated';
     this.co = null;
+    this.attackName = '';
     this.mood = 'happy';
     this.fight.onBossDefeated();
   }
@@ -99,6 +102,7 @@ export abstract class Boss {
   halt() {
     this.state = 'paused';
     this.co = null;
+    this.attackName = '';
     this.telegraph = 0;
     this.mood = 'angry';
   }
@@ -106,6 +110,7 @@ export abstract class Boss {
   // Start a specific attack now, instead of waiting for the scheduler to pick one.
   startAttack(name: string) {
     this.co = this.attack(name);
+    this.attackName = name;
     this.coWait = 0;
   }
 
@@ -136,8 +141,10 @@ export abstract class Boss {
       this.coWait -= dt;
       while (this.co && this.coWait <= 0) {
         const r = this.co.next();
-        if (r.done) this.co = null;
-        else this.coWait += r.value;
+        if (r.done) {
+          this.co = null;
+          this.attackName = '';
+        } else this.coWait += r.value;
       }
     } else {
       this.idle -= dt;

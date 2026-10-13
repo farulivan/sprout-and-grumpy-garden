@@ -1,5 +1,9 @@
 // What the game remembers between visits: one versioned object in localStorage.
 // Storage can be missing or throw (private mode, blocked storage): never let that break the game.
+//
+// A browser keeps one localStorage per domain, whatever folder a page is in. So two copies of the game
+// on the same domain (an old version kept online at /v1/ beside the new one, say) would share a save.
+// A build can name a slot to keep its own instead: VITE_SAVE_SLOT=v1 makes the key 'sprout.save.v1'.
 import type { BossId } from './sim/bosses';
 
 interface SaveData {
@@ -14,10 +18,13 @@ const KEY = 'sprout.save';
 // The original game kept three separate keys. They are read once, then removed.
 const OLD = { easy: 'sprout.easy', muted: 'sprout.muted', best: 'sprout.best' };
 
-export function createSave(store: Store | null) {
-  const read = (key: string) => {
+// slot = '' for the game's main save. A build with a slot touches nothing outside it: it neither
+// brings over nor removes the original game's keys, which belong to the main save.
+export function createSave(store: Store | null, slot = '') {
+  const key = slot ? `${KEY}.${slot}` : KEY;
+  const read = (name: string) => {
     try {
-      return store?.getItem(key) ?? null;
+      return store?.getItem(name) ?? null;
     } catch {
       return null;
     }
@@ -26,7 +33,7 @@ export function createSave(store: Store | null) {
   function load(): SaveData {
     const data: SaveData = { v: 1, easy: false, muted: false, best: {} };
     try {
-      const saved = JSON.parse(read(KEY) ?? 'null') as Partial<SaveData> | null;
+      const saved = JSON.parse(read(key) ?? 'null') as Partial<SaveData> | null;
       if (saved && typeof saved === 'object') {
         data.easy = saved.easy === true;
         data.muted = saved.muted === true;
@@ -37,6 +44,7 @@ export function createSave(store: Store | null) {
     } catch {
       /* unreadable save: start fresh */
     }
+    if (slot) return data;
     // first run of this version: bring over what the original game stored
     data.easy = read(OLD.easy) === '1';
     data.muted = read(OLD.muted) === '1';
@@ -48,8 +56,8 @@ export function createSave(store: Store | null) {
   const data = load();
   const write = () => {
     try {
-      store?.setItem(KEY, JSON.stringify(data));
-      for (const key of Object.values(OLD)) store?.removeItem(key);
+      store?.setItem(key, JSON.stringify(data));
+      if (!slot) for (const old of Object.values(OLD)) store?.removeItem(old);
     } catch {
       /* ignore */
     }
@@ -93,4 +101,4 @@ function browserStorage(): Store | null {
   }
 }
 
-export const save = createSave(browserStorage());
+export const save = createSave(browserStorage(), import.meta.env.VITE_SAVE_SLOT?.trim());

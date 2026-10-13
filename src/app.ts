@@ -28,6 +28,7 @@ export class App {
   // How far the display is between the previous simulation step (0) and the current one (1).
   alpha = 1;
   private acc = 0;
+  private frozen = 0; // seconds of hit-stop left
   private overlay: Overlay;
 
   constructor(private o: AppOptions) {
@@ -55,7 +56,7 @@ export class App {
     const { audio, controls } = this.o;
     audio.init();
     this.fight = new Fight({ seed: newSeed(), easy: this.overlay.easy });
-    this.acc = 0;
+    this.acc = this.frozen = 0;
     this.o.onFight?.(this.fight);
     this.setPaused(false);
     this.overlay.show(null);
@@ -103,11 +104,21 @@ export class App {
     this.overlay.setState(this.paused ? 'paused' : this.fight.state);
   }
 
+  // Hold the fight still for a moment, so a big hit is felt. The picture keeps moving; only the
+  // simulation waits.
+  hitStop(seconds: number) {
+    this.frozen = Math.max(this.frozen, seconds);
+  }
+
   // Run as many fixed steps as the elapsed time covers. Returns whether any ran.
   private advance(dt: number) {
+    if (this.frozen > 0) {
+      this.frozen -= dt;
+      return false;
+    }
     this.acc += Math.min(dt, MAX_FRAME);
     let stepped = false;
-    while (this.acc >= STEP) {
+    while (this.acc >= STEP && this.frozen <= 0) {
       this.acc -= STEP;
       const fight = this.fight;
       fight.step(this.o.controls.frame());

@@ -35,6 +35,7 @@ export class Player {
   alive = true;
   shootCd = 0;
   // The rest only drives how Pip is drawn.
+  aimUp = false;
   recoil = 0;
   runT = 0;
   sq = 1; // squash and stretch: 1 = normal
@@ -56,6 +57,7 @@ export class Player {
     this.recoil = Math.max(0, this.recoil - dt * 6);
 
     const ctrl = this.alive;
+    this.aimUp = ctrl && input.up;
     const ax = ctrl ? (input.right ? 1 : 0) - (input.left ? 1 : 0) : 0;
     if (ax) {
       this.vx += ax * ACCEL * dt;

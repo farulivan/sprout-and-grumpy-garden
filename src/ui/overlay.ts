@@ -12,6 +12,12 @@ export interface OverlayHandlers {
 }
 
 const byId = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
+const el = (tag: string, className: string, text = '') => {
+  const node = document.createElement(tag);
+  node.className = className;
+  node.textContent = text;
+  return node;
+};
 
 export class Overlay {
   private stage = byId('stage');
@@ -56,20 +62,34 @@ export class Overlay {
   }
 
   showWin(r: FightResult, best: number | null, isBest: boolean) {
-    byId('win-stars').textContent = '★'.repeat(r.stars) + '☆'.repeat(3 - r.stars);
-    const bestText = isBest || best === null ? ' (new best!)' : `  ·  Best: ${best.toFixed(1)}s`;
-    byId('win-stats').textContent =
-      `Time: ${r.time.toFixed(1)}s${bestText}  ·  Bonks: ${r.hits}${r.easy ? '  ·  Easy mode' : ''}`;
+    // Each star earned pops in, one after another (see .star.on in style.css).
+    byId('win-stars').replaceChildren(
+      ...[1, 2, 3].map((n) => el('span', n <= r.stars ? 'star on' : 'star', '★')),
+    );
+    const stats = [
+      el('span', '', `Time ${r.time.toFixed(1)}s`),
+      isBest || best === null ? el('span', 'best', 'New best!') : el('span', '', `Best ${best.toFixed(1)}s`),
+      el('span', '', `Bonks ${r.hits}`),
+    ];
+    if (r.easy) stats.push(el('span', '', 'Easy mode'));
+    byId('win-stats').replaceChildren(...stats);
     this.show('win');
   }
 
   showLose(progress: number) {
-    byId('lose-progress').textContent = `You cheered Sunny up ${progress}% of the way!`;
+    const meter = el('div', 'meter'),
+      fill = el('i', '');
+    fill.style.width = `${progress}%`;
+    meter.append(fill);
+    byId('lose-progress').replaceChildren(
+      el('span', '', `You cheered Sunny up ${progress}% of the way!`),
+      meter,
+    );
     this.show('lose');
   }
 
   setMuted(muted: boolean) {
-    byId('btn-mute').textContent = muted ? '🔇' : '🔊';
+    byId('btn-mute').classList.toggle('muted', muted); // the button holds both icons; CSS shows one
   }
 
   // CSS uses this to show the touch controls and HUD buttons only while playing.

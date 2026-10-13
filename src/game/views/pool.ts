@@ -4,8 +4,9 @@ export interface PooledView {
 }
 
 export class ViewPool<E extends object, V extends PooledView> {
-  private live = new Map<E, V>();
+  private live = new Map<E, { view: V; seen: number }>();
   private free = new Map<string, V[]>();
+  private frame = 0;
 
   // kind(e) names which sort of view an object needs; views are only reused within the same kind.
   constructor(
@@ -15,24 +16,29 @@ export class ViewPool<E extends object, V extends PooledView> {
 
   // update(e, view, fresh): fresh is true the first frame this view shows this object.
   sync(objects: readonly E[], update: (e: E, view: V, fresh: boolean) => void) {
-    const seen = new Set<E>(objects);
-    for (const [e, view] of this.live) {
-      if (seen.has(e)) continue;
-      view.setVisible(false);
-      this.live.delete(e);
-      const kind = this.kind(e);
-      if (!this.free.has(kind)) this.free.set(kind, []);
-      this.free.get(kind)!.push(view);
-    }
+    const frame = ++this.frame;
     for (const e of objects) {
-      let view = this.live.get(e);
-      const fresh = !view;
-      if (!view) {
-        view = this.free.get(this.kind(e))?.pop() ?? this.make(e);
+      let entry = this.live.get(e);
+      const fresh = !entry;
+      if (!entry) {
+        const view = this.free.get(this.kind(e))?.pop() ?? this.make(e);
         view.setVisible(true);
-        this.live.set(e, view);
+        entry = { view, seen: frame };
+        this.live.set(e, entry);
       }
-      update(e, view, fresh);
+      entry.seen = frame;
+      update(e, entry.view, fresh);
     }
+    // More views than objects means something went away since last frame: put its view back on the
+    // spare pile. (Most frames nothing has, and this is skipped.)
+    if (this.live.size > objects.length)
+      for (const [e, entry] of this.live) {
+        if (entry.seen === frame) continue;
+        entry.view.setVisible(false);
+        this.live.delete(e);
+        const kind = this.kind(e);
+        if (!this.free.has(kind)) this.free.set(kind, []);
+        this.free.get(kind)!.push(entry.view);
+      }
   }
 }

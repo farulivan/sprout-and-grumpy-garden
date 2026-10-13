@@ -1,58 +1,88 @@
 // Hearts, the boss's bar, toasts and "Ready? GO!". It runs on top of the fight scene with its own camera,
-// so screen shake does not move it.
-import { Scene, type GameObjects } from 'phaser';
+// so screen shake does not move it. The parts are baked in src/game/hud/art.ts.
+import { BlendModes, Scene, type GameObjects } from 'phaser';
 import type { App } from '../../app';
 import { H, RES, TAU, W } from '../../config';
+import type { ToastTone } from '../../presentation';
+import type { Fight } from '../../sim/fight';
 import { clamp } from '../../sim/math';
-import { bake, INV, part } from '../art/bake';
-import { circle, ellipse, fillStroke, heart, roundRect } from '../art/draw';
+import { INV, part, show, unit } from '../art/bake';
+import { FONT } from '../art/draw';
 import { fitCamera } from '../createGame';
+import { BAR_H, BAR_W, FILL_H, FILL_W } from '../hud/art';
+import { easeOutBack } from '../motion';
 import type { GamePresenter } from '../presenter';
 
-const MAX_HEARTS = 8;
-const BAR_W = 380,
-  BAR_X = W / 2 - BAR_W / 2 + 30,
-  BAR_Y = 22;
-const FONT = 'Fredoka, sans-serif';
+export { bakeHud } from '../hud/art';
 
-export function bakeHud(scene: Scene) {
-  bake(scene, 'heart-full', 32, 30, 16, 16, (c) => {
-    heart(c, 0, 0, 12);
-    fillStroke(c, '#ff6f91', '#c9405f', 3);
-  });
-  bake(scene, 'heart-empty', 32, 30, 16, 16, (c) => {
-    heart(c, 0, 0, 12);
-    fillStroke(c, 'rgba(255,255,255,0.5)', 'rgba(120,80,80,0.5)', 3);
-  });
-  bake(scene, 'bar-frame', BAR_W + 6, 26, 3, 3, (c) => {
-    roundRect(c, 0, 0, BAR_W, 20, 10);
-    fillStroke(c, 'rgba(255,255,255,0.7)', '#4d9a3f', 3);
-  });
-  // little sunflower at the left end of the bar
-  bake(scene, 'bar-icon', 44, 44, 22, 22, (c) => {
-    for (let i = 0; i < 8; i++) {
-      c.save();
-      c.rotate((i / 8) * TAU);
-      ellipse(c, 13, 0, 7, 4);
-      fillStroke(c, '#ffd23f', '#d98f1a', 1.5);
-      c.restore();
-    }
-    circle(c, 0, 0, 8);
-    fillStroke(c, '#8a5a2b', '#5a381a', 2);
-  });
+const MAX_HEARTS = 8;
+const BAR_X = W / 2 - BAR_W / 2 + 30,
+  BAR_Y = 20;
+const PHASE_COLOR = [0xffd23f, 0xffa42e, 0xff5f3c]; // the bar heats up with Sunny
+// Every letter, digit and mark a toast might use.
+const WARM_UP = 'Sphinx of black quartz, judge my vow! SUPER +1 ↑ ⬆ 0123456789';
+const TONES: Record<ToastTone, { size: number; color: string; stroke: string }> = {
+  info: { size: 22, color: '#ffffff', stroke: '#1f6b2f' },
+  alert: { size: 27, color: '#fff4d6', stroke: '#b3331a' },
+  good: { size: 24, color: '#ffffff', stroke: '#1f79a8' },
+};
+// Two quick thumps, then a rest: 0..1.
+const heartbeat = (t: number) => {
+  const u = (t * 1.5) % 1;
+  return u < 0.5 ? Math.max(0, Math.sin(u * TAU * 2)) : 0;
+};
+
+// One coloured bar inside the boss's track: two round ends and a stretch of colour between them.
+interface Fill {
+  left: GameObjects.Image;
+  mid: GameObjects.Image;
+  right: GameObjects.Image;
+}
+const FILL_X = (BAR_W - FILL_W) / 2; // where the coloured bar starts inside the track
+
+interface Heart {
+  slot: GameObjects.Image; // the empty outline, always there
+  full: GameObjects.Image;
+  ghost: GameObjects.Image; // a heart that was just lost, puffing away
+  was: boolean; // was full last frame
+  gained: boolean; // the last change filled it (rather than emptied it)
+  pop: number; // 1 -> 0 after it changes
 }
 
 export class HudScene extends Scene {
   private all!: GameObjects.Container;
-  private hearts: GameObjects.Image[] = [];
-  private barFill!: GameObjects.Graphics;
+  private danger!: GameObjects.Image;
+  private hearts: Heart[] = [];
+  private bar!: GameObjects.Container;
+  private lagFill!: Fill; // pale: where the boss's health was a moment ago
+  private hpFill!: Fill;
+  private hitFill!: Fill; // white: flashes over the bar when a hit lands
+  private barIcon!: GameObjects.Image;
   private bossName!: GameObjects.Text;
-  private toastText!: GameObjects.Text;
+  private toastPlate!: GameObjects.Image;
+  // One line of text per tone, each styled once. Text is drawn on a canvas of its own that has to be sent
+  // to the graphics card again whenever it changes, and every change of style counts: restyling one line
+  // for each toast sent it four times in a frame, enough to drop that frame.
+  private toasts!: Record<ToastTone, GameObjects.Text>;
+  private toastText!: GameObjects.Text; // the one showing
+  private burst!: GameObjects.Image;
+  private burstUnit = 1; // the rays are baked small: this is the scale that shows them at full size
   private ready!: GameObjects.Text;
   private go!: GameObjects.Text;
   private naps: GameObjects.Image[] = [];
-  private toastT = 0;
+
+  private seen: Fight | null = null;
   private clock = 0;
+  private toastT = 0; // seconds left
+  private toastAge = 0;
+  private toastTone: ToastTone = 'info';
+  private lag = 1; // the pale part of the bar: where the boss's health was a moment ago
+  private lagHold = 0;
+  private shown = 1;
+  private barShake = 0;
+  private iconPop = 0;
+  private prevPhase = 1;
+  private dangerA = 0;
 
   constructor(
     private app: App,
@@ -64,7 +94,7 @@ export class HudScene extends Scene {
   create() {
     fitCamera(this);
     // resolution: text is drawn on its own canvas, which has to be as sharp as the zoomed camera
-    const text = (size: number, weight: string, color: string, stroke?: string, thickness = 0) =>
+    const text = (size: number, weight: string, color: string, stroke: string, thickness: number) =>
       this.add.text(0, 0, '', {
         fontFamily: FONT,
         fontSize: `${size}px`,
@@ -72,28 +102,75 @@ export class HudScene extends Scene {
         color,
         stroke,
         strokeThickness: thickness,
-        padding: { x: 4, y: 4 },
+        padding: { x: 6, y: 6 },
         resolution: RES,
       });
+    // A drop shadow, for text that is drawn once and never changes. On a canvas a shadow is slow to
+    // draw (4-13 ms for one line here against 1.5 ms without), so the toasts, which change during the
+    // fight, go without: they have a dark patch behind them instead.
+    const shadowed = (t: GameObjects.Text) => t.setShadow(0, 3, 'rgba(20,10,5,0.35)', 0, true, true);
 
-    for (let i = 0; i < MAX_HEARTS; i++) this.hearts.push(part(this, 'heart-full'));
-    this.barFill = this.add.graphics();
-    this.bossName = text(15, '600', '#4b3b2f')
-      .setOrigin(0, 1)
-      .setPosition(BAR_X + 2, BAR_Y + 45);
+    this.danger = part(this, 'vignette').setDisplaySize(W, H).setTint(0xff2850).setAlpha(0);
+    for (let i = 0; i < MAX_HEARTS; i++)
+      this.hearts.push({
+        slot: part(this, 'heart-empty'),
+        full: part(this, 'heart-full'),
+        ghost: part(this, 'heart-full').setVisible(false),
+        was: true,
+        gained: false,
+        pop: 0,
+      });
+
+    const fill = (): Fill => ({
+      left: part(this, 'bar-cap'),
+      mid: part(this, 'white'),
+      right: part(this, 'bar-cap'),
+    });
+    this.lagFill = fill();
+    this.hpFill = fill();
+    this.hitFill = fill();
+    this.barIcon = part(this, 'bar-icon-angry', -18, BAR_H / 2);
+    this.bossName = shadowed(text(14, '600', '#ffffff', '#38200f', 4))
+      .setOrigin(0, 0)
+      .setPosition(16, BAR_H + 3);
+    this.bar = this.add.container(BAR_X, BAR_Y, [
+      part(this, 'bar-back'),
+      ...[this.lagFill, this.hpFill, this.hitFill].flatMap((f) => [f.left, f.mid, f.right]),
+      part(this, 'bar-gloss'),
+      this.barIcon,
+      this.bossName,
+    ]);
+
     // centred over the open sky left of the boss, so it never covers the "!" warning bubble
-    this.toastText = text(22, '700', '#fff', '#4d9a3f', 5).setOrigin(0.5).setPosition(400, 110);
-    this.ready = text(64, '700', '#fff', '#4d9a3f', 10).setOrigin(0.5).setText('Ready?');
-    this.go = text(64, '700', '#fff', '#e0762e', 10).setOrigin(0.5).setText('GO!');
+    this.toastPlate = part(this, 'toast-plate', 400, 112);
+    const line = (tone: ToastTone) =>
+      text(TONES[tone].size, '700', TONES[tone].color, TONES[tone].stroke, 6)
+        .setOrigin(0.5)
+        .setPosition(400, 112)
+        .setVisible(false);
+    this.toasts = { info: line('info'), alert: line('alert'), good: line('good') };
+    this.toastText = this.toasts.info;
+    // The first thing a line of text ever draws costs several times what later ones do (the browser has
+    // not drawn that typeface at that size yet). Pay that now, while the game is still starting, instead
+    // of in the frame the first toast pops up.
+    for (const toast of Object.values(this.toasts)) toast.setText(WARM_UP).setText('');
+    this.burst = part(this, 'go-burst', W / 2, H / 2 - 50).setBlendMode(BlendModes.ADD);
+    this.burstUnit = unit('go-burst');
+    this.ready = shadowed(text(72, '700', '#ffffff', '#2f8a3a', 12))
+      .setOrigin(0.5)
+      .setText('Ready?');
+    this.go = shadowed(text(96, '700', '#fff7c2', '#e8641c', 14))
+      .setOrigin(0.5)
+      .setText('GO!');
     for (let i = 0; i < 3; i++) this.naps.push(part(this, 'zzz'));
 
     this.all = this.add.container(0, 0, [
-      ...this.hearts,
-      part(this, 'bar-frame', BAR_X, BAR_Y),
-      this.barFill,
-      part(this, 'bar-icon', BAR_X - 22, BAR_Y + 10),
-      this.bossName,
-      this.toastText,
+      this.danger,
+      ...this.hearts.flatMap((h) => [h.slot, h.full, h.ghost]),
+      this.bar,
+      this.toastPlate,
+      ...Object.values(this.toasts),
+      this.burst,
       this.ready,
       this.go,
       ...this.naps,
@@ -101,9 +178,12 @@ export class HudScene extends Scene {
     this.presenter.hud = this;
   }
 
-  toast(text: string, seconds = 2.4) {
-    this.toastText.setText(text);
+  toast(text: string, seconds = 2.4, tone: ToastTone = 'info') {
+    this.toastText.setVisible(false);
+    this.toastText = this.toasts[tone].setText(text); // redrawn only if the words have changed
     this.toastT = seconds;
+    this.toastAge = 0;
+    this.toastTone = tone;
   }
   clear() {
     this.toastT = 0;
@@ -116,53 +196,176 @@ export class HudScene extends Scene {
       p = fight.player,
       b = fight.boss;
     this.clock += dt;
+    const fresh = fight !== this.seen; // a new fight: nothing should animate as if it had just changed
+    if (fresh) {
+      this.seen = fight;
+      this.lag = this.shown = 1;
+      this.prevPhase = b.phase;
+      this.iconPop = this.barShake = 0;
+    }
     this.all.setVisible(fight.state !== 'title');
-    if (fight.state === 'play' || fight.state === 'ending' || fight.state === 'down') this.toastT -= dt;
+    const live = fight.state === 'play' || fight.state === 'ending' || fight.state === 'down';
 
-    // hearts: the last two beat
-    const gap = p.maxHp > 5 ? 30 : 34;
-    this.hearts.forEach((h, i) => {
-      const full = i < p.hp,
-        pulse = full && p.hp <= 2 ? 1 + Math.sin(this.clock * 8) * 0.08 : 1;
-      h.setVisible(i < p.maxHp)
-        .setTexture(full ? 'heart-full' : 'heart-empty')
-        .setPosition(34 + i * gap, 34)
-        .setScale(INV * pulse);
-    });
+    this.syncHearts(dt, fight, fresh);
+    this.syncBar(dt, fight);
 
-    // boss bar
-    const k = b.hp / b.maxHp,
-      w = (BAR_W - 6) * k;
-    this.barFill.clear();
-    if (k > 0)
-      this.barFill
-        .fillStyle(k > 0.66 ? 0xffd23f : k > 0.33 ? 0xffb52e : 0xff7f50)
-        .fillRoundedRect(BAR_X + 3, BAR_Y + 3, w, 14, Math.min(7, w / 2));
-    if (this.bossName.text !== b.name) this.bossName.setText(b.name);
+    // ---- toast ----
+    if (live) {
+      this.toastT -= dt;
+      this.toastAge += dt;
+    }
+    const showing = live && this.toastT > 0,
+      fade = clamp(this.toastT / 0.4, 0, 1),
+      pop = this.toastAge < 0.25 ? easeOutBack(this.toastAge / 0.25) : 1,
+      rattle = this.toastTone === 'alert' ? Math.max(0, 0.5 - this.toastAge) * 12 : 0;
+    this.toastText
+      .setVisible(showing)
+      .setAlpha(fade)
+      .setScale(pop)
+      .setPosition(400 + (Math.random() - 0.5) * rattle, 112 - (1 - fade) * 8);
+    this.toastPlate
+      .setVisible(showing)
+      .setAlpha(fade * 0.85)
+      .setDisplaySize(this.toastText.width * pop + 110, 62);
 
-    this.toastText.setVisible(this.toastT > 0).setAlpha(clamp(this.toastT, 0, 1));
-
-    // "Ready?" while the boss wakes up, then "GO!"
+    // ---- "Ready?" while the boss wakes up, then "GO!" ----
     const intro = b.state === 'intro',
       t = b.introT,
       isGo = t >= 0.9;
     this.ready.setVisible(intro && !isGo);
     this.go.setVisible(intro && isGo);
-    if (intro) {
-      const u = isGo ? (t - 0.9) / 0.8 : t / 0.9;
-      const scale = isGo ? 1 + Math.max(0, 0.35 - u * 0.8) : 0.85 + 0.15 * Math.min(1, u * 2);
-      (isGo ? this.go : this.ready)
+    this.burst.setVisible(intro && isGo);
+    if (intro && !isGo) {
+      const u = t / 0.9;
+      this.ready
         .setPosition(W / 2, H / 2 - 50)
-        .setScale(scale)
-        .setAlpha(clamp(isGo ? (1 - u) * 3 : u * 3, 0, 1));
+        .setScale(easeOutBack(Math.min(1, u * 3.2)) * (1 + Math.sin(this.clock * 9) * 0.015))
+        .setRotation(-0.04 + Math.sin(this.clock * 5) * 0.012)
+        .setAlpha(clamp(u * 6, 0, 1));
+    } else if (intro) {
+      const u = (t - 0.9) / 0.8,
+        slam = 1 + 0.7 * Math.pow(Math.max(0, 1 - u * 5), 2); // lands big, settles fast
+      this.go
+        .setPosition(W / 2, H / 2 - 50)
+        .setScale(slam)
+        .setRotation(0.03)
+        .setAlpha(clamp((1 - u) * 3, 0, 1));
+      this.burst
+        .setRotation(this.clock * 0.9)
+        .setScale(this.burstUnit * (0.6 + u * 0.7))
+        .setAlpha(clamp((1 - u) * 1.6, 0, 1) * 0.9);
     }
 
-    // Pip is napping
-    this.naps.forEach((z, i) =>
-      z
-        .setVisible(fight.state === 'down')
-        .setScale((INV * 24) / 26)
-        .setPosition(p.x + 30 + i * 16, p.y - 60 - ((fight.endT * 0.8 + i * 0.3) % 1) * 30),
+    // ---- Pip is napping ----
+    this.naps.forEach((z, i) => {
+      const u = (fight.endT * 0.7 + i / 3) % 1;
+      z.setVisible(fight.state === 'down')
+        .setScale(INV * (0.6 + u * 0.7))
+        .setAlpha(Math.sin(u * Math.PI))
+        .setPosition(p.x + 34 + u * 34, p.y - 44 - u * 44);
+    });
+
+    // ---- the last heart: red creeps in from the corners, in time with the heartbeat ----
+    const scared = fight.state === 'play' && p.hp === 1;
+    this.dangerA += ((scared ? 1 : 0) - this.dangerA) * Math.min(1, dt * 4);
+    this.danger.setVisible(this.dangerA > 0.01).setAlpha(this.dangerA * (0.42 + 0.3 * heartbeat(this.clock)));
+  }
+
+  private syncHearts(dt: number, fight: Fight, fresh: boolean) {
+    const p = fight.player,
+      gap = p.maxHp > 5 ? 31 : 36;
+    this.hearts.forEach((h, i) => {
+      const full = i < p.hp,
+        used = i < p.maxHp,
+        x = 36 + i * gap,
+        y = 36;
+      if (fresh) {
+        h.was = full;
+        h.pop = 0;
+      } else if (full !== h.was) {
+        h.was = h.gained = full;
+        h.pop = 1;
+      }
+      h.pop = Math.max(0, h.pop - dt * 2.4);
+      // the last two hearts beat
+      const beat = full && p.hp <= 2 && p.alive ? heartbeat(this.clock - i * 0.07) : 0;
+      const rattle = !full && h.pop > 0.4 ? Math.sin(h.pop * 50) * 3 * h.pop : 0;
+      h.slot.setVisible(used).setPosition(x + rattle, y);
+      h.full
+        .setVisible(used && full)
+        .setPosition(x, y)
+        .setScale(INV * (1 + beat * 0.14 + (h.gained ? Math.sin(h.pop * Math.PI) * 0.5 : 0)));
+      const gone = 1 - h.pop;
+      h.ghost
+        .setVisible(used && !full && !h.gained && h.pop > 0)
+        .setPosition(x, y - gone * 12)
+        .setScale(INV * (1 + gone * 1.2))
+        .setAlpha(h.pop * h.pop);
+    });
+  }
+
+  private syncBar(dt: number, fight: Fight) {
+    const b = fight.boss,
+      k = b.hp / b.maxHp;
+    if (k < this.shown) {
+      this.lagHold = 0.3; // the pale bar waits a moment, then slides down to meet the real one
+      this.barShake = 1;
+    }
+    this.shown = k;
+    this.lagHold -= dt;
+    if (this.lagHold <= 0) this.lag += (k - this.lag) * Math.min(1, dt * 6);
+    if (this.lag < k) this.lag = k;
+    this.barShake = Math.max(0, this.barShake - dt * 9);
+    if (b.phase !== this.prevPhase) {
+      this.prevPhase = b.phase;
+      this.iconPop = 1;
+    }
+    this.iconPop = Math.max(0, this.iconPop - dt * 1.4);
+
+    this.setFill(this.lagFill, this.lag, 0xfff3cf, 0.95);
+    this.setFill(this.hpFill, k, PHASE_COLOR[Math.min(b.phase, 3) - 1], 1);
+    this.setFill(this.hitFill, k, 0xffffff, (b.flash / 0.12) * 0.6);
+
+    this.bar.setPosition(
+      BAR_X + (Math.random() - 0.5) * 5 * this.barShake,
+      BAR_Y + (Math.random() - 0.5) * 3 * this.barShake,
     );
+    show(this.barIcon, b.alive ? 'bar-icon-angry' : 'bar-icon-joy');
+    this.barIcon
+      .setScale(INV * (1 + Math.sin(this.iconPop * Math.PI) * 0.5 + (b.alive ? 0 : 0.12)))
+      .setRotation(
+        b.alive ? Math.sin(this.clock * 40) * 0.2 * this.iconPop : Math.sin(this.clock * 4) * 0.15,
+      );
+    if (this.bossName.text !== b.name) this.bossName.setText(b.name);
+  }
+
+  // Show `frac` of the track in one colour. The ends are half-discs; a bar shorter than it is tall
+  // squeezes them, so it stays rounded all the way down to nothing.
+  private setFill(f: Fill, frac: number, color: number, alpha: number) {
+    const w = FILL_W * frac,
+      on = w > 0.5 && alpha > 0;
+    f.left.setVisible(on);
+    f.mid.setVisible(on);
+    f.right.setVisible(on);
+    if (!on) return;
+    const r = Math.min(FILL_H / 2, w / 2),
+      squeeze = (INV * r) / (FILL_H / 2),
+      y = BAR_H / 2;
+    f.left
+      .setPosition(FILL_X + r, y)
+      .setScale(-squeeze, INV)
+      .setTint(color)
+      .setAlpha(alpha);
+    f.right
+      .setPosition(FILL_X + w - r, y)
+      .setScale(squeeze, INV)
+      .setTint(color)
+      .setAlpha(alpha);
+    // the stretch overlaps each end by a quarter pixel, so no seam can show between them
+    f.mid
+      .setPosition(FILL_X + r - 0.25, y - FILL_H / 2)
+      .setDisplaySize(w - 2 * r + 0.5, FILL_H)
+      .setTint(color)
+      .setAlpha(alpha);
   }
 }

@@ -1,10 +1,14 @@
 // Runs once: waits for the font, bakes every texture, then starts the fight scene.
-import { Scene, Sound } from 'phaser';
+import { Scene, Sound, WEBGL, type Renderer } from 'phaser';
 import type { GameAudio } from '../../audio';
+import { finishBaking } from '../art/bake';
+import { bakeShared } from '../art/shared';
 import { bakeFx } from '../fx';
 import { BOSS_VIEWS } from '../views/bossViews';
-import { bakeEntities } from '../views/EntityViews';
+import { bakeHazards } from '../views/HazardViews';
+import { bakePickups } from '../views/PickupViews';
 import { bakePlayer } from '../views/PlayerView';
+import { bakeProjectiles } from '../views/ProjectileViews';
 import { bakeWorld } from '../views/WorldView';
 import { bakeHud } from './HudScene';
 
@@ -29,13 +33,24 @@ export class BootScene extends Scene {
       this.audio.attach(this.sound.context, this.sound.destination);
     this.sound.mute = this.audio.muted;
 
+    // Draw with one texture per batch, on every device (Phaser already does on phones and tablets).
+    // Left alone on desktop, it builds a separate shader for each number of textures a batch happens to
+    // use, and each first build drops a frame or more in the middle of the fight. Nearly all the art
+    // shares a few atlas textures (see art/bake.ts), so this costs very few extra draw calls.
+    if (this.renderer.type === WEBGL)
+      (this.renderer as Renderer.WebGL.WebGLRenderer).renderNodes.setMaxParallelTextureUnits(1);
+
     void loadFont().then(() => {
+      bakeShared(this);
       bakeWorld(this);
       bakePlayer(this);
       for (const boss of Object.values(BOSS_VIEWS)) boss.bake(this);
-      bakeEntities(this);
+      bakeProjectiles(this);
+      bakeHazards(this);
+      bakePickups(this);
       bakeFx(this);
       bakeHud(this);
+      finishBaking(this);
       this.scene.start('fight');
     });
   }
