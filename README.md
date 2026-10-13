@@ -29,11 +29,12 @@ managers' lockfiles are ignored by git so a second one can never be committed.
 `pnpm build` writes a static site to `dist/`: an `index.html` and an `assets/` folder. Any static host
 serves it; where the host builds for you, the build command is `pnpm build` and the output folder is `dist`.
 
-There is no server, no account and no cookie, and the page asks for nothing outside its own folder (the
-font is bundled), so it works at the top of a domain or in any subfolder. File names in `assets/` are
-made from their contents, so they can be cached for good, and the engine has a file of its own that only
-changes when Phaser is upgraded: after an update to the game, returning players fetch about 40 kB, not
-the whole 400 kB. `index.html` is the one file that must not be cached for long.
+The game has no server, no account and no cookie, and its page asks for nothing outside its own folder
+(the font is bundled), so it works at the top of a domain or in any subfolder. A host can still add things
+of its own to the pages it serves; what this one adds is listed under "On Cloudflare". File names in
+`assets/` are made from their contents, so they can be cached for good, and the engine has a file of its
+own that only changes when Phaser is upgraded: after an update to the game, returning players fetch about
+40 kB, not the whole 400 kB. `index.html` is the one file that must not be cached for long.
 
 ### More than one version online
 
@@ -50,14 +51,15 @@ own site.
   save, so give the slot to the newer copy.
 
 Build each version with the tools it was written with. Up to tag `v1.0.0` (commit `06e2972`), the last
-one before the visual overhaul, that is npm (`npm ci && npm run build`); from the overhaul on it is pnpm.
-Most hosts pick the right one from the lockfile. The older version does not say which Node it needs (the
-newer one does, in `.nvmrc`): if its build fails on a host, set that site's Node version to 22 or 24.
+one before the visual overhaul, that is npm (`npm ci && npm run build`); from the overhaul on, tag
+`v2.0.0`, it is pnpm. Most hosts pick the right one from the lockfile. The older version does not say
+which Node it needs (the newer one does, in `.nvmrc`): if its build fails on a host, set that site's Node
+version to 22 or 24.
 
 ### On Cloudflare
 
-The game is set up to live on Cloudflare as two Workers that serve only files, which is free with no limit
-on visits. Each has a subdomain of its own, so their saves stay apart:
+The game is hosted on Cloudflare as two Workers that serve only files, which is free with no limit on
+visits. Each has a subdomain of its own, so their saves stay apart:
 
 | Address                   | Worker      | What                             | How it gets there                         |
 | ------------------------- | ----------- | -------------------------------- | ----------------------------------------- |
@@ -95,6 +97,23 @@ npm ci && npm run build
 npx wrangler@4 deploy --name sprout-v1 --assets ./dist --compatibility-date 2026-10-01 \
   --domain sprout-v1.farulivan.com
 ```
+
+**What the domain adds.** Two settings of `farulivan.com` each put a small script on every page it serves,
+on both sites. They are Cloudflare's, not the game's, and nothing in this repo switches them on or off:
+
+- **Web Analytics** counts visits and measures loading. Its script comes from
+  `static.cloudflareinsights.com` and reports each page view to `/cdn-cgi/rum` on the same domain: the
+  page's address, how long it took to load, and the browser and system version. It sets no cookie and
+  keeps nothing in the browser. The figures are in the Cloudflare dashboard under **Web Analytics**, and
+  **Manage Site** there switches it off.
+- **The bot check** (Cloudflare calls it JavaScript Detections; with Bot Fight Mode it is always on) runs a
+  short test from `/cdn-cgi/challenge-platform/` to tell browsers from bots, and keeps the result in a
+  `cf_clearance` cookie on `.farulivan.com`. The check itself never blocks or challenges a visitor. It is
+  set for the whole domain, under **Security Settings → Bot traffic**, and cannot be left out for these
+  two addresses alone.
+
+Both were checked on the live site in October 2026 and deliberately left on: the first shows how many
+people play each version, and the second guards the rest of the domain.
 
 ## Controls
 
