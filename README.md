@@ -49,10 +49,52 @@ own site.
   `sprout.save.v2` and touches nothing else. Builds from before this option existed always use the main
   save, so give the slot to the newer copy.
 
-Build each version with the tools it was written with. Up to commit `06e2972`, the last one before the
-visual overhaul, that is npm (`npm ci && npm run build`); from the overhaul on it is pnpm. Most hosts
-pick the right one from the lockfile. The older version does not say which Node it needs (the newer one
-does, in `.nvmrc`): if its build fails on a host, set that site's Node version to 22 or 24.
+Build each version with the tools it was written with. Up to tag `v1.0.0` (commit `06e2972`), the last
+one before the visual overhaul, that is npm (`npm ci && npm run build`); from the overhaul on it is pnpm.
+Most hosts pick the right one from the lockfile. The older version does not say which Node it needs (the
+newer one does, in `.nvmrc`): if its build fails on a host, set that site's Node version to 22 or 24.
+
+### On Cloudflare
+
+The game is set up to live on Cloudflare as two Workers that serve only files, which is free with no limit
+on visits. Each has a subdomain of its own, so their saves stay apart:
+
+| Address                   | Worker      | What                             | How it gets there                         |
+| ------------------------- | ----------- | -------------------------------- | ----------------------------------------- |
+| `sprout.farulivan.com`    | `sprout`    | the game, from `main`            | Cloudflare builds and deploys every merge |
+| `sprout-v1.farulivan.com` | `sprout-v1` | the first version, tag `v1.0.0`  | uploaded once by hand                     |
+
+**The game.** `wrangler.jsonc` says what the site is (the `dist/` folder), what the Worker is called and
+which address it answers on, and `public/_headers` sets the caching described above. The build is set up
+once in the Cloudflare dashboard, under the Worker's **Settings → Build**, and these values live only
+there:
+
+| Setting         | Value                                                            |
+| --------------- | ---------------------------------------------------------------- |
+| Git branch      | `main`                                                           |
+| Build command   | `corepack pnpm install --frozen-lockfile && corepack pnpm build` |
+| Deploy command  | `./node_modules/.bin/wrangler deploy`                            |
+| Preview command | `./node_modules/.bin/wrangler preview`                           |
+| Build variable  | `SKIP_DEPENDENCY_INSTALL` = `1`                                  |
+
+They differ from Cloudflare's defaults for two reasons. Its builder comes with an older pnpm than the one
+pinned here and would install with that, so the variable turns its own install off and the build command
+fetches the pinned pnpm through Corepack instead. And its default commands start with `npx`, which this
+project refuses (see "Run it"), so they call the installed wrangler directly.
+
+With **Enable Preview Builds** ticked there, every pull request is built too and gets an address of its
+own to try the change at. Those addresses are public.
+
+To serve a build locally the way Cloudflare will, headers included: `pnpm build && pnpm exec wrangler dev`.
+
+**The first version** never changes, so nothing builds it automatically. To upload it:
+
+```bash
+git worktree add ../sprout-v1 v1.0.0 && cd ../sprout-v1
+npm ci && npm run build
+npx wrangler@4 deploy --name sprout-v1 --assets ./dist --compatibility-date 2026-10-01 \
+  --domain sprout-v1.farulivan.com
+```
 
 ## Controls
 

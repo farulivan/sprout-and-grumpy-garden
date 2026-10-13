@@ -1,0 +1,17 @@
+// How Cloudflare serves the game. Cloudflare builds and deploys every merge to main by itself: it runs
+// `pnpm build`, then `pnpm exec wrangler deploy`, which reads this file. See "Where it is hosted" in the README.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // Has to be the Worker's name in the Cloudflare dashboard, or the build is refused.
+  "name": "sprout",
+  "compatibility_date": "2026-10-01",
+  // There is no server code: the site is the folder `pnpm build` writes, with the headers in public/_headers.
+  "assets": { "directory": "./dist" },
+  // The game's one address. Deploying creates its DNS record and certificate.
+  "routes": [{ "pattern": "sprout.farulivan.com", "custom_domain": true }],
+  // No second copy of the game at sprout.<account>.workers.dev...
+  "workers_dev": false,
+  // ...but a pull request still gets a link of its own there, to try a change before it is merged.
+  "preview_urls": true,
+  "previews": {},
+}
