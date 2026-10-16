@@ -367,10 +367,5 @@ M4 Mac at 1920x1080 is about 30 draw calls, 0.2 ms of script and 140 kB of short
 
 ## Ideas for later
 
-- A second chapter (e.g. "The Prickly Cactus" or "The Moody Mushroom") and a small level-select map.
-- A dash or a "Sunshine Super" meter that fills with hits.
-- Recorded sound and music to replace the synthesized placeholders (the picture has had its overhaul).
-- An installable, offline version (PWA) for tablets. (Give its service worker the game's own folder as
-  its scope, or it will take over other copies of the game on the same domain.)
-- A trimmed build of Phaser. The engine is 93% of the download and the game uses a small part of it: no
-  physics, tilemaps, loader, tweens or input plugins.
+[`docs/future-improvements.md`](docs/future-improvements.md) lists what could come next, from small fixes to a
+second boss, with what each change would take. It also lists the ideas that were decided against, and why.
