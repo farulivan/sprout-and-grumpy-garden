@@ -163,8 +163,9 @@ export class Fight {
     for (const d of this.pickups) {
       if (d.dead || !circleHit(d, hb)) continue;
       d.dead = true;
-      if (p.hp < p.maxHp) p.hp++;
-      this.emit({ type: 'pickup', x: d.x, y: d.y });
+      const healed = p.hp < p.maxHp;
+      if (healed) p.hp++;
+      this.emit({ type: 'pickup', x: d.x, y: d.y, healed });
     }
     if (!p.alive) this.onPlayerDown();
   }

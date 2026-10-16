@@ -21,7 +21,7 @@ export type SimEvent =
   | { type: 'fightStart' }
   | { type: 'phase'; phase: number; x: number; y: number }
   | { type: 'groundPuff'; x: number }
-  | { type: 'pickup'; x: number; y: number }
+  | { type: 'pickup'; x: number; y: number; healed: boolean } // healed = false when Pip's hearts were full
   | { type: 'bossDefeated'; x: number; y: number }
   | { type: 'confetti' }
   | { type: 'playerDown' }

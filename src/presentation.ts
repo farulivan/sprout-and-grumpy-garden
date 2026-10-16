@@ -275,7 +275,7 @@ export function present(e: SimEvent, p: Presenter, opts: { touch: boolean }) {
       break;
     case 'pickup':
       p.sfx('pickup');
-      p.toast('Dewdrop! +1 heart', 2.4, 'good');
+      p.toast(e.healed ? 'Dewdrop! +1 heart' : 'Dewdrop! Hearts already full', 2.4, 'good');
       p.ring(e.x, e.y, { color: '#bfeaff', from: 8, to: 62, life: 0.4 });
       p.burst(e.x, e.y, { n: 9, color: '#8fd8ff', speed: 150, size: 4, life: 0.5, gravity: 240 });
       p.burst(e.x, e.y, {
@@ -288,17 +288,18 @@ export function present(e: SimEvent, p: Presenter, opts: { touch: boolean }) {
         shape: 'star',
         glow: true,
       });
-      p.burst(e.x, e.y - 8, {
-        n: 2,
-        color: '#ff8fa8',
-        speed: 60,
-        size: 6,
-        life: 0.9,
-        gravity: -60,
-        shape: 'heart',
-        dir: UP,
-        spread: 1,
-      });
+      if (e.healed)
+        p.burst(e.x, e.y - 8, {
+          n: 2,
+          color: '#ff8fa8',
+          speed: 60,
+          size: 6,
+          life: 0.9,
+          gravity: -60,
+          shape: 'heart',
+          dir: UP,
+          spread: 1,
+        });
       break;
     case 'bossDefeated':
       p.shake(14);

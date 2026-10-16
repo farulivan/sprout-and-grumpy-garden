@@ -165,6 +165,22 @@ describe('fight', () => {
     expect(fight.pickups.length).toBe(0);
   });
 
+  it('says whether a dewdrop healed, so a full Pip is not promised a heart', () => {
+    const fight = fighting();
+    const pip = fight.player;
+    const pickUp = () => {
+      fight.boss.inv = 0;
+      fight.boss.hit(fight.boss.maxHp * 0.34); // into the next phase, which drops a dewdrop
+      Object.assign(fight.pickups[0], { x: pip.x, y: pip.y - 20 });
+      return steps(fight, 1 / 60).find((e) => e.type === 'pickup');
+    };
+    expect(pickUp()).toMatchObject({ healed: false });
+    expect(pip.hp).toBe(5);
+    pip.hp = 3;
+    expect(pickUp()).toMatchObject({ healed: true });
+    expect(pip.hp).toBe(4);
+  });
+
   it('wins with stars for hits taken, after a slow-motion bloom', () => {
     const fight = fighting();
     fight.player.hits = 2;
