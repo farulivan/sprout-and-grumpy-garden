@@ -363,35 +363,74 @@ h1 {
 .bang {
   color: #ff4d2e;
 }
+/* The four things Pip does, one key each: the key on top, what it does underneath. */
 .controls {
-  display: grid;
+  display: flex;
+  justify-content: center;
+  gap: 28px;
+  margin: 4px 0 12px;
+  padding: 0;
+  list-style: none;
+}
+.controls li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+.controls li > span {
+  display: flex;
   gap: 4px;
-  margin: 0 auto 8px;
-  font-size: 14px;
-  color: #6b5a4c;
 }
 .controls b {
+  font-size: 15px;
   color: #3f7a33;
 }
-.controls small {
-  font-size: 12px;
-  color: #9a8773;
+.controls kbd {
+  min-width: 36px;
+  margin: 0;
+  font-size: 16px;
+  line-height: 30px;
 }
-.controls.keys {
-  grid-template-columns: auto auto;
-  justify-content: center;
-  gap: 6px 22px;
-  padding: 9px 14px;
-  text-align: left;
-  white-space: nowrap;
-  background: rgba(255, 243, 208, 0.7);
-  border: 2px dashed #e3c98f;
-  border-radius: 16px;
+/* a gamepad's buttons are round, with their letters in the colours most pads print them in */
+.controls kbd.pad {
+  width: 36px;
+  padding: 0;
+  border-radius: 50%;
 }
-.controls.keys .wide {
-  grid-column: 1 / -1;
-  text-align: center;
+.controls kbd.a {
+  color: #3f9a3a;
+}
+.controls kbd.x {
+  color: #2f78c8;
+}
+/* on a touch screen the jump button is round, as on screen, and Pip shoots by itself */
+.controls kbd.round {
+  padding: 0 12px;
+  border-radius: 999px;
+}
+.controls kbd.auto {
   font-size: 13px;
+  color: #8a7a6a;
+}
+/* The keys for what the player is using. A gamepad wins over touch, and touch over the keyboard
+   (body.touch is set by src/ui/touch.ts, body.gamepad by src/controls.ts). */
+.controls .on-touch,
+.controls .on-pad {
+  display: none;
+}
+body.touch .controls .on-keys {
+  display: none;
+}
+body.touch .controls .on-touch {
+  display: flex;
+}
+body.gamepad .controls .on-keys,
+body.gamepad .controls .on-touch {
+  display: none;
+}
+body.gamepad .controls .on-pad {
+  display: flex;
 }
 .tip {
   margin: 0 0 10px;
@@ -581,23 +620,9 @@ kbd {
   color: #8a7a6a;
 }
 
-/* Show keyboard help on desktop, touch help on tablets/phones (body.touch is set by src/ui/touch.ts). */
-.touch-only {
-  display: none;
-}
-body.touch .touch-only {
-  display: grid;
-}
+/* Keyboard hints ("or press Enter") are not shown on tablets and phones (body.touch, src/ui/touch.ts). */
 body.touch .keys-only {
   display: none;
-}
-
-/* The gamepad line appears once a gamepad is connected (body.gamepad is set by src/controls.ts). */
-.pad-only {
-  display: none;
-}
-body.gamepad .pad-only {
-  display: grid;
 }
 
 /* ---------- round HUD buttons (sound + pause), visible only during the fight ---------- */
