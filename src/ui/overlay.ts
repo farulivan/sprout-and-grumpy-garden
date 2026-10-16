@@ -7,6 +7,7 @@ export interface OverlayHandlers {
   start(): void;
   resume(): void;
   pause(): void;
+  title(): void;
   mute(): void;
   easy(on: boolean): void;
 }
@@ -28,6 +29,7 @@ export class Overlay {
     lose: byId('lose-card'),
     pause: byId('pause-card'),
   };
+  private showing: Card | null = null;
   private easyToggles = [...document.querySelectorAll<HTMLInputElement>('.easy-toggle')];
 
   constructor(handlers: OverlayHandlers, easy: boolean) {
@@ -38,9 +40,10 @@ export class Overlay {
         handlers.easy(el.checked);
       });
     }
-    for (const id of ['btn-start', 'btn-again', 'btn-retry'])
+    for (const id of ['btn-start', 'btn-again', 'btn-retry', 'btn-restart'])
       byId(id).addEventListener('click', handlers.start);
     byId('btn-resume').addEventListener('click', handlers.resume);
+    byId('btn-title').addEventListener('click', handlers.title);
     // blur(): otherwise Space or Enter would "click" the focused button again mid-fight
     byId('btn-pause').addEventListener('click', (e) => {
       (e.currentTarget as HTMLElement).blur();
@@ -57,8 +60,19 @@ export class Overlay {
   }
 
   show(card: Card | null) {
+    this.showing = card;
     this.root.classList.toggle('hidden', !card);
     for (const [name, el] of Object.entries(this.cards)) el.classList.toggle('hidden', name !== card);
+  }
+
+  // Press the button the player has tabbed to on the card that is showing, or else its first one.
+  press() {
+    const buttons = this.buttons();
+    (buttons.find((b) => b === document.activeElement) ?? buttons[0])?.click();
+  }
+
+  private buttons(): HTMLButtonElement[] {
+    return this.showing ? [...this.cards[this.showing].querySelectorAll('button')] : [];
   }
 
   showWin(r: FightResult, best: number | null, isBest: boolean) {

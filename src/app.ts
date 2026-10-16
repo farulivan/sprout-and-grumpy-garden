@@ -37,6 +37,7 @@ export class App {
         start: () => this.start(),
         resume: () => this.setPaused(false),
         pause: () => this.setPaused(true),
+        title: () => this.toTitle(),
         mute: () => {
           o.audio.init();
           this.toggleMute();
@@ -55,13 +56,24 @@ export class App {
   start() {
     const { audio, controls } = this.o;
     audio.init();
-    this.fight = new Fight({ seed: newSeed(), easy: this.overlay.easy });
-    this.acc = this.frozen = 0;
-    this.o.onFight?.(this.fight);
-    this.setPaused(false);
+    this.replaceFight(new Fight({ seed: newSeed(), easy: this.overlay.easy }));
     this.overlay.show(null);
     audio.startMusic();
     controls.endFrame(); // the key that started the game must not also make Pip jump
+  }
+
+  // Leave the fight for the sleepy garden behind the title card, as when the game first opened.
+  toTitle() {
+    this.replaceFight(new Fight({ seed: newSeed(), title: true }));
+    this.overlay.show('title');
+    this.o.audio.stopMusic();
+  }
+
+  private replaceFight(fight: Fight) {
+    this.fight = fight;
+    this.acc = this.frozen = 0;
+    this.o.onFight?.(fight);
+    this.setPaused(false);
   }
 
   setPaused(paused: boolean) {
@@ -90,7 +102,8 @@ export class App {
     if (c.pressed('mute')) this.toggleMute();
     let stepped = false;
     if (this.paused) {
-      if (c.pressed('pause') || c.pressed('start')) this.setPaused(false);
+      if (c.pressed('pause')) this.setPaused(false);
+      else if (c.pressed('start')) this.overlay.press(); // Enter: the button tabbed to, or "Keep playing"
     } else if (state === 'play' && c.pressed('pause')) {
       this.setPaused(true);
     } else if (state === 'title' && (c.pressed('start') || c.pressed('jump') || c.pressed('shoot'))) {

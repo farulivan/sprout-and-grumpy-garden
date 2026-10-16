@@ -506,6 +506,43 @@ kbd {
   outline: 4px solid #ffd23f;
   outline-offset: 3px;
 }
+/* The ways out of a paused fight (start over, back to the title). Wood and cream, like the round buttons
+   over the game: quieter than the green button, which stays the one to press. */
+.leave {
+  margin-top: 18px;
+}
+.btn.wood {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 20px 8px 15px;
+  font-size: 17px;
+  color: var(--wood);
+  text-shadow: 0 1px 0 #fff;
+  background: linear-gradient(#fffaf0, #f6e7c4 60%, #ebd3a3);
+  border-color: var(--wood);
+  box-shadow:
+    inset 0 3px 0 rgba(255, 255, 255, 0.8),
+    inset 0 -3px 0 rgba(107, 68, 35, 0.14),
+    0 5px 0 var(--wood-dark),
+    0 10px 12px rgba(0, 0, 0, 0.22);
+}
+.btn.wood:active {
+  box-shadow:
+    inset 0 3px 0 rgba(255, 255, 255, 0.8),
+    inset 0 -3px 0 rgba(107, 68, 35, 0.14),
+    0 1px 0 var(--wood-dark),
+    0 3px 6px rgba(0, 0, 0, 0.22);
+}
+.btn.wood svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
 
 .stars {
   display: flex;
