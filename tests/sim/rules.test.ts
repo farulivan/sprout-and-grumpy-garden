@@ -1,5 +1,6 @@
 // The rules of a fight that the README promises players.
 import { describe, expect, it } from 'vitest';
+import { GROUND } from '../../src/config';
 import { Fight } from '../../src/sim/fight';
 import { NO_INPUT } from '../../src/sim/input';
 import type { SimEvent } from '../../src/sim/events';
@@ -179,6 +180,22 @@ describe('fight', () => {
     pip.hp = 3;
     expect(pickUp()).toMatchObject({ healed: true });
     expect(pip.hp).toBe(4);
+  });
+
+  it('bursts petals on the ground instead of letting them slide on through the soil', () => {
+    const fight = fighting();
+    fight.boss.phase = 3; // two volleys
+    fight.boss.startAttack('petalFan');
+    let bursts = 0,
+      deepest = 0;
+    for (let i = 0; i < 60 * 4; i++) {
+      fight.player.inv = 999;
+      fight.step(NO_INPUT);
+      for (const e of fight.drainEvents()) if (e.type === 'groundPuff' && e.kind === 'petal') bursts++;
+      for (const p of fight.projectiles) if (p.kind === 'petal') deepest = Math.max(deepest, p.y);
+    }
+    expect(bursts).toBeGreaterThan(0);
+    expect(deepest).toBeLessThan(GROUND + 10); // never sunk deeper than half its size
   });
 
   it('wins with stars for hits taken, after a slow-motion bloom', () => {

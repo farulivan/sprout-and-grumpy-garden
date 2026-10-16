@@ -1,5 +1,7 @@
 // Things that happen in the simulation that the outside world reacts to with sound, particles, shake or
 // text. The simulation only announces them; src/presentation.ts decides what each one looks and sounds like.
+import type { ProjectileKind } from './projectile';
+
 export interface FightResult {
   time: number; // seconds of fight time
   hits: number; // times Pip was hurt
@@ -20,7 +22,7 @@ export type SimEvent =
   | { type: 'introRoar' }
   | { type: 'fightStart' }
   | { type: 'phase'; phase: number; x: number; y: number }
-  | { type: 'groundPuff'; x: number }
+  | { type: 'groundPuff'; x: number; kind: ProjectileKind } // a seed or petal of Sunny's hit the ground
   | { type: 'pickup'; x: number; y: number; healed: boolean } // healed = false when Pip's hearts were full
   | { type: 'bossDefeated'; x: number; y: number }
   | { type: 'confetti' }

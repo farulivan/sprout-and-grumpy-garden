@@ -10,7 +10,7 @@ import type { Hazard } from './hazards';
 import type { InputFrame } from './input';
 import { circleHit, prune } from './math';
 import type { Dewdrop } from './pickups';
-import { Player } from './player';
+import { PIP_LOWEST, Player } from './player';
 import type { Projectile } from './projectile';
 import { Rng } from './rng';
 
@@ -79,7 +79,10 @@ export class Fight {
     this.boss.update(sdt);
     for (const p of this.projectiles) {
       p.update(sdt);
-      if (p.hitGround) this.emit({ type: 'groundPuff', x: p.x });
+      // Petals fly straight, so the low ones in a fan dive into the ground. Once one is wholly below
+      // anything Pip can reach it can never hit him, so it bursts there instead of sliding on through the soil.
+      if (p.kind === 'petal' && p.y - p.r >= PIP_LOWEST) p.dead = p.hitGround = true;
+      if (p.hitGround) this.emit({ type: 'groundPuff', x: p.x, kind: p.kind });
     }
     for (const h of this.hazards) h.update(sdt);
     for (const d of this.pickups) d.update(sdt);

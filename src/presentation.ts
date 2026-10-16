@@ -261,17 +261,32 @@ export function present(e: SimEvent, p: Presenter, opts: { touch: boolean }) {
     }
     case 'groundPuff':
       p.burst(e.x, GROUND, { ...DUST, n: 4, speed: 60 });
-      p.burst(e.x, GROUND - 2, {
-        n: 4,
-        colors: ['#8a5530', '#b47a4c'],
-        speed: 150,
-        size: 3.5,
-        life: 0.5,
-        gravity: 520,
-        shape: 'clod',
-        dir: UP,
-        spread: 1.8,
-      });
+      if (e.kind === 'petal')
+        // the petal tears into scraps on the grass
+        p.burst(e.x, GROUND - 4, {
+          n: 4,
+          colors: ['#ffd23f', '#ff9a1f', '#fff0a0'],
+          speed: 130,
+          size: 4.5,
+          life: 0.6,
+          gravity: 320,
+          shape: 'petal',
+          dir: UP,
+          spread: 2.2,
+        });
+      else
+        // the seed digs in and kicks up earth
+        p.burst(e.x, GROUND - 2, {
+          n: 4,
+          colors: ['#8a5530', '#b47a4c'],
+          speed: 150,
+          size: 3.5,
+          life: 0.5,
+          gravity: 520,
+          shape: 'clod',
+          dir: UP,
+          spread: 1.8,
+        });
       break;
     case 'pickup':
       p.sfx('pickup');
