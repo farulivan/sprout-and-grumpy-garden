@@ -19,7 +19,13 @@ it('moves with the stick or the d-pad', () => {
 
 it('ignores a stick that is only resting off-centre', () => {
   const state = readPad(pad([], [0.2, -0.2]));
-  expect([state.left, state.right, state.up]).toEqual([false, false, false]);
+  expect([state.left, state.right, state.up, state.down]).toEqual([false, false, false, false]);
+});
+
+it('reads down from the stick or the d-pad, for moving through the pause card', () => {
+  expect(readPad(pad([], [0, 0.9])).down).toBe(true);
+  expect(readPad(pad([13])).down).toBe(true);
+  expect(readPad(pad([12])).down).toBe(false);
 });
 
 it('aims up, jumps, shoots and pauses', () => {
