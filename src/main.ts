@@ -12,6 +12,7 @@ import { BootScene } from './game/scenes/BootScene';
 import { FightScene } from './game/scenes/FightScene';
 import { HudScene } from './game/scenes/HudScene';
 import { initLayout } from './ui/layout';
+import { finishLoading } from './ui/loading';
 import { initTouch } from './ui/touch';
 
 const audio = new GameAudio();
@@ -36,11 +37,19 @@ const app = new App({
 
 presenter.onHitStop = (seconds) => app.hitStop(seconds);
 
-initLayout(document.getElementById('stage') as HTMLElement);
+const stage = document.getElementById('stage') as HTMLElement;
+initLayout(stage);
 const fightScene = new FightScene(app, presenter);
 const game = createGame('game-root', [new BootScene(audio), fightScene, new HudScene(app, presenter)]);
 // The App runs before the scenes each frame: it advances the simulation, then the scenes draw it.
 game.events.on(Core.Events.STEP, (_time: number, deltaMs: number) => app.tick(deltaMs / 1000));
+// The loading screen stays up until the garden has been drawn once.
+const loaded = () => {
+  if (!game.scene.isActive('fight')) return;
+  game.events.off(Core.Events.POST_RENDER, loaded);
+  finishLoading(stage);
+};
+game.events.on(Core.Events.POST_RENDER, loaded);
 
 initTouch(controls, unlockAudio);
 window.addEventListener('blur', () => app.setPaused(true)); // auto-pause when the tab/window loses focus

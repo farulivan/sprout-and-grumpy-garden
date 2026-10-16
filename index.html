@@ -10,11 +10,276 @@
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🌻%3C/text%3E%3C/svg%3E"
     />
     <link rel="stylesheet" href="/src/style.css" />
+    <!-- The loading screen and the title card are written in Fredoka, and the game waits for it before it
+         draws anything: fetch it with the page, not once the script has arrived and asked for it. -->
+    <link
+      rel="preload"
+      href="/node_modules/@fontsource/fredoka/files/fredoka-latin-700-normal.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      href="/node_modules/@fontsource/fredoka/files/fredoka-latin-600-normal.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      href="/node_modules/@fontsource/fredoka/files/fredoka-latin-400-normal.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
   </head>
   <body>
     <div id="rotate">Turn your tablet sideways for a bigger garden! 🔄</div>
     <div id="stage">
       <div id="game-root"></div>
+      <!-- Shown from the first paint, while the script is still on its way, and removed by
+           src/ui/loading.ts once the garden has been drawn. Plain HTML and CSS: it waits for nothing. -->
+      <div id="loading" role="status">
+        <!-- The garden at its simplest, on the same lines as the real one (src/game/views/world/), so the
+             real garden grows in over it -->
+        <svg
+          class="loading-garden"
+          viewBox="0 0 960 540"
+          preserveAspectRatio="xMidYMid slice"
+          aria-hidden="true"
+        >
+          <defs>
+            <linearGradient id="lg-sky" gradientUnits="userSpaceOnUse" x2="0" y2="468">
+              <stop offset="0" stop-color="#3ea5f2" />
+              <stop offset="0.42" stop-color="#7fcbff" />
+              <stop offset="0.72" stop-color="#c2e9ff" />
+              <stop offset="0.88" stop-color="#e9f8f0" />
+              <stop offset="1" stop-color="#f7fbdf" />
+            </linearGradient>
+            <radialGradient id="lg-glow">
+              <stop offset="0" stop-color="#fffbdc" stop-opacity="0.95" />
+              <stop offset="0.2" stop-color="#fff2b0" stop-opacity="0.62" />
+              <stop offset="0.5" stop-color="#ffe48c" stop-opacity="0.2" />
+              <stop offset="1" stop-color="#ffdc82" stop-opacity="0" />
+            </radialGradient>
+            <radialGradient id="lg-sun" fx="0.35" fy="0.32">
+              <stop offset="0" stop-color="#fffce2" />
+              <stop offset="0.5" stop-color="#ffee93" />
+              <stop offset="1" stop-color="#ffcb52" />
+            </radialGradient>
+            <linearGradient id="lg-mountains" gradientUnits="userSpaceOnUse" y1="245" x2="0" y2="400">
+              <stop offset="0" stop-color="#a5c5ea" />
+              <stop offset="0.5" stop-color="#cfe4f3" />
+              <stop offset="1" stop-color="#e6f3f4" />
+            </linearGradient>
+            <linearGradient id="lg-far" gradientUnits="userSpaceOnUse" y1="326" x2="0" y2="440">
+              <stop offset="0" stop-color="#9bd0b1" />
+              <stop offset="0.5" stop-color="#b7dfc0" />
+              <stop offset="1" stop-color="#d2ecd0" />
+            </linearGradient>
+            <linearGradient id="lg-meadow" gradientUnits="userSpaceOnUse" y1="374" x2="0" y2="468">
+              <stop offset="0" stop-color="#b6ea8e" />
+              <stop offset="0.5" stop-color="#98da75" />
+              <stop offset="1" stop-color="#84cd67" />
+            </linearGradient>
+            <linearGradient id="lg-turf" gradientUnits="userSpaceOnUse" y1="462" x2="0" y2="490">
+              <stop offset="0" stop-color="#a6ec6c" />
+              <stop offset="0.5" stop-color="#74d04e" />
+              <stop offset="1" stop-color="#4dae3d" />
+            </linearGradient>
+            <linearGradient id="lg-soil" gradientUnits="userSpaceOnUse" y1="468" x2="0" y2="540">
+              <stop offset="0" stop-color="#b5733f" />
+              <stop offset="0.5" stop-color="#8f5632" />
+              <stop offset="1" stop-color="#663b23" />
+            </linearGradient>
+            <g id="lg-cloud">
+              <circle cx="-58" cy="-14" r="20" />
+              <circle cx="-28" cy="-27" r="28" />
+              <circle cx="8" cy="-33" r="32" />
+              <circle cx="42" cy="-22" r="24" />
+              <circle cx="66" cy="-10" r="16" />
+              <rect x="-78" y="-18" width="160" height="18" rx="9" />
+            </g>
+          </defs>
+          <rect width="960" height="540" fill="url(#lg-sky)" />
+          <circle cx="132" cy="92" r="190" fill="url(#lg-glow)" />
+          <circle cx="132" cy="92" r="43" fill="url(#lg-sun)" stroke="#f6a933" stroke-width="3.5" />
+          <path
+            d="M94.5 86.1A38 38 0 0 1 143.7 55.9"
+            fill="none"
+            stroke="#fff"
+            stroke-opacity="0.55"
+            stroke-width="2"
+          />
+          <g fill="#2b1b17">
+            <ellipse cx="118.4" cy="92.4" rx="5.6" ry="6.5" />
+            <ellipse cx="145.6" cy="92.4" rx="5.6" ry="6.5" />
+          </g>
+          <g fill="#fff">
+            <circle cx="116.8" cy="90.1" r="2.5" />
+            <circle cx="144.1" cy="90.1" r="2.5" />
+          </g>
+          <g fill="#ff6987" opacity="0.42">
+            <ellipse cx="111.8" cy="102.2" rx="6.5" ry="3.9" />
+            <ellipse cx="152.2" cy="102.2" rx="6.5" ry="3.9" />
+          </g>
+          <path
+            d="M138.4 103.7A7 7 0 0 1 125.6 103.7"
+            fill="none"
+            stroke="#2b1b17"
+            stroke-width="3.2"
+            stroke-linecap="round"
+          />
+          <g class="drift">
+            <g transform="translate(900 232) scale(0.5)" opacity="0.75">
+              <use href="#lg-cloud" fill="#c3d0ee" />
+              <use href="#lg-cloud" fill="#fff" transform="translate(-2.5 -4) scale(0.93)" />
+            </g>
+            <g transform="translate(180 152) scale(0.6)">
+              <use href="#lg-cloud" fill="#c3d0ee" />
+              <use href="#lg-cloud" fill="#fff" transform="translate(-2.5 -4) scale(0.93)" />
+            </g>
+            <g transform="translate(430 112) scale(0.82)">
+              <use href="#lg-cloud" fill="#c3d0ee" />
+              <use href="#lg-cloud" fill="#fff" transform="translate(-2.5 -4) scale(0.93)" />
+            </g>
+            <g transform="translate(780 74) scale(1)">
+              <use href="#lg-cloud" fill="#c3d0ee" />
+              <use href="#lg-cloud" fill="#fff" transform="translate(-2.5 -4) scale(0.93)" />
+            </g>
+          </g>
+          <path
+            d="M-8 271.1l12 -3.1l12 -2.5l12 -1.6l12 -0.6l12 0.6l12 1.6l12 2.6l12 2.9l12 -2.4l12 -2.1l12 -1.9l12 -1.9l12 -2l12 -2.1l12 -2.1l12 -2l12 -1.7l12 -1.1l12 -0.3l12 0.7l12 1.9l12 3.2l12 4.5l12 5.6l12 6.5l12 7.2l12 7.4l12 6.9l12 0.8l12 0.4l12 -0.1l12 -0.4l12 -0.6l12 -0.5l12 -0.2l12 0.4l12 -2.9l12 -4.3l12 -3.1l12 -1.9l12 -0.7l12 0.2l12 0.9l12 1.3l12 1.4l12 1.3l12 1l12 -0.1l12 -6.3l12 -6.5l12 -6.5l12 -6.2l12 -5.5l12 -4.6l12 -3.4l12 -2l12 -0.7l12 0.6l12 1.8l12 2.7l12 3.3l12 3.7l12 3.8l12 3.7l12 3.5l12 3.3l12 3.1l12 2.4l12 -3l12 -2.6l12 -1.8l12 -0.9l12 0.3l12 1.4l12 2.5l12 3.5l12 4.2l12 4.7l12 4.9l12 4.9l12 4.8l4 1.5V472H-8Z"
+            fill="url(#lg-mountains)"
+            stroke="#fff"
+            stroke-opacity="0.45"
+            stroke-width="3"
+          />
+          <path
+            d="M-8 337.2l16 -3.5l16 -3.1l16 -2.6l16 -2l16 -1.3l16 -0.7l16 0l16 0.7l16 1.4l16 2l16 2.5l16 3l16 3.3l16 3.5l16 3.7l16 3.7l16 3.6l16 3.4l16 3.1l16 2.7l16 2.3l16 1.9l16 1.4l16 1l16 0.6l16 0.2l16 -0.1l16 -0.3l16 -0.4l16 -0.4l16 -0.3l16 -0.1l16 0.1l16 0.4l16 0.7l16 1.1l16 1.5l16 1.9l16 2.2l16 2.5l16 2.7l16 2.8l16 2.9l16 2.8l16 2.6l16 2.3l16 1.9l16 1.4l16 0.8l16 0.2l16 -0.5l16 -1.1l16 -1.8l16 -2.4l16 -3l16 -3.5l16 -3.9l16 -4.2l16 -4.4l16 -4.5l16 -4.4V472H-8Z"
+            fill="url(#lg-far)"
+          />
+          <path
+            d="M-8 395.2l16 2.4l16 3.4l16 4.2l16 4.8l16 5l16 5l16 4.5l16 3.8l16 2.8l16 1.6l16 0.3l16 -0.8l16 -1.8l16 -2.6l16 -3l16 -3.1l16 -2.9l16 -2.4l16 -1.7l16 -1l16 -0.2l16 0.4l16 0.8l16 1l16 0.8l16 0.3l16 -0.4l16 -1.3l16 -2.3l16 -3.3l16 -4.2l16 -4.8l16 -5.1l16 -5.1l16 -4.7l16 -4l16 -3l16 -1.8l16 -0.6l16 0.6l16 1.6l16 2.4l16 2.8l16 2.9l16 2.7l16 2.2l16 1.6l16 0.8l16 0.1l16 -0.6l16 -1l16 -1.1l16 -0.9l16 -0.5l16 0.3l16 1.2l16 2.3l16 3.3l16 4.2l16 4.8l16 5.2V472H-8Z"
+            fill="url(#lg-meadow)"
+            stroke="#e2fab0"
+            stroke-opacity="0.85"
+            stroke-width="6"
+          />
+          <rect y="466" width="960" height="74" fill="url(#lg-soil)" />
+          <path
+            d="M-8 462.4l12 2l12 -0.3l12 -0.7l12 1l12 0.8l12 -1.7l12 -2.1l12 0.2l12 0.8l12 -0.9l12 -0.8l12 1.7l12 2.1l12 -0.2l12 -1l12 0.7l12 0.8l12 -1.6l12 -2.2l12 0.2l12 1.1l12 -0.5l12 -0.7l12 1.6l12 2.2l12 -0.1l12 -1.2l12 0.4l12 0.7l12 -1.5l12 -2.2l12 0.1l12 1.4l12 -0.2l12 -0.7l12 1.4l12 2.2l12 -0.1l12 -1.5l12 0l12 0.7l12 -1.3l12 -2.2l12 0.1l12 1.6l12 0.1l12 -0.7l12 1.2l12 2.2l12 0l12 -1.7l12 -0.3l12 0.7l12 -1.1l12 -2.1l12 0l12 1.8l12 0.4l12 -0.7l12 1l12 2.1l12 0l12 -1.9l12 -0.6l12 0.7l12 -0.8l12 -2l12 0l12 2l12 0.7l12 -0.7l12 0.7l12 1.9l12 0l12 -2l12 -0.9l12 0.7l12 -0.5l12 -1.9l12 0l12 2.1l4 0.6L968 478Q956.6 498.8 945.2 478Q929.8 495.2 914.4 478Q901.4 490.4 888.4 478Q878.6 496.4 868.8 478Q852.6 492.8 836.4 478Q822.6 491.6 808.8 478Q798.2 497.6 787.6 478Q773 494 758.4 478Q746.2 489.2 734 478Q722.6 498.8 711.2 478Q695.8 495.2 680.4 478Q667.4 490.4 654.4 478Q644.6 496.4 634.8 478Q618.6 492.8 602.4 478Q588.6 491.6 574.8 478Q564.2 497.6 553.6 478Q539 494 524.4 478Q512.2 489.2 500 478Q488.6 498.8 477.2 478Q461.8 495.2 446.4 478Q433.4 490.4 420.4 478Q410.6 496.4 400.8 478Q384.6 492.8 368.4 478Q354.6 491.6 340.8 478Q330.2 497.6 319.6 478Q305 494 290.4 478Q278.2 489.2 266 478Q254.6 498.8 243.2 478Q227.8 495.2 212.4 478Q199.4 490.4 186.4 478Q176.6 496.4 166.8 478Q150.6 492.8 134.4 478Q120.6 491.6 106.8 478Q96.2 497.6 85.6 478Q71 494 56.4 478Q44.2 489.2 32 478Q20.6 498.8 9.2 478Q0.6 495.2 -8 478Z"
+            fill="url(#lg-turf)"
+          />
+          <path
+            d="M968 478Q956.6 498.8 945.2 478Q929.8 495.2 914.4 478Q901.4 490.4 888.4 478Q878.6 496.4 868.8 478Q852.6 492.8 836.4 478Q822.6 491.6 808.8 478Q798.2 497.6 787.6 478Q773 494 758.4 478Q746.2 489.2 734 478Q722.6 498.8 711.2 478Q695.8 495.2 680.4 478Q667.4 490.4 654.4 478Q644.6 496.4 634.8 478Q618.6 492.8 602.4 478Q588.6 491.6 574.8 478Q564.2 497.6 553.6 478Q539 494 524.4 478Q512.2 489.2 500 478Q488.6 498.8 477.2 478Q461.8 495.2 446.4 478Q433.4 490.4 420.4 478Q410.6 496.4 400.8 478Q384.6 492.8 368.4 478Q354.6 491.6 340.8 478Q330.2 497.6 319.6 478Q305 494 290.4 478Q278.2 489.2 266 478Q254.6 498.8 243.2 478Q227.8 495.2 212.4 478Q199.4 490.4 186.4 478Q176.6 496.4 166.8 478Q150.6 492.8 134.4 478Q120.6 491.6 106.8 478Q96.2 497.6 85.6 478Q71 494 56.4 478Q44.2 489.2 32 478Q20.6 498.8 9.2 478Q0.6 495.2 -8 478"
+            fill="none"
+            stroke="#2a8038"
+            stroke-width="2.6"
+          />
+        </svg>
+        <svg class="loading-pip" viewBox="-40 -118 80 126" aria-hidden="true">
+          <defs>
+            <!-- Pip as the game draws it (src/game/views/PlayerView.ts), facing us -->
+            <path
+              id="pip-body"
+              d="M0-50C15-50 22-38 22-24C22-9 13-2 0-2C-13-2-22-9-22-24C-22-38-15-50 0-50Z"
+            />
+            <clipPath id="pip-clip"><use href="#pip-body" /></clipPath>
+            <g id="pip-leaf">
+              <path d="M0 0C4-9.4 18.2-6 20 0C18.2 6 4 9.4 0 0Z" fill="url(#pip-leaf-fill)" />
+              <path d="M3 0H15" stroke="#e0fbb0" stroke-width="1.3" opacity="0.8" />
+            </g>
+            <radialGradient
+              id="pip-skin"
+              gradientUnits="userSpaceOnUse"
+              cx="0"
+              cy="-26"
+              r="30"
+              fx="-8"
+              fy="-37"
+            >
+              <stop offset="0" stop-color="#e6fd9e" />
+              <stop offset="0.5" stop-color="#b3ee6a" />
+              <stop offset="1" stop-color="#82d44c" />
+            </radialGradient>
+            <radialGradient id="pip-shade" gradientUnits="userSpaceOnUse" cx="-9.9" cy="-38" r="42">
+              <stop offset="0.55" stop-color="#145a2a" stop-opacity="0" />
+              <stop offset="0.8" stop-color="#145a2a" stop-opacity="0.2" />
+              <stop offset="1" stop-color="#145a2a" stop-opacity="0.36" />
+            </radialGradient>
+            <radialGradient id="pip-light">
+              <stop offset="0" stop-color="#fff" stop-opacity="0.34" />
+              <stop offset="0.5" stop-color="#fff" stop-opacity="0.15" />
+              <stop offset="1" stop-color="#fff" stop-opacity="0" />
+            </radialGradient>
+            <radialGradient id="pip-tummy">
+              <stop offset="0" stop-color="#f6ffd6" stop-opacity="0.6" />
+              <stop offset="0.5" stop-color="#f6ffd6" stop-opacity="0.27" />
+              <stop offset="1" stop-color="#f6ffd6" stop-opacity="0" />
+            </radialGradient>
+            <radialGradient id="pip-floor">
+              <stop offset="0" stop-color="#14301a" stop-opacity="0.5" />
+              <stop offset="0.5" stop-color="#14301a" stop-opacity="0.22" />
+              <stop offset="1" stop-color="#14301a" stop-opacity="0" />
+            </radialGradient>
+            <linearGradient id="pip-foot" x2="0" y2="1">
+              <stop offset="0" stop-color="#d59c60" />
+              <stop offset="1" stop-color="#8c5730" />
+            </linearGradient>
+            <linearGradient id="pip-leaf-fill">
+              <stop offset="0" stop-color="#58b947" />
+              <stop offset="1" stop-color="#aaec7a" />
+            </linearGradient>
+          </defs>
+          <ellipse class="floor" cx="0" cy="1" rx="26" ry="7" fill="url(#pip-floor)" />
+          <g class="hop">
+            <g fill="url(#pip-foot)" stroke="#4a2a14" stroke-width="2.6">
+              <ellipse cx="-8" cy="-3" rx="8.5" ry="5.6" />
+              <ellipse cx="8" cy="-3" rx="8.5" ry="5.6" />
+            </g>
+            <g fill="none" stroke-linecap="round">
+              <path d="M0-46Q-2-54 1-62" stroke="#226a2e" stroke-width="6" />
+              <path d="M0-46Q-2-54 1-62" stroke="#7fd65a" stroke-width="2.8" />
+            </g>
+            <g transform="translate(1 -62)" stroke="#226a2e" stroke-width="2.6" stroke-linejoin="round">
+              <g transform="rotate(-136)"><use class="leaf" href="#pip-leaf" /></g>
+              <g transform="scale(-1 1) rotate(-136)"><use class="leaf" href="#pip-leaf" /></g>
+            </g>
+            <use href="#pip-body" fill="url(#pip-skin)" />
+            <g clip-path="url(#pip-clip)">
+              <rect x="-30" y="-60" width="60" height="62" fill="url(#pip-shade)" />
+              <ellipse cx="-8.4" cy="-36.8" rx="20.9" ry="19.2" fill="url(#pip-light)" />
+              <ellipse cx="1" cy="-24" rx="21" ry="19" fill="url(#pip-tummy)" />
+            </g>
+            <use href="#pip-body" fill="none" stroke="#226a2e" stroke-width="3.4" />
+            <g fill="#ff6987" opacity="0.42">
+              <ellipse cx="-14.5" cy="-21.5" rx="5" ry="3" />
+              <ellipse cx="16.5" cy="-21.5" rx="5" ry="3" />
+            </g>
+            <g class="eyes">
+              <ellipse cx="-9.5" cy="-29" rx="4.3" ry="5" fill="#2b1b17" />
+              <ellipse cx="11.5" cy="-29" rx="4.3" ry="5" fill="#2b1b17" />
+              <circle cx="-10.7" cy="-30.8" r="1.9" fill="#fff" />
+              <circle cx="10.3" cy="-30.8" r="1.9" fill="#fff" />
+            </g>
+            <path
+              d="M5.9-20.3A5.4 5.4 0 0 1-3.9-20.3"
+              fill="none"
+              stroke="#2b1b17"
+              stroke-width="2.5"
+              stroke-linecap="round"
+            />
+          </g>
+        </svg>
+        <p>
+          Growing the garden<span class="dots" aria-hidden="true"><i>.</i><i>.</i><i>.</i></span>
+        </p>
+        <!-- After a long wait: an ordinary link to this page, so it works even if the script never arrives -->
+        <a class="slow" href="">Taking a while? <b>Try again</b></a>
+        <noscript><p class="nojs">The garden needs JavaScript to grow.</p></noscript>
+      </div>
       <div id="hud-btns">
         <button id="btn-mute" class="icon-btn" aria-label="Sound on or off">
           <svg class="ico-on" viewBox="0 0 24 24" aria-hidden="true">
