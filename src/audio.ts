@@ -20,6 +20,7 @@ const RECIPES: Record<SfxName, (tone: Tone) => void> = {
   },
   bossHit: (tone) => tone(210, { end: 130, dur: 0.06, vol: 0.08 }),
   faceHit: (tone) => tone(520, { end: 780, type: 'triangle', dur: 0.08, vol: 0.12 }),
+  block: (tone) => tone(1400, { end: 1000, type: 'triangle', dur: 0.05, vol: 0.07 }), // a light "tink"
   telegraph: (tone) => {
     tone(720, { type: 'sine', dur: 0.09, vol: 0.13 });
     tone(980, { type: 'sine', dur: 0.12, vol: 0.13, delay: 0.1 });

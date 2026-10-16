@@ -153,7 +153,7 @@ export class Fight {
         if (b.hit(mult)) {
           if (mult > 1) this.faceHits++;
           this.emit({ type: 'bossHit', x: pr.x, y: pr.y, weak: mult > 1 });
-        }
+        } else this.emit({ type: 'bossBlock', x: pr.x, y: pr.y }); // still waking up, or just changed phase
       } else if (p.alive && circleHit(pr, hb)) {
         pr.dead = true;
         p.hurt();

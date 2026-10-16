@@ -11,6 +11,7 @@ export type SfxName =
   | 'hurt'
   | 'bossHit'
   | 'faceHit'
+  | 'block'
   | 'telegraph'
   | 'spit'
   | 'petal'
@@ -174,6 +175,35 @@ export function present(e: SimEvent, p: Presenter, opts: { touch: boolean }) {
           glow: true,
         });
       }
+      break;
+    case 'bossBlock':
+      // A "tink", a glint, and the seed itself knocked back up the way it came, so a wasted shot can be
+      // seen to be wasted. No leaves fly and he doesn't flinch: that is what a hit looks like.
+      p.sfx('block');
+      p.ring(e.x, e.y, { color: '#ffffff', from: 6, to: 30, life: 0.2 });
+      p.burst(e.x, e.y, {
+        n: 1,
+        color: '#7cc644',
+        speed: 240,
+        size: 7,
+        life: 0.6,
+        gravity: 800,
+        shape: 'leaf',
+        dir: -2.3, // up and back toward Pip
+        spread: 0.5,
+      });
+      p.burst(e.x, e.y, {
+        n: 4,
+        color: '#ffffff',
+        speed: 260,
+        size: 4.5,
+        life: 0.18,
+        gravity: 0,
+        shape: 'spark',
+        glow: true,
+        dir: Math.PI,
+        spread: 1.6,
+      });
       break;
     case 'telegraph':
       p.sfx('telegraph');

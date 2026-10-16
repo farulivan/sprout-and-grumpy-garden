@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { Fight } from '../../src/sim/fight';
 import { NO_INPUT } from '../../src/sim/input';
 import type { SimEvent } from '../../src/sim/events';
+import { Projectile } from '../../src/sim/projectile';
 
 const steps = (fight: Fight, seconds: number) => {
   const events: SimEvent[] = [];
@@ -26,6 +27,22 @@ describe('boss', () => {
     expect(events).toContain('introRoar');
     expect(events).toContain('fightStart');
     expect(fight.boss.state).toBe('fight');
+  });
+
+  it('reports seeds that bounce off while he is invulnerable', () => {
+    const fight = new Fight({ seed: 3 }); // still waking up
+    const boss = fight.boss;
+    const seed = { vx: 0, vy: 0, r: 6, owner: 'player', kind: 'sprout', life: 1 } as const;
+    const shoot = () => {
+      fight.projectiles.push(new Projectile({ ...seed, x: boss.x, y: boss.y })); // right in his face
+      fight.step(NO_INPUT);
+      return fight.drainEvents().map((e) => e.type);
+    };
+    expect(shoot()).toContain('bossBlock');
+    expect(boss.hp).toBe(boss.maxHp);
+    boss.state = 'fight';
+    expect(shoot()).toContain('bossHit');
+    expect(boss.hp).toBe(boss.maxHp - 2);
   });
 
   it('changes phase at 66% and 33% health', () => {
