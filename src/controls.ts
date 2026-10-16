@@ -50,7 +50,7 @@ export class Controls {
     window.addEventListener('blur', () => {
       for (const a of Object.keys(this.held) as Action[]) this.held[a] = false;
     });
-    // lets the page show the gamepad hint only to players who have one
+    // lets the title card show a gamepad's buttons instead of keys, to players who have one
     window.addEventListener('gamepadconnected', () => document.body.classList.add('gamepad'));
   }
 

@@ -128,20 +128,35 @@
             Sunny the Sunflower woke up grumpy and is blocking the garden path! Help little Pip cheer him up
             with a shower of seeds.
           </p>
-          <div class="controls touch-only">
-            <div>Slide on <b>◀ ▶</b> to move, tap <b>Jump</b> to hop.</div>
-            <div>Pip shoots all by itself! Tap <b>⬆</b> to aim up.</div>
-          </div>
-          <div class="controls keys keys-only">
-            <div><kbd>←</kbd><kbd>→</kbd> or <kbd>A</kbd><kbd>D</kbd> <b>move</b></div>
-            <div><kbd>Space</kbd> or <kbd>Z</kbd> <b>jump</b> <small>hold = higher</small></div>
-            <div><kbd>X</kbd> or <kbd>J</kbd> <b>shoot</b> <small>hold</small></div>
-            <div><kbd>↑</kbd> <b>aim up</b> <small>hold</small></div>
-            <div class="wide"><kbd>P</kbd> pause &nbsp;·&nbsp; <kbd>M</kbd> sound</div>
-          </div>
-          <div class="controls pad-only">
-            <div>🎮 Stick or d-pad to move · <b>A</b> jump · <b>X</b> shoot · <b>Start</b> pause</div>
-          </div>
+          <!-- The four things Pip does, with one key each, for whatever the player is using: the keyboard,
+               a touch screen or a gamepad (body.touch and body.gamepad choose). The other keys still work
+               and are listed in the README; pause and sound have buttons of their own during the fight. -->
+          <ul class="controls">
+            <li>
+              <span class="on-keys"><kbd>←</kbd><kbd>→</kbd></span>
+              <span class="on-touch"><kbd>◀ ▶</kbd></span>
+              <span class="on-pad"><kbd>◀ ▶</kbd></span>
+              <b>Move</b>
+            </li>
+            <li>
+              <span class="on-keys"><kbd>Space</kbd></span>
+              <span class="on-touch"><kbd class="round">Jump</kbd></span>
+              <span class="on-pad"><kbd class="pad a">A</kbd></span>
+              <b>Jump</b>
+            </li>
+            <li>
+              <span class="on-keys"><kbd>X</kbd></span>
+              <span class="on-touch"><kbd class="auto">auto</kbd></span>
+              <span class="on-pad"><kbd class="pad x">X</kbd></span>
+              <b>Shoot</b>
+            </li>
+            <li>
+              <span class="on-keys"><kbd>↑</kbd></span>
+              <span class="on-touch"><kbd>⬆</kbd></span>
+              <span class="on-pad"><kbd>↑</kbd></span>
+              <b>Aim</b>
+            </li>
+          </ul>
           <p class="tip">⭐ Face shots do double damage!</p>
           <div class="actions">
             <label class="easy"><input type="checkbox" class="easy-toggle" /> 🌱 Easy mode (8 hearts)</label>
