@@ -126,6 +126,10 @@ people play each version, and the second guards the rest of the domain.
 | Pause / resume | P or Esc | Start | ⏸ button |
 | Sound on/off | M | | 🔊 button |
 
+The title card keeps this short: one key for each of the four actions (Move ←→, Jump Space, Shoot X,
+Aim ↑), or a gamepad's or touch screen's own buttons once the game sees one. Everything else in the table
+still works; it is just not listed there, and pause and sound have buttons on screen during the fight.
+
 Face shots do 2 damage; stem shots do 1. The game auto-pauses when the tab loses focus.
 **Easy mode** (checkbox on the title and lose screens) gives 8 hearts instead of 5.
 A jump pressed a moment before landing still counts, and so does one pressed a moment after walking off an edge.
