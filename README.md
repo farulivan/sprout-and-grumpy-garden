@@ -201,7 +201,7 @@ keyboard / gamepad / touch ─► Controls ─► App ──step(input)──►
 | `src/game/views/sunny/`, `hazards/` | The bigger views keep their drawing code beside them: Sunny's parts (`art.ts`) and layered face (`face.ts`), the hazards' parts (`art.ts`) |
 | `src/game/scenes/`, `src/game/hud/` | `BootScene` (font, baking), `FightScene` (syncs views every frame), `HudScene` (hearts, boss bar, toasts); `hud/art.ts` bakes the HUD's parts |
 | `src/game/fx.ts`, `motion.ts`, `debug.ts` | Particles, rings, the screen flash, shake and camera punch; small helpers for moving things (`rand`, `easeOutBack`); the hitbox overlay |
-| `index.html`, `src/style.css`, `src/ui/` | The HTML cards (title, win, lose, pause) and touch buttons layered over the canvas |
+| `index.html`, `src/style.css`, `src/ui/` | The loading screen, the HTML cards (title, win, lose, pause) and the touch buttons layered over the canvas |
 | `tests/` | Simulation tests, bot fights, and tests for the save, gamepad, music and weather code |
 
 Fight states: `title → play → ending (slow-mo bloom) → win`, or `play → down (Pip naps) → lose`.
@@ -247,6 +247,12 @@ Fight states: `title → play → ending (slow-mo bloom) → win`, or `play → 
   name) has a drop shadow, which is slow to draw on a canvas.
 - **Anything drawn in front of the fight** (depth `front` in `FightScene`) must stay below the line Pip
   stands on, or it will hide feet and ground warnings.
+- **The page works before the script arrives.** On a slow connection the 1.4 MB script takes seconds, and
+  the page shows long before it. So the stage is sized by `style.css` (`src/ui/layout.ts` only keeps `--ui`
+  in step with it), and the loading screen (`#loading` in `index.html`) is plain HTML and CSS. It covers
+  the stage, with the cards hidden under it, until the garden has been drawn once; then
+  `src/ui/loading.ts` fades it out and the title card pops in. Keep it free of anything the script makes.
+  Its garden is drawn on the same lines as the real one, so the real one grows in over it.
 - **Phaser 4 is not Phaser 3.** Most examples online are for v3 and some of its API is gone (`setTintFill`,
   `Geom.Point`). Phaser ships its own notes per topic in `node_modules/phaser/skills/*/SKILL.md`; read the
   relevant one before using an API.
