@@ -10,6 +10,29 @@
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🌻%3C/text%3E%3C/svg%3E"
     />
     <link rel="stylesheet" href="/src/style.css" />
+    <!-- The loading screen and the title card are written in Fredoka, and the game waits for it before it
+         draws anything: fetch it with the page, not once the script has arrived and asked for it. -->
+    <link
+      rel="preload"
+      href="/node_modules/@fontsource/fredoka/files/fredoka-latin-700-normal.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      href="/node_modules/@fontsource/fredoka/files/fredoka-latin-600-normal.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      href="/node_modules/@fontsource/fredoka/files/fredoka-latin-400-normal.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
   </head>
   <body>
     <div id="rotate">Turn your tablet sideways for a bigger garden! 🔄</div>
