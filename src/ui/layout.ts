@@ -1,14 +1,10 @@
-// Sizes the stage to the window. Everything in it (the game canvas, the cards, the touch buttons) follows.
-import { H, W } from '../config';
+// The stage is sized in style.css (16:9, as big as the window allows), so the page is laid out before any
+// script has run. This keeps --ui, how much the cards and touch buttons scale, in step with its size.
+import { H } from '../config';
 import { clamp } from '../sim/math';
 
 export function initLayout(stage: HTMLElement) {
-  const resize = () => {
-    const s = Math.min(window.innerWidth / W, window.innerHeight / H) * 0.97;
-    stage.style.width = Math.round(W * s) + 'px';
-    stage.style.height = Math.round(H * s) + 'px';
-    stage.style.setProperty('--ui', clamp(s, 0.45, 1.6).toFixed(3)); // cards + touch buttons scale with the game
-  };
-  window.addEventListener('resize', resize);
-  resize();
+  const fit = () => stage.style.setProperty('--ui', clamp(stage.clientHeight / H, 0.45, 1.6).toFixed(3));
+  new ResizeObserver(fit).observe(stage);
+  fit();
 }

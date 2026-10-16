@@ -39,6 +39,12 @@ body {
 }
 #stage {
   position: relative;
+  /* The game's frame: 16:9 (960x540, see src/config.ts) and as big as the window allows. It is sized
+     here rather than by a script, so the page is laid out right from the first paint, before any script
+     has arrived. src/ui/layout.ts keeps --ui (how much the cards and buttons scale) in step with it. */
+  --h: min(97vh, 97vw * 9 / 16);
+  width: calc(var(--h) * 16 / 9);
+  height: var(--h);
   --ui: 1;
   border-radius: 20px;
   box-shadow:
@@ -50,7 +56,13 @@ body {
   -webkit-user-select: none;
   -webkit-touch-callout: none;
 }
-/* Phaser puts its canvas in here and sizes it to fit; #stage is sized by src/ui/layout.ts. */
+/* On phones vh counts the space under the browser's toolbars; dvh is only what can be seen. */
+@supports (height: 1dvh) {
+  #stage {
+    --h: min(97dvh, 97vw * 9 / 16);
+  }
+}
+/* Phaser puts its canvas in here and sizes it to fit. */
 #game-root {
   width: 100%;
   height: 100%;
