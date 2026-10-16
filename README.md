@@ -130,6 +130,11 @@ The title card keeps this short: one key for each of the four actions (Move ←�
 Aim ↑), or a gamepad's or touch screen's own buttons once the game sees one. Everything else in the table
 still works; it is just not listed there, and pause and sound have buttons on screen during the fight.
 
+The pause card has **Keep playing**, **Start over** (a new fight, with the same Easy setting) and **Title
+screen** (back to the title card, where Easy mode can be changed). Click or tap one, or choose one with the
+arrow keys, the d-pad or the stick and press it with Space, Enter or A. Pausing from the keyboard or a
+gamepad starts on Keep playing, so pressing A or Space right away just resumes.
+
 Face shots do 2 damage; stem shots do 1. The game auto-pauses when the tab loses focus.
 **Easy mode** (checkbox on the title and lose screens) gives 8 hearts instead of 5. With only a keyboard, Tab
 to it and press Space; after a click, Space starts the game as usual.
@@ -208,9 +213,11 @@ keyboard / gamepad / touch ─► Controls ─► App ──step(input)──►
 | `src/game/scenes/`, `src/game/hud/` | `BootScene` (font, baking), `FightScene` (syncs views every frame), `HudScene` (hearts, boss bar, toasts); `hud/art.ts` bakes the HUD's parts |
 | `src/game/fx.ts`, `motion.ts`, `debug.ts` | Particles, rings, the screen flash, shake and camera punch; small helpers for moving things (`rand`, `easeOutBack`); the hitbox overlay |
 | `index.html`, `src/style.css`, `src/ui/` | The loading screen, the HTML cards (title, win, lose, pause) and the touch buttons layered over the canvas |
-| `tests/` | Simulation tests, bot fights, and tests for the save, gamepad, music and weather code |
+| `tests/` | Simulation tests, bot fights, and tests for the save, gamepad, music and weather code and for moving through the pause card |
 
-Fight states: `title → play → ending (slow-mo bloom) → win`, or `play → down (Pip naps) → lose`.
+Fight states: `title → play → ending (slow-mo bloom) → win`, or `play → down (Pip naps) → lose`. A new
+fight replaces the old one rather than resetting it: Play!, Play again, Try again and Start over each make
+one, and Title screen makes a sleeping `title` fight, as the game does when it opens.
 
 ### Things to know before changing it
 
