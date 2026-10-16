@@ -131,13 +131,15 @@ Aim ↑), or a gamepad's or touch screen's own buttons once the game sees one. E
 still works; it is just not listed there, and pause and sound have buttons on screen during the fight.
 
 Face shots do 2 damage; stem shots do 1. The game auto-pauses when the tab loses focus.
-**Easy mode** (checkbox on the title and lose screens) gives 8 hearts instead of 5.
+**Easy mode** (checkbox on the title and lose screens) gives 8 hearts instead of 5. With only a keyboard, Tab
+to it and press Space; after a click, Space starts the game as usual.
 A jump pressed a moment before landing still counts, and so does one pressed a moment after walking off an edge.
 
 ## How the fight works
 
 - **Phases:** Sunny has 400 HP and three phases (at 66% and 33%). Each phase change roars, gives 1.4 s of
-  invulnerability, drops a healing **Dewdrop** 💧, recolors his petals, and unlocks harder attacks.
+  invulnerability, drops a healing **Dewdrop** 💧, recolors his petals, and unlocks harder attacks. Seeds
+  that hit him while he can't be hurt (then, and during "Ready? GO!") bounce off with a *tink*.
 - **Telegraphs:** every attack starts with a "!" bubble and a chime. Ground hazards also show their own warning
   (a rumbling mound, cracks in the ground, an orange ring with a beam of light) before they can hurt.
 - **Attacks:**

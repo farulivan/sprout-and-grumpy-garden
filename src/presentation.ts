@@ -11,6 +11,7 @@ export type SfxName =
   | 'hurt'
   | 'bossHit'
   | 'faceHit'
+  | 'block'
   | 'telegraph'
   | 'spit'
   | 'petal'
@@ -175,6 +176,35 @@ export function present(e: SimEvent, p: Presenter, opts: { touch: boolean }) {
         });
       }
       break;
+    case 'bossBlock':
+      // A "tink", a glint, and the seed itself knocked back up the way it came, so a wasted shot can be
+      // seen to be wasted. No leaves fly and he doesn't flinch: that is what a hit looks like.
+      p.sfx('block');
+      p.ring(e.x, e.y, { color: '#ffffff', from: 6, to: 30, life: 0.2 });
+      p.burst(e.x, e.y, {
+        n: 1,
+        color: '#7cc644',
+        speed: 240,
+        size: 7,
+        life: 0.6,
+        gravity: 800,
+        shape: 'leaf',
+        dir: -2.3, // up and back toward Pip
+        spread: 0.5,
+      });
+      p.burst(e.x, e.y, {
+        n: 4,
+        color: '#ffffff',
+        speed: 260,
+        size: 4.5,
+        life: 0.18,
+        gravity: 0,
+        shape: 'spark',
+        glow: true,
+        dir: Math.PI,
+        spread: 1.6,
+      });
+      break;
     case 'telegraph':
       p.sfx('telegraph');
       break;
@@ -231,21 +261,36 @@ export function present(e: SimEvent, p: Presenter, opts: { touch: boolean }) {
     }
     case 'groundPuff':
       p.burst(e.x, GROUND, { ...DUST, n: 4, speed: 60 });
-      p.burst(e.x, GROUND - 2, {
-        n: 4,
-        colors: ['#8a5530', '#b47a4c'],
-        speed: 150,
-        size: 3.5,
-        life: 0.5,
-        gravity: 520,
-        shape: 'clod',
-        dir: UP,
-        spread: 1.8,
-      });
+      if (e.kind === 'petal')
+        // the petal tears into scraps on the grass
+        p.burst(e.x, GROUND - 4, {
+          n: 4,
+          colors: ['#ffd23f', '#ff9a1f', '#fff0a0'],
+          speed: 130,
+          size: 4.5,
+          life: 0.6,
+          gravity: 320,
+          shape: 'petal',
+          dir: UP,
+          spread: 2.2,
+        });
+      else
+        // the seed digs in and kicks up earth
+        p.burst(e.x, GROUND - 2, {
+          n: 4,
+          colors: ['#8a5530', '#b47a4c'],
+          speed: 150,
+          size: 3.5,
+          life: 0.5,
+          gravity: 520,
+          shape: 'clod',
+          dir: UP,
+          spread: 1.8,
+        });
       break;
     case 'pickup':
       p.sfx('pickup');
-      p.toast('Dewdrop! +1 heart', 2.4, 'good');
+      p.toast(e.healed ? 'Dewdrop! +1 heart' : 'Dewdrop! Hearts already full', 2.4, 'good');
       p.ring(e.x, e.y, { color: '#bfeaff', from: 8, to: 62, life: 0.4 });
       p.burst(e.x, e.y, { n: 9, color: '#8fd8ff', speed: 150, size: 4, life: 0.5, gravity: 240 });
       p.burst(e.x, e.y, {
@@ -258,17 +303,18 @@ export function present(e: SimEvent, p: Presenter, opts: { touch: boolean }) {
         shape: 'star',
         glow: true,
       });
-      p.burst(e.x, e.y - 8, {
-        n: 2,
-        color: '#ff8fa8',
-        speed: 60,
-        size: 6,
-        life: 0.9,
-        gravity: -60,
-        shape: 'heart',
-        dir: UP,
-        spread: 1,
-      });
+      if (e.healed)
+        p.burst(e.x, e.y - 8, {
+          n: 2,
+          color: '#ff8fa8',
+          speed: 60,
+          size: 6,
+          life: 0.9,
+          gravity: -60,
+          shape: 'heart',
+          dir: UP,
+          spread: 1,
+        });
       break;
     case 'bossDefeated':
       p.shake(14);

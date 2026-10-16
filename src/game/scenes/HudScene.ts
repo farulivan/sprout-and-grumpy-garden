@@ -83,6 +83,7 @@ export class HudScene extends Scene {
   private iconPop = 0;
   private prevPhase = 1;
   private dangerA = 0;
+  private shownA = 1; // the whole HUD fades away under the win and lose cards
 
   constructor(
     private app: App,
@@ -203,7 +204,10 @@ export class HudScene extends Scene {
       this.prevPhase = b.phase;
       this.iconPop = this.barShake = 0;
     }
-    this.all.setVisible(fight.state !== 'title');
+    // The result cards sit over the middle of the screen, and the boss's bar would poke out above them.
+    const result = fight.state === 'win' || fight.state === 'lose';
+    this.shownA = fresh ? 1 : clamp(this.shownA + (result ? -dt : dt) * 5, 0, 1);
+    this.all.setVisible(fight.state !== 'title' && this.shownA > 0).setAlpha(this.shownA);
     const live = fight.state === 'play' || fight.state === 'ending' || fight.state === 'down';
 
     this.syncHearts(dt, fight, fresh);

@@ -10,7 +10,7 @@ import type { Hazard } from './hazards';
 import type { InputFrame } from './input';
 import { circleHit, prune } from './math';
 import type { Dewdrop } from './pickups';
-import { Player } from './player';
+import { PIP_LOWEST, Player } from './player';
 import type { Projectile } from './projectile';
 import { Rng } from './rng';
 
@@ -79,7 +79,10 @@ export class Fight {
     this.boss.update(sdt);
     for (const p of this.projectiles) {
       p.update(sdt);
-      if (p.hitGround) this.emit({ type: 'groundPuff', x: p.x });
+      // Petals fly straight, so the low ones in a fan dive into the ground. Once one is wholly below
+      // anything Pip can reach it can never hit him, so it bursts there instead of sliding on through the soil.
+      if (p.kind === 'petal' && p.y - p.r >= PIP_LOWEST) p.dead = p.hitGround = true;
+      if (p.hitGround) this.emit({ type: 'groundPuff', x: p.x, kind: p.kind });
     }
     for (const h of this.hazards) h.update(sdt);
     for (const d of this.pickups) d.update(sdt);
@@ -153,7 +156,7 @@ export class Fight {
         if (b.hit(mult)) {
           if (mult > 1) this.faceHits++;
           this.emit({ type: 'bossHit', x: pr.x, y: pr.y, weak: mult > 1 });
-        }
+        } else this.emit({ type: 'bossBlock', x: pr.x, y: pr.y }); // still waking up, or just changed phase
       } else if (p.alive && circleHit(pr, hb)) {
         pr.dead = true;
         p.hurt();
@@ -163,8 +166,9 @@ export class Fight {
     for (const d of this.pickups) {
       if (d.dead || !circleHit(d, hb)) continue;
       d.dead = true;
-      if (p.hp < p.maxHp) p.hp++;
-      this.emit({ type: 'pickup', x: d.x, y: d.y });
+      const healed = p.hp < p.maxHp;
+      if (healed) p.hp++;
+      this.emit({ type: 'pickup', x: d.x, y: d.y, healed });
     }
     if (!p.alive) this.onPlayerDown();
   }

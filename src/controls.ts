@@ -16,6 +16,14 @@ const KEYS: Record<string, Action> = {
   m: 'mute', M: 'mute',
 }; // prettier-ignore
 
+// A button or checkbox on the card that is showing. When the player has tabbed to one, Space presses or
+// ticks it, as on any web page, instead of making Pip jump (which on the title card starts the game). A
+// player who clicked can't see where the focus is, so for them Space still starts the game.
+const onCard = (target: EventTarget | null) =>
+  target instanceof HTMLElement &&
+  target.matches('button, input') &&
+  !!target.closest('#overlay:not(.hidden) .card:not(.hidden)');
+
 export class Controls {
   readonly held: Record<Action, boolean> = {
     left: false,
@@ -33,16 +41,19 @@ export class Controls {
   aimLock = false;
   private just = new Set<Action>();
   private pad = readPad(null);
+  private tabbed = false; // the focus was moved with Tab since the last click or touch
 
   constructor(onAnyKey: () => void = () => {}) {
     window.addEventListener('keydown', (e) => {
+      if (e.key === 'Tab') this.tabbed = true;
       const action = KEYS[e.key];
-      if (action) {
+      if (action && !(e.key === ' ' && this.tabbed && onCard(e.target))) {
         e.preventDefault();
         this.press(action);
       }
       onAnyKey();
     });
+    window.addEventListener('pointerdown', () => (this.tabbed = false));
     window.addEventListener('keyup', (e) => {
       const action = KEYS[e.key];
       if (action) this.release(action);

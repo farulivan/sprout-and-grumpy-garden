@@ -1,8 +1,10 @@
 // The rules of a fight that the README promises players.
 import { describe, expect, it } from 'vitest';
+import { GROUND } from '../../src/config';
 import { Fight } from '../../src/sim/fight';
 import { NO_INPUT } from '../../src/sim/input';
 import type { SimEvent } from '../../src/sim/events';
+import { Projectile } from '../../src/sim/projectile';
 
 const steps = (fight: Fight, seconds: number) => {
   const events: SimEvent[] = [];
@@ -26,6 +28,22 @@ describe('boss', () => {
     expect(events).toContain('introRoar');
     expect(events).toContain('fightStart');
     expect(fight.boss.state).toBe('fight');
+  });
+
+  it('reports seeds that bounce off while he is invulnerable', () => {
+    const fight = new Fight({ seed: 3 }); // still waking up
+    const boss = fight.boss;
+    const seed = { vx: 0, vy: 0, r: 6, owner: 'player', kind: 'sprout', life: 1 } as const;
+    const shoot = () => {
+      fight.projectiles.push(new Projectile({ ...seed, x: boss.x, y: boss.y })); // right in his face
+      fight.step(NO_INPUT);
+      return fight.drainEvents().map((e) => e.type);
+    };
+    expect(shoot()).toContain('bossBlock');
+    expect(boss.hp).toBe(boss.maxHp);
+    boss.state = 'fight';
+    expect(shoot()).toContain('bossHit');
+    expect(boss.hp).toBe(boss.maxHp - 2);
   });
 
   it('changes phase at 66% and 33% health', () => {
@@ -146,6 +164,38 @@ describe('fight', () => {
     fight.step(NO_INPUT);
     expect(pip.hp).toBe(4);
     expect(fight.pickups.length).toBe(0);
+  });
+
+  it('says whether a dewdrop healed, so a full Pip is not promised a heart', () => {
+    const fight = fighting();
+    const pip = fight.player;
+    const pickUp = () => {
+      fight.boss.inv = 0;
+      fight.boss.hit(fight.boss.maxHp * 0.34); // into the next phase, which drops a dewdrop
+      Object.assign(fight.pickups[0], { x: pip.x, y: pip.y - 20 });
+      return steps(fight, 1 / 60).find((e) => e.type === 'pickup');
+    };
+    expect(pickUp()).toMatchObject({ healed: false });
+    expect(pip.hp).toBe(5);
+    pip.hp = 3;
+    expect(pickUp()).toMatchObject({ healed: true });
+    expect(pip.hp).toBe(4);
+  });
+
+  it('bursts petals on the ground instead of letting them slide on through the soil', () => {
+    const fight = fighting();
+    fight.boss.phase = 3; // two volleys
+    fight.boss.startAttack('petalFan');
+    let bursts = 0,
+      deepest = 0;
+    for (let i = 0; i < 60 * 4; i++) {
+      fight.player.inv = 999;
+      fight.step(NO_INPUT);
+      for (const e of fight.drainEvents()) if (e.type === 'groundPuff' && e.kind === 'petal') bursts++;
+      for (const p of fight.projectiles) if (p.kind === 'petal') deepest = Math.max(deepest, p.y);
+    }
+    expect(bursts).toBeGreaterThan(0);
+    expect(deepest).toBeLessThan(GROUND + 10); // never sunk deeper than half its size
   });
 
   it('wins with stars for hits taken, after a slow-motion bloom', () => {

@@ -14,6 +14,11 @@ const SPEED = 290,
 const SHOT_SPEED = 640,
   SHOT_COOLDOWN = 0.17;
 const JUMP_BUFFER = 0.1; // a jump pressed this long before landing still happens
+// His hitbox is a circle this far above his feet. Forgiving: smaller than the sprite.
+const HIT_UP = 22,
+  HIT_R = 14;
+// Pip never goes below the ground, so nothing under this line can touch him.
+export const PIP_LOWEST = GROUND - HIT_UP + HIT_R;
 
 export class Player {
   x = 150;
@@ -43,9 +48,8 @@ export class Player {
 
   constructor(private fight: Fight) {}
 
-  // Forgiving: smaller than the sprite.
   get hitbox(): Circle {
-    return { x: this.x, y: this.y - 22, r: 14 };
+    return { x: this.x, y: this.y - HIT_UP, r: HIT_R };
   }
 
   update(dt: number, input: InputFrame) {
