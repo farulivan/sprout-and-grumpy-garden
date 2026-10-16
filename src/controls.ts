@@ -3,12 +3,14 @@
 import { PAD_ACTIONS, readPad } from './gamepad';
 import type { InputFrame } from './sim/input';
 
-export type Action = 'left' | 'right' | 'up' | 'jump' | 'shoot' | 'start' | 'pause' | 'mute';
+// Down only moves between the pause card's buttons (see App.tick): Pip has no use for it.
+export type Action = 'left' | 'right' | 'up' | 'down' | 'jump' | 'shoot' | 'start' | 'pause' | 'mute';
 
 const KEYS: Record<string, Action> = {
   ArrowLeft: 'left', a: 'left', A: 'left',
   ArrowRight: 'right', d: 'right', D: 'right',
   ArrowUp: 'up', w: 'up', W: 'up',
+  ArrowDown: 'down', s: 'down', S: 'down',
   ' ': 'jump', z: 'jump', Z: 'jump', k: 'jump', K: 'jump',
   x: 'shoot', X: 'shoot', j: 'shoot', J: 'shoot', l: 'shoot', L: 'shoot',
   Enter: 'start',
@@ -29,6 +31,7 @@ export class Controls {
     left: false,
     right: false,
     up: false,
+    down: false,
     jump: false,
     shoot: false,
     start: false,

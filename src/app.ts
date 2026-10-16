@@ -102,10 +102,18 @@ export class App {
     if (c.pressed('mute')) this.toggleMute();
     let stepped = false;
     if (this.paused) {
+      // The pause card's buttons: move between them with the arrow keys or the d-pad, and press one with
+      // Space, Enter or A. With none chosen, that is "Keep playing".
       if (c.pressed('pause')) this.setPaused(false);
-      else if (c.pressed('start')) this.overlay.press(); // Enter: the button tabbed to, or "Keep playing"
+      else if (c.pressed('start') || c.pressed('jump')) this.overlay.press();
+      else if (c.pressed('left')) this.overlay.choose(-1, 0);
+      else if (c.pressed('right')) this.overlay.choose(1, 0);
+      else if (c.pressed('up')) this.overlay.choose(0, -1);
+      else if (c.pressed('down')) this.overlay.choose(0, 1);
+      c.consumeJump(); // a press that worked the card must not also make Pip jump
     } else if (state === 'play' && c.pressed('pause')) {
       this.setPaused(true);
+      this.overlay.choose(); // paused from the keyboard or a gamepad: start on "Keep playing"
     } else if (state === 'title' && (c.pressed('start') || c.pressed('jump') || c.pressed('shoot'))) {
       this.start();
     } else if ((state === 'win' || state === 'lose') && c.pressed('start')) {
