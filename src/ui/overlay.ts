@@ -4,7 +4,8 @@ import type { FightResult } from '../sim/events';
 export type Card = 'title' | 'win' | 'lose' | 'pause';
 
 export interface OverlayHandlers {
-  start(): void;
+  start(): void; // the chapter from the beginning
+  retry(): void; // the level being played, again
   resume(): void;
   pause(): void;
   title(): void;
@@ -71,8 +72,8 @@ export class Overlay {
         handlers.easy(el.checked);
       });
     }
-    for (const id of ['btn-start', 'btn-again', 'btn-retry', 'btn-restart'])
-      byId(id).addEventListener('click', handlers.start);
+    for (const id of ['btn-start', 'btn-again']) byId(id).addEventListener('click', handlers.start);
+    for (const id of ['btn-retry', 'btn-restart']) byId(id).addEventListener('click', handlers.retry);
     byId('btn-resume').addEventListener('click', handlers.resume);
     byId('btn-title').addEventListener('click', handlers.title);
     // blur(): otherwise Space or Enter would "click" the focused button again mid-fight
@@ -138,13 +139,20 @@ export class Overlay {
     this.show('win');
   }
 
-  showLose(progress: number) {
+  // where: lost on the way to the boss (a stage) or against him
+  showLose(progress: number, where: 'stage' | 'boss') {
     const meter = el('div', 'meter'),
       fill = el('i', '');
     fill.style.width = `${progress}%`;
     meter.append(fill);
     byId('lose-progress').replaceChildren(
-      el('span', '', `You cheered Sunny up ${progress}% of the way!`),
+      el(
+        'span',
+        '',
+        where === 'stage'
+          ? `You made it ${progress}% of the way to Sunny!`
+          : `You cheered Sunny up ${progress}% of the way!`,
+      ),
       meter,
     );
     this.show('lose');
