@@ -206,15 +206,16 @@ keyboard / gamepad / touch ─► Controls ─► App ──step(input)──►
 | `src/sim/stage/enemies/` | The small enemies a stage places (Grumbud, Puffball, Pea Pod, Snapper), one file each, and their registry (`index.ts`) |
 | `src/sim/stage/stages/` | The stages, as data: where everything goes. `gardenPath.ts` is Stage 1 |
 | `src/presentation.ts` | The one table that turns each event into a sound, particles, rings, a shake, a flash or a toast |
-| `src/app.ts` | Screen flow (title, pause, mute, win, lose), the fixed-step loop and hit-stop. Knows nothing about Phaser |
+| `src/app.ts` | Screen flow (title, pause, mute, win, lose; a stage, then its boss through the stage's gate), the fixed-step loop and hit-stop. Knows nothing about Phaser |
 | `src/controls.ts`, `src/gamepad.ts` | Keyboard, touch and gamepad merged into one input per step |
 | `src/audio.ts` | Synthesized sound effects and music |
 | `src/save.ts` | Easy mode, mute and best times in one versioned `localStorage` entry (or in a slot of its own: see "More than one version online") |
 | `src/game/art/` | `draw.ts`: Canvas 2D paths, gradients and shading helpers. `face.ts`: the small shared face. `color.ts`: colour maths and the shared outline pens. `bake.ts`: turns drawings into textures, packs them into an atlas, and bends one along a curve (`Ribbon`). `shared.ts`: parts several views use |
-| `src/game/views/` | One view per thing on screen. Each bakes its own parts and animates them from the simulation: `PlayerView`, `SunnyView`, `ProjectileViews`, `HazardViews`, `PickupViews`, `WorldView`. `pool.ts` reuses the views of things that come and go |
+| `src/game/views/` | One view per thing on screen. Each bakes its own parts and animates them from the simulation: `PlayerView`, `SunnyView`, `ProjectileViews`, `HazardViews`, `PickupViews`, `WorldView`, and on a stage `EnemyViews` (parts in `enemies/art.ts`). `pool.ts` reuses the views of things that come and go |
+| `src/game/views/stage/` | A stage's world: `StageWorldView` (the sky that stays put, landscape strips that repeat and slide by how far away they are, the ground with its pits, logs, thorns and leaf pads, the sign, the gate, and the flowers cheered-up plants leave) and its parts (`art.ts`) |
 | `src/game/views/world/` | The arena, one file per layer: `sky.ts`, `land.ts`, `ground.ts`, `air.ts`, and `weather.ts`, which blends between the four moods |
 | `src/game/views/sunny/`, `hazards/` | The bigger views keep their drawing code beside them: Sunny's parts (`art.ts`) and layered face (`face.ts`), the hazards' parts (`art.ts`) |
-| `src/game/scenes/`, `src/game/hud/` | `BootScene` (font, baking), `FightScene` (syncs views every frame), `HudScene` (hearts, boss bar, toasts); `hud/art.ts` bakes the HUD's parts |
+| `src/game/scenes/`, `src/game/hud/` | `BootScene` (font, baking), `FightScene` and `StageScene` (sync the views every frame; only the one for what is being played runs), `HudScene` (hearts, the boss's bar or the stage's path bar and golden seeds, toasts); `hud/art.ts` bakes the HUD's parts |
 | `src/game/fx.ts`, `motion.ts`, `debug.ts` | Particles, rings, the screen flash, shake and camera punch; small helpers for moving things (`rand`, `easeOutBack`); the hitbox overlay |
 | `index.html`, `src/style.css`, `src/ui/` | The loading screen, the HTML cards (title, win, lose, pause) and the touch buttons layered over the canvas |
 | `tests/` | Simulation tests (the boss fight and the stages), bot fights, and tests for the save, gamepad, music and weather code and for moving through the pause card |
@@ -241,10 +242,12 @@ one, and Title screen makes a sleeping `title` fight, as the game does when it o
   the rules don't need: Sunny's head recoiling from a hit, Pip's sprout trailing behind a run, the wind-up
   before an attack. That state lives in the view and uses `Math.random` freely.
 - **Small parts share one atlas texture.** `bake()` only queues a small part; `finishBaking()` (called
-  once in `BootScene`) packs them onto a 2048-pixel page, which is about 90% full (it warns in the console
-  if a second page is ever needed). Make images with `part()` and swap them with `show()`; never call
-  `setTexture` yourself. Parts longer than 512 texture pixels keep their own texture. Big soft glows are
-  baked small (`SOFT`, `HAZY`) so they fit: scale those with `unit(key)`, not `INV`.
+  once in `BootScene`) packs them onto a 2048-pixel page, which is about 75% full (it warns in the console
+  if a second page is ever needed). Art that only a stage draws is baked inside `bakeApart('stage', ...)`
+  and goes on a page of its own: it doesn't crowd the shared page, and a boss fight never switches between
+  pages because of it. Make images with `part()` and swap them with `show()`; never call `setTexture`
+  yourself. Parts longer than 512 texture pixels keep their own texture. Big soft glows are baked small
+  (`SOFT`, `HAZY`) so they fit: scale those with `unit(key)`, not `INV`.
 - **One texture per draw batch, on purpose.** `BootScene` sets this for every device (Phaser's default on
   phones and tablets). Otherwise Phaser compiles a new shader the first time a batch uses a new number of
   textures, which drops frames mid-fight. Thanks to the atlas a frame is still only about 20-35 draw calls.
@@ -359,7 +362,9 @@ S.step(60 * 10);                           // simulate 10 seconds
 console.log(S.game.boss.hp, S.game.player.hp, S.game.state);
 ```
 
-Add `?hitboxes` (or call `S.hitboxes(true)`) to draw what the simulation actually collides with.
+Add `?hitboxes` (or call `S.hitboxes(true)`) to draw what the simulation actually collides with. Add `?stage`
+to have Play! start with Stage 1, the Garden Path, before Sunny; `S.startStage()` and `S.startBoss(hearts)`
+start either one directly.
 
 Two things to know when scripting it. Hit-stop (see `App.hitStop`) holds the simulation for a few frames
 after Pip is hurt or Sunny changes phase, so `step(n)` can advance the fight by a little less than `n`
@@ -367,7 +372,8 @@ steps. And timing a tight `step()` loop does not measure frame time: WebGL calls
 how fast the graphics card drains the queue. To check for stutter, let the game's own loop run and record
 the gaps between `requestAnimationFrame` callbacks. To see what a frame costs, count `drawElements` calls
 on `S.phaser.renderer.gl` and take a CPU profile while the loop runs. For reference, a phase-3 fight on an
-M4 Mac at 1920x1080 is about 30 draw calls, 0.2 ms of script and 140 kB of short-lived memory per frame.
+M4 Mac at 1920x1080 is about 30 draw calls, 0.2 ms of script and 140 kB of short-lived memory per frame,
+and the Garden Path about 35 draw calls.
 
 ## Ideas for later
 
