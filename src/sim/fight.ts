@@ -1,7 +1,7 @@
 // One boss fight: the whole game state plus the rules that advance it.
 // States: title (boss asleep behind the title card) | play -> ending (boss blooms) -> win
 //                                                    | play -> down (Pip naps) -> lose
-import { STEP } from '../config';
+import { ARENA_R, STEP } from '../config';
 import { platforms } from './arena';
 import type { Boss } from './boss';
 import { BOSSES, type BossId } from './bosses';
@@ -10,7 +10,7 @@ import type { Hazard } from './hazards';
 import type { InputFrame } from './input';
 import { circleHit, prune } from './math';
 import type { Dewdrop } from './pickups';
-import { PIP_LOWEST, Player } from './player';
+import { PIP_LOWEST, Player, type PlayerWorld } from './player';
 import type { Projectile } from './projectile';
 import { Rng } from './rng';
 
@@ -23,10 +23,12 @@ export interface FightOptions {
   title?: boolean; // the sleepy scene behind the title card: nothing fights
 }
 
-export class Fight {
+export class Fight implements PlayerWorld {
   state: FightState;
   readonly easy: boolean;
   readonly rng: Rng;
+  readonly minX = 24;
+  readonly maxX = ARENA_R;
   readonly platforms = platforms;
   readonly player: Player;
   readonly boss: Boss;

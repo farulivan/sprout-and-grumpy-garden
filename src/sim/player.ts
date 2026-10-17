@@ -1,8 +1,8 @@
 // Pip, the little sprout hero. Feet are at (x, y).
-import { ARENA_R, GROUND } from '../config';
-import type { Fight } from './fight';
+import { GROUND } from '../config';
+import type { SimEvent } from './events';
 import type { InputFrame } from './input';
-import { clamp, type Circle } from './math';
+import { clamp, type Circle, type Rect } from './math';
 import { Projectile } from './projectile';
 
 const SPEED = 290,
@@ -19,6 +19,16 @@ const HIT_UP = 22,
   HIT_R = 14;
 // Pip never goes below the ground, so nothing under this line can touch him.
 export const PIP_LOWEST = GROUND - HIT_UP + HIT_R;
+
+// What Pip needs from the level he is in: how far he can walk, what he can land on, where his seeds go and
+// who hears about what he does. A boss fight is one (fight.ts).
+export interface PlayerWorld {
+  readonly minX: number; // the range his feet stay in
+  readonly maxX: number;
+  readonly platforms: readonly Rect[]; // one-way: he lands on them from above and jumps up through them
+  readonly projectiles: Projectile[];
+  emit(e: SimEvent): void;
+}
 
 export class Player {
   x = 150;
@@ -46,14 +56,14 @@ export class Player {
   sq = 1; // squash and stretch: 1 = normal
   t = 0;
 
-  constructor(private fight: Fight) {}
+  constructor(private world: PlayerWorld) {}
 
   get hitbox(): Circle {
     return { x: this.x, y: this.y - HIT_UP, r: HIT_R };
   }
 
   update(dt: number, input: InputFrame) {
-    const f = this.fight;
+    const w = this.world;
     this.t += dt;
     this.inv = Math.max(0, this.inv - dt);
     this.hurtT = Math.max(0, this.hurtT - dt);
@@ -82,13 +92,13 @@ export class Player {
       this.coyote = 0;
       this.jumpHeld = true;
       this.sq = 1.35;
-      f.emit({ type: 'jump', x: this.x, y: this.y });
+      w.emit({ type: 'jump', x: this.x, y: this.y });
     }
     if (!input.jump) this.jumpHeld = false;
     this.vy = Math.min(this.vy + (this.vy < 0 && this.jumpHeld ? GRAV_HOLD : GRAV) * dt, 1000);
 
     const prevY = this.y;
-    this.x = clamp(this.x + this.vx * dt, 24, ARENA_R);
+    this.x = clamp(this.x + this.vx * dt, w.minX, w.maxX);
     this.y += this.vy * dt;
     const wasGround = this.onGround;
     this.onGround = false;
@@ -98,7 +108,7 @@ export class Player {
       this.onGround = true;
     } else if (this.vy >= 0) {
       // one-way platforms: land only when falling from above
-      for (const p of f.platforms) {
+      for (const p of w.platforms) {
         if (this.x > p.x - 4 && this.x < p.x + p.w + 4 && prevY <= p.y + 0.01 && this.y >= p.y) {
           this.y = p.y;
           this.vy = 0;
@@ -109,7 +119,7 @@ export class Player {
     this.coyote = this.onGround ? 0.1 : this.coyote - dt;
     if (this.onGround && !wasGround) {
       this.sq = 0.7;
-      f.emit({ type: 'land', x: this.x, y: this.y });
+      w.emit({ type: 'land', x: this.x, y: this.y });
     }
 
     if (ctrl && input.shoot && this.shootCd <= 0) {
@@ -118,7 +128,7 @@ export class Player {
       const up = input.up,
         d = this.facing,
         s = up ? SHOT_SPEED * 0.72 : SHOT_SPEED;
-      f.projectiles.push(
+      w.projectiles.push(
         new Projectile({
           x: this.x + d * 20,
           y: this.y - 28 - (up ? 10 : 0),
@@ -130,7 +140,7 @@ export class Player {
           life: 1.8,
         }),
       );
-      f.emit({ type: 'shoot' });
+      w.emit({ type: 'shoot' });
     }
     this.sq += (1 - this.sq) * Math.min(1, dt * 9);
   }
@@ -144,7 +154,7 @@ export class Player {
     this.vy = -280;
     this.vx = -this.facing * 160;
     this.sq = 0.8;
-    this.fight.emit({ type: 'playerHurt', x: this.x, y: this.y - 24 });
+    this.world.emit({ type: 'playerHurt', x: this.x, y: this.y - 24 });
     if (this.hp <= 0) this.alive = false;
     return true;
   }
