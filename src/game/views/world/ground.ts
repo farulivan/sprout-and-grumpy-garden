@@ -156,7 +156,7 @@ function drawTurf(c: Ctx, rand: () => number) {
 }
 
 // A clump of grass rooted at (0, 0).
-function drawTuft(c: Ctx, rand: () => number) {
+export function drawTuft(c: Ctx, rand: () => number) {
   const n = 6 + Math.floor(rand() * 3);
   for (let i = 0; i < n; i++) {
     const u = n === 1 ? 0 : i / (n - 1) - 0.5,
@@ -172,7 +172,7 @@ function drawTuft(c: Ctx, rand: () => number) {
 }
 
 // A flower on its stem, rooted at (0, 0). Returns nothing; kind picks the bloom.
-function drawFlower(c: Ctx, kind: number, rand: () => number) {
+export function drawFlower(c: Ctx, kind: number, rand: () => number) {
   const h = 17 + rand() * 9,
     lean = (rand() - 0.5) * 7;
   c.beginPath();
@@ -237,7 +237,7 @@ function drawFlower(c: Ctx, kind: number, rand: () => number) {
 }
 
 // A broad leaf to stand on. (0, 0) is the middle of the walkable top; w is the walkable width.
-function drawLeafPlatform(c: Ctx, w: number) {
+export function drawLeafPlatform(c: Ctx, w: number) {
   const lx = -w / 2 - 13,
     ly = 3,
     rx = w / 2 + 16,
@@ -296,7 +296,7 @@ function drawLeafPlatform(c: Ctx, w: number) {
 }
 
 // The stalk a leaf platform grows on: from under the leaf at (0, 0) down to the ground `drop` below.
-function drawStalk(c: Ctx, drop: number, lean: number) {
+export function drawStalk(c: Ctx, drop: number, lean: number) {
   // the stalk is one curve; these are its two bends
   const bx1 = -16,
     by1 = drop * 0.3,

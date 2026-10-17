@@ -48,7 +48,12 @@ function ridge(c: Ctx, y: (x: number) => number, bottom: number) {
 }
 
 // Bushy leaves: the same lumps painted three times, each pass smaller, lighter and nudged toward the light.
-function foliage(c: Ctx, lumps: readonly Lump[], [dark, mid, light]: readonly string[], rand: () => number) {
+export function foliage(
+  c: Ctx,
+  lumps: readonly Lump[],
+  [dark, mid, light]: readonly string[],
+  rand: () => number,
+) {
   const pass = (dx: number, dy: number, k: number, color: string) => {
     c.fillStyle = color;
     for (const [x, y, r] of lumps) {
@@ -74,7 +79,7 @@ function foliage(c: Ctx, lumps: readonly Lump[], [dark, mid, light]: readonly st
 }
 
 // A tree with its foot at (0, 0).
-function drawTree(c: Ctx, kind: number, rand: () => number) {
+export function drawTree(c: Ctx, kind: number, rand: () => number) {
   const k = TREE_KINDS[kind],
     tall = kind === 2,
     th = tall ? 50 : 58;
@@ -136,7 +141,7 @@ function drawTree(c: Ctx, kind: number, rand: () => number) {
 }
 
 // A rounded hedge sitting on the ground at (x, y).
-function drawHedge(
+export function drawHedge(
   c: Ctx,
   x: number,
   y: number,

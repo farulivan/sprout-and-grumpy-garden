@@ -1,7 +1,7 @@
 // Runs once: waits for the font, bakes every texture, then starts the fight scene.
 import { Scene, Sound, WEBGL, type Renderer } from 'phaser';
 import type { GameAudio } from '../../audio';
-import { finishBaking } from '../art/bake';
+import { bakeApart, finishBaking } from '../art/bake';
 import { bakeShared } from '../art/shared';
 import { bakeFx } from '../fx';
 import { BOSS_VIEWS } from '../views/bossViews';
@@ -9,6 +9,7 @@ import { bakeHazards } from '../views/HazardViews';
 import { bakePickups } from '../views/PickupViews';
 import { bakePlayer } from '../views/PlayerView';
 import { bakeProjectiles } from '../views/ProjectileViews';
+import { bakeStage } from '../views/stage/art';
 import { bakeWorld } from '../views/WorldView';
 import { bakeHud } from './HudScene';
 
@@ -48,6 +49,8 @@ export class BootScene extends Scene {
       bakeProjectiles(this);
       bakeHazards(this);
       bakePickups(this);
+      // only a stage draws these, so they get atlas pages of their own (see bakeApart)
+      bakeApart('stage', () => bakeStage(this));
       bakeFx(this);
       bakeHud(this);
       finishBaking(this);
