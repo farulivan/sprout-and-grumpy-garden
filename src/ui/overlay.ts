@@ -44,6 +44,11 @@ export function nearest(boxes: readonly Box[], from: number, dx: number, dy: num
   return best;
 }
 
+// Where a card's main button is among its controls: the one pressed when the player hasn't moved to another
+// (Play!, Try again, Play again or Keep playing). It is the first button; the Easy mode checkbox comes before
+// it on the title and lose cards.
+const main = (controls: readonly HTMLElement[]) => controls.findIndex((c) => c instanceof HTMLButtonElement);
+
 const byId = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const el = (tag: string, className: string, text = '') => {
   const node = document.createElement(tag);
@@ -85,6 +90,9 @@ export class Overlay {
       (e.currentTarget as HTMLElement).blur();
       handlers.mute();
     });
+    // #overlay.nav: the player is choosing with the keyboard or a gamepad (see choose()). Tabbing chooses too;
+    // a click or a touch stops it.
+    window.addEventListener('keydown', (e) => e.key === 'Tab' && this.root.classList.add('nav'));
     window.addEventListener('pointerdown', () => this.root.classList.remove('nav'));
   }
 
@@ -99,29 +107,49 @@ export class Overlay {
     for (const [name, el] of Object.entries(this.cards)) el.classList.toggle('hidden', name !== card);
   }
 
-  // Keyboard and gamepad players move between the buttons on the card with the arrow keys or the d-pad.
-  // The button they are on has the browser's focus, outlined as when tabbing to it, until a click or a
-  // touch (#overlay.nav in style.css). With no direction, or on the first press, they start on the card's
-  // first button.
+  // Keyboard and gamepad players move between the card's controls (its buttons, and its Easy mode checkbox)
+  // with the arrow keys or the d-pad. The one they are on has the browser's focus, outlined as when tabbing
+  // to it, until a click or a touch (#overlay.nav in style.css). With no direction, or on the first press,
+  // they start on the card's main button.
   choose(dx = 0, dy = 0) {
-    const buttons = this.buttons(),
-      boxes = buttons.map((b) => b.getBoundingClientRect());
-    let i = buttons.findIndex((b) => b === document.activeElement);
-    if (i < 0) i = 0;
+    const controls = this.controls(),
+      // a checkbox goes by its label, the pill the player sees
+      boxes = controls.map((c) => (c.closest('label') ?? c).getBoundingClientRect());
+    let i = controls.findIndex((c) => c === document.activeElement);
+    if (i < 0) i = main(controls);
     else if (dx || dy) i = nearest(boxes, i, dx, dy);
-    if (!buttons[i]) return;
-    buttons[i].focus({ preventScroll: true });
+    if (!controls[i]) return;
+    controls[i].focus({ preventScroll: true });
     this.root.classList.add('nav');
   }
 
-  // Press the button the player has moved to on the card that is showing, or else its first one.
-  press() {
-    const buttons = this.buttons();
-    (buttons.find((b) => b === document.activeElement) ?? buttons[0])?.click();
+  // Enter or Start: press the button the player has moved to on the card that is showing, or else its main
+  // button. Never the checkbox, so a player who has just ticked Easy mode starts right away.
+  go() {
+    const controls = this.controls(),
+      chosen = this.chosen(controls);
+    (chosen instanceof HTMLButtonElement ? chosen : controls[main(controls)])?.click();
   }
 
-  private buttons(): HTMLButtonElement[] {
-    return this.showing ? [...this.cards[this.showing].querySelectorAll('button')] : [];
+  // Space or A: press, or tick, the control the player has moved to; with none, and orMain, press the card's
+  // main button.
+  select(orMain = true) {
+    const controls = this.controls();
+    (this.chosen(controls) ?? (orMain ? controls[main(controls)] : undefined))?.click();
+  }
+
+  // The card's buttons and checkbox.
+  private controls(): HTMLElement[] {
+    return this.showing ? [...this.cards[this.showing].querySelectorAll<HTMLElement>('button, input')] : [];
+  }
+
+  // The control the player has moved to and can see outlined, if any: with the arrow keys, the d-pad or Tab
+  // since the card showed. One that merely has the focus after a click doesn't count: a ticked checkbox, or
+  // Start over, which shows again on the next pause.
+  private chosen(controls: HTMLElement[]) {
+    return this.root.classList.contains('nav')
+      ? controls.find((c) => c === document.activeElement)
+      : undefined;
   }
 
   showWin(r: FightResult, best: number | null, isBest: boolean) {

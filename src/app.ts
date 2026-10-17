@@ -130,30 +130,41 @@ export class App {
     c.poll();
     if (c.pressed('mute')) this.toggleMute();
     let stepped = false;
+    // On every card the arrow keys or the d-pad move between its controls (chooseOnCard). Enter or Start
+    // presses the button chosen (go), and Space or A the control chosen (select); with none chosen, both
+    // press the card's main button: Keep playing, Play!, Play again or Try again.
     if (this.paused) {
-      // The pause card's buttons: move between them with the arrow keys or the d-pad, and press one with
-      // Space, Enter or A. With none chosen, that is "Keep playing".
       if (c.pressed('pause')) this.setPaused(false);
-      else if (c.pressed('start') || c.pressed('jump')) this.overlay.press();
-      else if (c.pressed('left')) this.overlay.choose(-1, 0);
-      else if (c.pressed('right')) this.overlay.choose(1, 0);
-      else if (c.pressed('up')) this.overlay.choose(0, -1);
-      else if (c.pressed('down')) this.overlay.choose(0, 1);
+      else if (c.pressed('start')) this.overlay.go();
+      else if (c.pressed('jump')) this.overlay.select();
+      else this.chooseOnCard(c);
       c.consumeJump(); // a press that worked the card must not also make Pip jump
     } else if (state === 'play' && c.pressed('pause')) {
       this.setPaused(true);
       this.overlay.choose(); // paused from the keyboard or a gamepad: start on "Keep playing"
-    } else if (state === 'title' && (c.pressed('start') || c.pressed('jump') || c.pressed('shoot'))) {
-      this.start();
-    } else if (state === 'win' && c.pressed('start')) {
-      this.start();
-    } else if (state === 'lose' && c.pressed('start')) {
-      this.retry();
+    } else if (state === 'title' && (c.pressed('start') || c.pressed('shoot'))) {
+      this.overlay.go();
+    } else if (state === 'title' && c.pressed('jump')) {
+      this.overlay.select();
+    } else if ((state === 'win' || state === 'lose') && c.pressed('start')) {
+      this.overlay.go();
+    } else if ((state === 'win' || state === 'lose') && c.pressed('jump')) {
+      // only a control the player has moved to: a jump still being mashed as the level ends does nothing
+      this.overlay.select(false);
     } else {
+      if (state === 'title' || state === 'win' || state === 'lose') this.chooseOnCard(c);
       stepped = this.advance(dt);
     }
     c.endFrame(!stepped && !this.paused && this.level.state === 'play');
     this.overlay.setState(this.paused ? 'paused' : this.level.state);
+  }
+
+  // The arrow keys or the d-pad: move between the controls on the card that is showing.
+  private chooseOnCard(c: Controls) {
+    if (c.pressed('left')) this.overlay.choose(-1, 0);
+    else if (c.pressed('right')) this.overlay.choose(1, 0);
+    else if (c.pressed('up')) this.overlay.choose(0, -1);
+    else if (c.pressed('down')) this.overlay.choose(0, 1);
   }
 
   // Hold the fight still for a moment, so a big hit is felt. The picture keeps moving; only the

@@ -647,7 +647,8 @@ kbd {
 .easy input:checked {
   background: #63c254;
 }
-.easy input:focus-visible {
+.easy input:focus-visible,
+#overlay.nav .easy input:focus {
   outline: 4px solid #ffd23f;
   outline-offset: 2px;
 }
