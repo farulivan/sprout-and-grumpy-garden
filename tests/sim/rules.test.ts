@@ -143,6 +143,13 @@ describe('fight', () => {
     expect([easy.hp, easy.maxHp]).toEqual([8, 8]);
   });
 
+  it('starts Pip with the hearts he carried in from a stage, never more than he can hold', () => {
+    expect(new Fight({ seed: 1, hearts: 2 }).player.hp).toBe(2);
+    expect(new Fight({ seed: 1, hearts: 9 }).player.hp).toBe(5);
+    const easy = new Fight({ seed: 1, easy: true, hearts: 7 }).player;
+    expect([easy.hp, easy.maxHp]).toEqual([7, 8]);
+  });
+
   it('protects Pip for 1.6 s after a hit', () => {
     const fight = fighting();
     const pip = fight.player;
