@@ -42,14 +42,15 @@ export class Projectile {
     this.life = o.life;
   }
 
-  update(dt: number) {
+  // viewLeft: the world x of the view's left edge. Whatever flies out of the view is gone.
+  update(dt: number, viewLeft = 0) {
     this.t += dt;
     this.life -= dt;
     this.vy += this.gravity * dt;
     this.x += this.vx * dt;
     this.y += this.vy * dt;
-    if (this.life <= 0 || this.x < -40 || this.x > W + 40 || this.y > H + 40 || this.y < -160)
-      this.dead = true;
+    const x = this.x - viewLeft;
+    if (this.life <= 0 || x < -40 || x > W + 40 || this.y > H + 40 || this.y < -160) this.dead = true;
     if (this.gravity && this.y + this.r >= GROUND) {
       this.dead = true;
       this.hitGround = true;
