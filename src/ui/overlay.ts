@@ -1,7 +1,9 @@
 // The HTML layer over the game: title, win, lose and pause cards, plus the round sound and pause buttons.
-import type { FightResult } from '../sim/events';
+import type { FightResult, StageResult } from '../sim/events';
 
 export type Card = 'title' | 'win' | 'lose' | 'pause';
+// How a run's stage went, for the win card: its result, its name, and how many golden seeds it hides.
+export type StagePath = StageResult & { name: string; total: number };
 
 export interface OverlayHandlers {
   start(): void; // the chapter from the beginning
@@ -83,7 +85,7 @@ export class Overlay {
     byId('btn-sunny').addEventListener('click', handlers.boss);
     byId('btn-resume').addEventListener('click', handlers.resume);
     byId('btn-title').addEventListener('click', handlers.title);
-    // blur(): otherwise Space or Enter would "click" the focused button again mid-fight
+    // blur(): otherwise Space or Enter would "click" the focused button again mid-level
     byId('btn-pause').addEventListener('click', (e) => {
       (e.currentTarget as HTMLElement).blur();
       handlers.pause();
@@ -163,7 +165,8 @@ export class Overlay {
     byId('btn-sunny').hidden = !on;
   }
 
-  showWin(r: FightResult, best: number | null, isBest: boolean) {
+  // path: how the stage before the boss went, if this run came that way.
+  showWin(r: FightResult, best: number | null, isBest: boolean, path?: StagePath) {
     // Each star earned pops in, one after another (see .star.on in style.css).
     byId('win-stars').replaceChildren(
       ...[1, 2, 3].map((n) => el('span', n <= r.stars ? 'star on' : 'star', '★')),
@@ -174,6 +177,13 @@ export class Overlay {
       el('span', '', `Bonks ${r.hits}`),
     ];
     if (r.easy) stats.push(el('span', '', 'Easy mode'));
+    // the stage's own row under the boss's
+    if (path)
+      stats.push(
+        el('i', 'break'),
+        el('span', '', `${path.name} ${path.time.toFixed(1)}s`),
+        el('span', path.seeds === path.total ? 'best' : '', `Golden seeds ${path.seeds}/${path.total}`),
+      );
     byId('win-stats').replaceChildren(...stats);
     this.show('win');
   }
@@ -184,6 +194,7 @@ export class Overlay {
       fill = el('i', '');
     fill.style.width = `${progress}%`;
     meter.append(fill);
+    byId('lose-who').textContent = where === 'stage' ? 'The garden path is' : 'Sunny is';
     byId('lose-progress').replaceChildren(
       el(
         'span',

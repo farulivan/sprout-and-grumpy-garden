@@ -10,7 +10,7 @@ import { save } from './save';
 import type { SimEvent } from './sim/events';
 import { Fight } from './sim/fight';
 import { Stage } from './sim/stage/stage';
-import { Overlay } from './ui/overlay';
+import { Overlay, type StagePath } from './ui/overlay';
 
 const MAX_FRAME = 0.05; // after a long hitch, slow down instead of catching up all at once
 const newSeed = () => Math.floor(Math.random() * 2 ** 32);
@@ -37,6 +37,7 @@ export class App {
   private acc = 0;
   private frozen = 0; // seconds of hit-stop left
   private overlay: Overlay;
+  private path: StagePath | null = null; // how this run's stage went, for the win card
 
   constructor(private o: AppOptions) {
     this.overlay = new Overlay(
@@ -76,6 +77,7 @@ export class App {
   }
 
   startStage() {
+    this.path = null;
     this.begin(new Stage({ seed: newSeed(), stage: CHAPTER.stage, easy: this.overlay.easy }), 'stage');
   }
 
@@ -84,8 +86,9 @@ export class App {
     this.begin(new Fight({ seed: newSeed(), boss: CHAPTER.boss, easy: this.overlay.easy, hearts }), 'boss');
   }
 
-  // "Straight to Sunny" on the title card: the boss with full hearts.
+  // "Straight to Sunny" on the title card: the boss with full hearts, and no stage in this run.
   skipToBoss() {
+    this.path = null;
     this.startBoss();
   }
 
@@ -205,10 +208,12 @@ export class App {
     if (e.type === 'win' && this.level instanceof Fight) {
       const boss = this.level.boss.id,
         best = save.best(boss);
-      this.overlay.showWin(e.result, best, save.recordWin(boss, e.result.time));
+      this.overlay.showWin(e.result, best, save.recordWin(boss, e.result.time), this.path ?? undefined);
     } else if (e.type === 'stageClear' && this.level instanceof Stage) {
       // golden seeds count, and are kept, only once the stage is cleared
-      save.recordStage(this.level.id, e.result.time, this.level.seeds);
+      const stage = this.level;
+      save.recordStage(stage.id, e.result.time, stage.seeds);
+      this.path = { ...e.result, name: stage.name, total: stage.seeds.length };
     } else if (e.type === 'stageExit') {
       save.reach(CHAPTER.boss);
       this.overlay.setShortcut(true);

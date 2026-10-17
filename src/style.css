@@ -607,6 +607,9 @@ kbd {
   background: #fff0b0;
   border-color: #ffc93c;
 }
+.stats .break {
+  flex-basis: 100%;
+}
 /* how far the lost fight got: a bar that fills up */
 .meter {
   flex-basis: 100%;
