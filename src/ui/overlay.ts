@@ -6,6 +6,7 @@ export type Card = 'title' | 'win' | 'lose' | 'pause';
 export interface OverlayHandlers {
   start(): void; // the chapter from the beginning
   retry(): void; // the level being played, again
+  boss(): void; // straight to the boss, past the stage before it
   resume(): void;
   pause(): void;
   title(): void;
@@ -79,6 +80,7 @@ export class Overlay {
     }
     for (const id of ['btn-start', 'btn-again']) byId(id).addEventListener('click', handlers.start);
     for (const id of ['btn-retry', 'btn-restart']) byId(id).addEventListener('click', handlers.retry);
+    byId('btn-sunny').addEventListener('click', handlers.boss);
     byId('btn-resume').addEventListener('click', handlers.resume);
     byId('btn-title').addEventListener('click', handlers.title);
     // blur(): otherwise Space or Enter would "click" the focused button again mid-fight
@@ -138,9 +140,13 @@ export class Overlay {
     (this.chosen(controls) ?? (orMain ? controls[main(controls)] : undefined))?.click();
   }
 
-  // The card's buttons and checkbox.
+  // The card's buttons and checkbox, leaving out a hidden one ("Straight to Sunny" before Sunny has been
+  // reached).
   private controls(): HTMLElement[] {
-    return this.showing ? [...this.cards[this.showing].querySelectorAll<HTMLElement>('button, input')] : [];
+    if (!this.showing) return [];
+    return [...this.cards[this.showing].querySelectorAll<HTMLElement>('button, input')].filter(
+      (c) => !c.hidden,
+    );
   }
 
   // The control the player has moved to and can see outlined, if any: with the arrow keys, the d-pad or Tab
@@ -150,6 +156,11 @@ export class Overlay {
     return this.root.classList.contains('nav')
       ? controls.find((c) => c === document.activeElement)
       : undefined;
+  }
+
+  // Show "Straight to Sunny" on the title card (once he has been reached).
+  setShortcut(on: boolean) {
+    byId('btn-sunny').hidden = !on;
   }
 
   showWin(r: FightResult, best: number | null, isBest: boolean) {

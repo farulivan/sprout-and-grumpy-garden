@@ -14,6 +14,8 @@ import { Overlay } from './ui/overlay';
 
 const MAX_FRAME = 0.05; // after a long hitch, slow down instead of catching up all at once
 const newSeed = () => Math.floor(Math.random() * 2 ** 32);
+// The chapter: a stage, then its boss through the stage's gate.
+const CHAPTER = { stage: 'gardenPath', boss: 'sunny' } as const;
 
 // What is being played: a boss fight (or the sleepy one behind the title card), or a stage.
 export type Played = Fight | Stage;
@@ -22,7 +24,6 @@ export interface AppOptions {
   controls: Controls;
   audio: GameAudio;
   presenter: Presenter;
-  stageFirst?: boolean; // Play! starts with the stage before the boss
   onLevel?: (level: Played) => void; // a new level replaced the old one
   onPause?: (paused: boolean) => void;
   onMute?: (muted: boolean) => void;
@@ -42,6 +43,7 @@ export class App {
       {
         start: () => this.start(),
         retry: () => this.retry(),
+        boss: () => this.skipToBoss(),
         resume: () => this.setPaused(false),
         pause: () => this.setPaused(true),
         title: () => this.toTitle(),
@@ -57,13 +59,13 @@ export class App {
       o.audio.muted = true;
       this.overlay.setMuted(true);
     }
+    this.overlay.setShortcut(save.reached(CHAPTER.boss));
     this.overlay.show('title');
   }
 
-  // Play! and Play again: the chapter from its first level.
+  // Play! and Play again: the chapter from its first level, the stage.
   start() {
-    if (this.o.stageFirst) this.startStage();
-    else this.startBoss();
+    this.startStage();
   }
 
   // Try again, and Start over on the pause card: the level being played, from its start. A boss fight
@@ -74,12 +76,17 @@ export class App {
   }
 
   startStage() {
-    this.begin(new Stage({ seed: newSeed(), easy: this.overlay.easy }), 'stage');
+    this.begin(new Stage({ seed: newSeed(), stage: CHAPTER.stage, easy: this.overlay.easy }), 'stage');
   }
 
   // hearts: what Pip carried in from the stage; without it he starts with all of them.
   startBoss(hearts?: number) {
-    this.begin(new Fight({ seed: newSeed(), easy: this.overlay.easy, hearts }), 'boss');
+    this.begin(new Fight({ seed: newSeed(), boss: CHAPTER.boss, easy: this.overlay.easy, hearts }), 'boss');
+  }
+
+  // "Straight to Sunny" on the title card: the boss with full hearts.
+  skipToBoss() {
+    this.startBoss();
   }
 
   private begin(level: Played, tune: Tune) {
@@ -199,7 +206,12 @@ export class App {
       const boss = this.level.boss.id,
         best = save.best(boss);
       this.overlay.showWin(e.result, best, save.recordWin(boss, e.result.time));
+    } else if (e.type === 'stageClear' && this.level instanceof Stage) {
+      // golden seeds count, and are kept, only once the stage is cleared
+      save.recordStage(this.level.id, e.result.time, this.level.seeds);
     } else if (e.type === 'stageExit') {
+      save.reach(CHAPTER.boss);
+      this.overlay.setShortcut(true);
       this.startBoss(this.level.player.hp);
     } else if (e.type === 'lose') {
       this.overlay.showLose(e.progress, this.level instanceof Stage ? 'stage' : 'boss');

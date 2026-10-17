@@ -27,7 +27,6 @@ const app = new App({
   controls,
   audio,
   presenter,
-  stageFirst: params.has('stage'),
   onLevel: (level) => {
     presenter.reset();
     showSceneFor(level);
