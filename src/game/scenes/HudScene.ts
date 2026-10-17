@@ -62,6 +62,12 @@ export class HudScene extends Scene {
   private hitFill!: Fill; // white: flashes over the bar when a hit lands
   private barIcon!: GameObjects.Image;
   private bossName!: GameObjects.Text;
+  // On a stage, instead of the boss's bar: the path to Sunny, Pip's head showing how far along it he is
+  private path!: GameObjects.Container;
+  private pathFill!: Fill;
+  private pathPip!: GameObjects.Image;
+  private stageName!: GameObjects.Text;
+  private seeds: { slot: GameObjects.Image; seed: GameObjects.Image; had: boolean; pop: number }[] = [];
   private toastPlate!: GameObjects.Image;
   // One line of text per tone, each styled once. Text is drawn on a canvas of its own that has to be sent
   // to the graphics card again whenever it changes, and every change of style counts: restyling one line
@@ -144,6 +150,28 @@ export class HudScene extends Scene {
       this.barIcon,
       this.bossName,
     ]);
+    this.pathFill = fill();
+    this.pathPip = part(this, 'hud-pip', FILL_X, BAR_H / 2);
+    this.stageName = shadowed(text(14, '600', '#ffffff', '#1f6b2f', 4))
+      .setOrigin(0, 0)
+      .setPosition(16, BAR_H + 3);
+    this.path = this.add.container(BAR_X, BAR_Y, [
+      part(this, 'bar-back'),
+      this.pathFill.left,
+      this.pathFill.mid,
+      this.pathFill.right,
+      part(this, 'bar-gloss'),
+      part(this, 'bar-icon-angry', BAR_W + 18, BAR_H / 2), // Sunny, waiting at the end of the path
+      this.pathPip,
+      this.stageName,
+    ]);
+    for (let i = 0; i < 3; i++)
+      this.seeds.push({
+        slot: part(this, 'seed-slot', 30 + i * 26, 74).setScale(INV * 0.7),
+        seed: part(this, 'golden-seed', 30 + i * 26, 74).setVisible(false),
+        had: false,
+        pop: 0,
+      });
 
     // centred over the open sky left of the boss, so it never covers the "!" warning bubble
     this.toastPlate = part(this, 'toast-plate', 400, 112);
@@ -171,7 +199,9 @@ export class HudScene extends Scene {
     this.all = this.add.container(0, 0, [
       this.danger,
       ...this.hearts.flatMap((h) => [h.slot, h.full, h.ghost]),
+      ...this.seeds.flatMap((s) => [s.slot, s.seed]),
       this.bar,
+      this.path,
       this.toastPlate,
       ...Object.values(this.toasts),
       this.burst,
@@ -219,6 +249,10 @@ export class HudScene extends Scene {
     this.syncHearts(dt, p, fresh);
     this.bar.setVisible(!!fight);
     if (fight) this.syncBar(dt, fight);
+    this.path.setVisible(!!stage);
+    for (const s of this.seeds) s.slot.setVisible(!!stage);
+    if (stage) this.syncPath(dt, stage, fresh);
+    else for (const s of this.seeds) s.seed.setVisible(false);
 
     // ---- toast ----
     if (live) {
@@ -312,6 +346,30 @@ export class HudScene extends Scene {
         .setPosition(x, y - gone * 12)
         .setScale(INV * (1 + gone * 1.2))
         .setAlpha(h.pop * h.pop);
+    });
+  }
+
+  // Pip's head travels along the path to Sunny, and the golden seeds found fill their places.
+  private syncPath(dt: number, stage: Stage, fresh: boolean) {
+    const k = stage.progress,
+      moving = Math.abs(stage.player.vx) > 30;
+    this.setFill(this.pathFill, k, 0x7fd65a, 1);
+    this.pathPip
+      .setPosition(FILL_X + k * FILL_W, BAR_H / 2 - (moving ? Math.abs(Math.sin(this.clock * 12)) * 3 : 0))
+      .setRotation(moving ? Math.sin(this.clock * 12) * 0.08 : 0);
+    if (this.stageName.text !== stage.name) this.stageName.setText(stage.name);
+    this.seeds.forEach((s, i) => {
+      const has = !!stage.seeds[i];
+      if (fresh) s.had = has;
+      else if (has && !s.had) {
+        s.had = true;
+        s.pop = 1;
+      }
+      s.pop = Math.max(0, s.pop - dt * 2);
+      s.seed
+        .setVisible(has)
+        .setScale(INV * 0.7 * (1 + Math.sin(s.pop * Math.PI) * 0.6))
+        .setRotation(Math.sin(s.pop * Math.PI * 3) * 0.3 * s.pop);
     });
   }
 

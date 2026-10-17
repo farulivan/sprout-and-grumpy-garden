@@ -4,10 +4,10 @@
 import { GROUND } from '../../../config';
 import { Enemy, type EnemyWorld } from './enemy';
 
-export const SNAP_WARN = 0.8; // seconds the mound rumbles before the snap
-const TRIGGER = 150, // how close across Pip comes before it stirs
-  UP = 0.7, // seconds it stays up, chomping
-  DOWN = 1.4; // seconds it stays down before it can stir again
+export const SNAP_WARN = 0.8, // seconds the mound rumbles before the snap
+  SNAP_UP = 0.7, // seconds it stays up, chomping
+  SNAP_DOWN = 1.4; // seconds it stays down before it can stir again
+const TRIGGER = 150; // how close across Pip comes before it stirs
 
 export class Snapper extends Enemy {
   readonly kind = 'snapper';
@@ -37,11 +37,11 @@ export class Snapper extends Enemy {
     } else if (this.timer <= 0) {
       if (this.state === 'warn') {
         this.state = 'up';
-        this.timer = UP;
+        this.timer = SNAP_UP;
         w.emit({ type: 'snap', x: this.x, y: this.y - 46 });
       } else if (this.state === 'up') {
         this.state = 'down';
-        this.timer = DOWN;
+        this.timer = SNAP_DOWN;
       } else {
         this.state = 'hidden';
       }

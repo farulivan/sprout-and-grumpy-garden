@@ -16,6 +16,7 @@ const RANGE = 560, // it only spits at Pip when he is in front of it and this cl
 export class PeaPod extends Enemy {
   readonly kind = 'peaPod';
   warn = 0; // seconds of "!" left
+  spitT = -1; // its clock when it last spat; only for drawing (the pod gapes for a moment)
   private rest = 0.6;
   private more = 0; // peas still to spit after this "!"
 
@@ -70,6 +71,7 @@ export class PeaPod extends Enemy {
       }),
     );
     w.emit({ type: 'pea', x, y });
+    this.spitT = this.t;
     this.more--;
     this.rest = this.more > 0 ? BEAT : REST;
   }

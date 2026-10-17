@@ -33,8 +33,8 @@ const CLODS: Burst = {
 };
 
 // The "!" badge pops in, then bounces. Every badge is drawn on the marks layer, in front of Pip, so a
-// warning can never hide behind the hero.
-function showMark(mark: GameObjects.Image, x: number, y: number, t: number) {
+// warning can never hide behind the hero. A stage's small enemies use it too (EnemyViews.ts).
+export function showMark(mark: GameObjects.Image, x: number, y: number, t: number) {
   mark
     .setVisible(true)
     .setPosition(x, y - Math.abs(Math.sin(t * 8.5)) * 7)

@@ -5,7 +5,7 @@ import { bakeApart, finishBaking } from '../art/bake';
 import { bakeShared } from '../art/shared';
 import { bakeFx } from '../fx';
 import { BOSS_VIEWS } from '../views/bossViews';
-import { bakeEnemies } from '../views/enemies/art';
+import { bakeEnemies } from '../views/EnemyViews';
 import { bakeHazards } from '../views/HazardViews';
 import { bakePickups } from '../views/PickupViews';
 import { bakePlayer } from '../views/PlayerView';

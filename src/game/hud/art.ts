@@ -100,6 +100,33 @@ export function bakeHud(scene: Scene) {
       drawFace(c, 0, 0.5, 0.52, mood);
     });
 
+  // Pip's head, for the stage's path bar: how far along the path to Sunny he is
+  bake(scene, 'hud-pip', 44, 48, 22, 28, (c) => {
+    glow(c, 0, 4, 20, '#0d2a12', 0.4);
+    for (const side of [-1, 1]) {
+      leaf(c, side * 2, -14, 13, 5.5, -Math.PI / 2 + side * 0.75);
+      c.fillStyle = side < 0 ? '#58b947' : '#aaec7a';
+      c.fill();
+      line(c, '#226a2e', 2);
+    }
+    circle(c, 0, 0, 15);
+    c.fillStyle = radial(c, 0, 0, 16, ['#e6fd9e', '#b3ee6a', '#82d44c'], -5, -6);
+    c.fill();
+    line(c, '#226a2e', 2.6);
+    drawFace(c, 0.5, 1.5, 0.5, 'happy');
+  });
+  // an empty place for a golden seed, beside the hearts on a stage
+  bake(scene, 'seed-slot', 30, 40, 15, 20, (c) => {
+    c.beginPath();
+    c.moveTo(0, -15);
+    c.bezierCurveTo(10, -9, 10, 7, 0, 14);
+    c.bezierCurveTo(-10, 7, -10, -9, 0, -15);
+    c.closePath();
+    c.fillStyle = 'rgba(30,20,10,0.35)';
+    c.fill();
+    line(c, '#fff3c0', 2.2, 0.85);
+  });
+
   // a soft dark patch behind a line of text
   bake(scene, 'toast-plate', 320, 60, 160, 30, (c) => glow(c, 0, 0, 158, '#06231a', 0.6, 26), SOFT);
   // rays bursting out behind "GO!"

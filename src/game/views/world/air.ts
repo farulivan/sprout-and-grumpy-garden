@@ -186,8 +186,9 @@ export class Air {
       .setPosition(-40, -40);
   }
 
-  // napping = Pip is down: the light goes soft and sleepy.
-  sync(t: number, dt: number, weather: Weather, pan: number, napping: boolean) {
+  // napping = Pip is down: the light goes soft and sleepy. viewX: the world x of the view's left edge, when
+  // the camera moves (on a stage); the parts in front of everything follow it.
+  sync(t: number, dt: number, weather: Weather, pan: number, napping: boolean, viewX = 0) {
     const { look } = weather,
       wind = look.wind;
 
@@ -241,13 +242,19 @@ export class Air {
       if (m.x > W + 10) m.x = -8;
       const twinkle = 0.5 + 0.5 * Math.sin(t * 1.4 + m.phase);
       m.image
-        .setPosition(m.x + Math.sin(t * 0.9 + m.phase) * 9, m.y)
+        .setPosition(viewX + m.x + Math.sin(t * 0.9 + m.phase) * 9, m.y)
         .setScale(m.size * (0.8 + 0.4 * twinkle))
         .setAlpha(Math.min(1, look.life) * (0.25 + 0.5 * twinkle) + wind * 0.12);
     }
 
     this.dim += ((napping ? 0.34 : 0) - this.dim) * Math.min(1, dt * 1.6);
-    this.dusk.setAlpha(this.dim).setVisible(this.dim > 0.01);
-    this.vignette.setTint(look.vignetteTint).setAlpha(Math.min(1, look.vignette + this.dim * 0.4));
+    this.dusk
+      .setAlpha(this.dim)
+      .setVisible(this.dim > 0.01)
+      .setX(viewX - 40);
+    this.vignette
+      .setTint(look.vignetteTint)
+      .setAlpha(Math.min(1, look.vignette + this.dim * 0.4))
+      .setX(viewX - 40);
   }
 }

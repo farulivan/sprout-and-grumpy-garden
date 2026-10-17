@@ -11,6 +11,7 @@ import { GamePresenter } from './game/presenter';
 import { BootScene } from './game/scenes/BootScene';
 import { FightScene } from './game/scenes/FightScene';
 import { HudScene } from './game/scenes/HudScene';
+import { StageScene } from './game/scenes/StageScene';
 import { Stage } from './sim/stage/stage';
 import { initLayout } from './ui/layout';
 import { finishLoading } from './ui/loading';
@@ -26,6 +27,7 @@ const app = new App({
   controls,
   audio,
   presenter,
+  stageFirst: params.has('stage'),
   onLevel: (level) => {
     presenter.reset();
     showSceneFor(level);
@@ -55,7 +57,13 @@ presenter.onHitStop = (seconds) => app.hitStop(seconds);
 const stage = document.getElementById('stage') as HTMLElement;
 initLayout(stage);
 const fightScene = new FightScene(app, presenter);
-const game = createGame('game-root', [new BootScene(audio), fightScene, new HudScene(app, presenter)]);
+const stageScene = new StageScene(app, presenter);
+const game = createGame('game-root', [
+  new BootScene(audio),
+  fightScene,
+  stageScene,
+  new HudScene(app, presenter),
+]);
 // The App runs before the scenes each frame: it advances the simulation, then the scenes draw it.
 game.events.on(Core.Events.STEP, (_time: number, deltaMs: number) => app.tick(deltaMs / 1000));
 // The loading screen stays up until the garden has been drawn once.
@@ -85,8 +93,10 @@ if (params.has('debug')) {
         return app.level;
       },
       startGame: () => app.start(),
+      startStage: () => app.startStage(),
+      startBoss: (hearts?: number) => app.startBoss(hearts),
       setPaused: (paused: boolean) => app.setPaused(paused),
-      hitboxes: (on = true) => (fightScene.hitboxes.visible = on),
+      hitboxes: (on = true) => (fightScene.hitboxes.visible = stageScene.hitboxes.visible = on),
       step(n = 1) {
         for (let i = 0; i < n; i++) game.step(performance.now(), 1000 / 60);
       },
