@@ -202,6 +202,9 @@ keyboard / gamepad / touch ─► Controls ─► App ──step(input)──►
 | `src/sim/bosses/` | One file per boss (`sunny.ts`) and the registry of all of them (`index.ts`) |
 | `src/sim/hazards.ts`, `projectile.ts`, `pickups.ts`, `arena.ts` | Vine, root and pollen; seeds and petals; the dewdrop; the leaf platforms |
 | `src/sim/events.ts` | The list of things the simulation announces (`jump`, `bossHit`, `phase`, ...) |
+| `src/sim/stage/stage.ts` | `Stage`: one scrolling stage, the way `Fight` is one boss fight. Ground in solid boxes with pits between, logs, thorns, leaf pads, the camera, pickups and the gate, and the rules that advance it |
+| `src/sim/stage/enemies/` | The small enemies a stage places (Grumbud, Puffball, Pea Pod, Snapper), one file each, and their registry (`index.ts`) |
+| `src/sim/stage/stages/` | The stages, as data: where everything goes. `gardenPath.ts` is Stage 1 |
 | `src/presentation.ts` | The one table that turns each event into a sound, particles, rings, a shake, a flash or a toast |
 | `src/app.ts` | Screen flow (title, pause, mute, win, lose), the fixed-step loop and hit-stop. Knows nothing about Phaser |
 | `src/controls.ts`, `src/gamepad.ts` | Keyboard, touch and gamepad merged into one input per step |
@@ -214,7 +217,7 @@ keyboard / gamepad / touch ─► Controls ─► App ──step(input)──►
 | `src/game/scenes/`, `src/game/hud/` | `BootScene` (font, baking), `FightScene` (syncs views every frame), `HudScene` (hearts, boss bar, toasts); `hud/art.ts` bakes the HUD's parts |
 | `src/game/fx.ts`, `motion.ts`, `debug.ts` | Particles, rings, the screen flash, shake and camera punch; small helpers for moving things (`rand`, `easeOutBack`); the hitbox overlay |
 | `index.html`, `src/style.css`, `src/ui/` | The loading screen, the HTML cards (title, win, lose, pause) and the touch buttons layered over the canvas |
-| `tests/` | Simulation tests, bot fights, and tests for the save, gamepad, music and weather code and for moving through the pause card |
+| `tests/` | Simulation tests (the boss fight and the stages), bot fights, and tests for the save, gamepad, music and weather code and for moving through the pause card |
 
 Fight states: `title → play → ending (slow-mo bloom) → win`, or `play → down (Pip naps) → lose`. A new
 fight replaces the old one rather than resetting it: Play!, Play again, Try again and Start over each make
