@@ -196,7 +196,8 @@ keyboard / gamepad / touch ─► Controls ─► App ──step(input)──►
 | --- | --- |
 | `src/sim/` | The game itself in plain TypeScript: no Phaser, no browser, no `Math.random`. Runs in tests as it runs in the game |
 | `src/sim/fight.ts` | `Fight`: one boss fight. `step(input)` advances exactly 1/60 s; `drainEvents()` reports what happened |
-| `src/sim/player.ts` | Pip: movement, jump, shooting, hurt and invulnerability |
+| `src/sim/player.ts` | Pip: movement, jump, shooting, hurt and invulnerability. He asks the level he is in for its edges, platforms and projectile list (`PlayerWorld`), so he isn't tied to a boss fight |
+| `src/sim/level.ts` | What the views need from the level being played (`Level`); `Fight` is one |
 | `src/sim/boss.ts` | What every boss shares: health, three phases, the intro, the attack scheduler |
 | `src/sim/bosses/` | One file per boss (`sunny.ts`) and the registry of all of them (`index.ts`) |
 | `src/sim/hazards.ts`, `projectile.ts`, `pickups.ts`, `arena.ts` | Vine, root and pollen; seeds and petals; the dewdrop; the leaf platforms |
