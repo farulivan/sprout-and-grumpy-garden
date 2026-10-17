@@ -5,6 +5,7 @@ import { bakeApart, finishBaking } from '../art/bake';
 import { bakeShared } from '../art/shared';
 import { bakeFx } from '../fx';
 import { BOSS_VIEWS } from '../views/bossViews';
+import { bakeEnemies } from '../views/enemies/art';
 import { bakeHazards } from '../views/HazardViews';
 import { bakePickups } from '../views/PickupViews';
 import { bakePlayer } from '../views/PlayerView';
@@ -50,7 +51,10 @@ export class BootScene extends Scene {
       bakeHazards(this);
       bakePickups(this);
       // only a stage draws these, so they get atlas pages of their own (see bakeApart)
-      bakeApart('stage', () => bakeStage(this));
+      bakeApart('stage', () => {
+        bakeStage(this);
+        bakeEnemies(this);
+      });
       bakeFx(this);
       bakeHud(this);
       finishBaking(this);
