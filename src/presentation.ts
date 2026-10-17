@@ -72,6 +72,8 @@ export interface Presenter {
 // The petals Sunny sheds when he leaves a phase: yellow, then orange, then red.
 const PETAL_COLOR = ['#ffc62e', '#ff982c', '#f7622c'];
 const CONFETTI = ['#ffd23f', '#ff8fb1', '#8fd8ff', '#b48cff', '#7ccf63', '#ffffff'];
+const LEAVES = ['#7cc644', '#9ad85f', '#5aa83a'];
+const CHEER = ['#ffd23f', '#ff8fb1', '#fff3b0', '#ffb3c7']; // the petals a cheered-up enemy pops into
 // The puff of dust that anything landing, sliding or digging kicks up. Views reuse it for theirs.
 export const DUST: Burst = {
   n: 5,
@@ -87,6 +89,37 @@ export const DUST: Burst = {
   drag: 0.8,
 };
 const rand = (a: number, b: number) => a + Math.random() * (b - a);
+
+// A seed that hit something that can't be hurt right now: a "tink", a glint, and the seed itself knocked
+// back up the way it came, so a wasted shot can be seen to be wasted. No leaves fly and nothing flinches:
+// that is what a hit looks like.
+function bounce(p: Presenter, x: number, y: number) {
+  p.sfx('block');
+  p.ring(x, y, { color: '#ffffff', from: 6, to: 30, life: 0.2 });
+  p.burst(x, y, {
+    n: 1,
+    color: '#7cc644',
+    speed: 240,
+    size: 7,
+    life: 0.6,
+    gravity: 800,
+    shape: 'leaf',
+    dir: -2.3, // up and back toward Pip
+    spread: 0.5,
+  });
+  p.burst(x, y, {
+    n: 4,
+    color: '#ffffff',
+    speed: 260,
+    size: 4.5,
+    life: 0.18,
+    gravity: 0,
+    shape: 'spark',
+    glow: true,
+    dir: Math.PI,
+    spread: 1.6,
+  });
+}
 
 export function present(e: SimEvent, p: Presenter, opts: { touch: boolean }) {
   switch (e.type) {
@@ -177,33 +210,8 @@ export function present(e: SimEvent, p: Presenter, opts: { touch: boolean }) {
       }
       break;
     case 'bossBlock':
-      // A "tink", a glint, and the seed itself knocked back up the way it came, so a wasted shot can be
-      // seen to be wasted. No leaves fly and he doesn't flinch: that is what a hit looks like.
-      p.sfx('block');
-      p.ring(e.x, e.y, { color: '#ffffff', from: 6, to: 30, life: 0.2 });
-      p.burst(e.x, e.y, {
-        n: 1,
-        color: '#7cc644',
-        speed: 240,
-        size: 7,
-        life: 0.6,
-        gravity: 800,
-        shape: 'leaf',
-        dir: -2.3, // up and back toward Pip
-        spread: 0.5,
-      });
-      p.burst(e.x, e.y, {
-        n: 4,
-        color: '#ffffff',
-        speed: 260,
-        size: 4.5,
-        life: 0.18,
-        gravity: 0,
-        shape: 'spark',
-        glow: true,
-        dir: Math.PI,
-        spread: 1.6,
-      });
+    case 'enemyBlock':
+      bounce(p, e.x, e.y);
       break;
     case 'telegraph':
       p.sfx('telegraph');
@@ -375,6 +383,66 @@ export function present(e: SimEvent, p: Presenter, opts: { touch: boolean }) {
     case 'playerDown':
       p.music(false);
       p.sfx('lose');
+      break;
+    // ---- on a stage ----
+    case 'enemyHit':
+      p.sfx('bossHit');
+      p.burst(e.x, e.y, {
+        n: 4,
+        colors: LEAVES,
+        speed: 150,
+        size: 6,
+        life: 0.5,
+        gravity: 500,
+        shape: 'leaf',
+        dir: UP,
+        spread: 2.4,
+      });
+      break;
+    case 'enemyCheered':
+      // out of its mood: a cheer, a shower of petals and sparkles, and the stage holds still for a beat
+      p.sfx('faceHit');
+      p.hitStop(0.04);
+      p.ring(e.x, e.y, { color: '#fff3b0', from: 8, to: 54, life: 0.35 });
+      p.burst(e.x, e.y, {
+        n: 12,
+        colors: CHEER,
+        speed: 190,
+        size: 7,
+        life: 0.8,
+        gravity: 260,
+        shape: 'petal',
+      });
+      p.burst(e.x, e.y, {
+        n: 5,
+        color: '#fffbe0',
+        speed: 120,
+        size: 6,
+        life: 0.5,
+        gravity: -30,
+        shape: 'star',
+        glow: true,
+      });
+      break;
+    case 'enemyWarn':
+      p.sfx('telegraph');
+      break;
+    case 'pea':
+      p.sfx('spit');
+      break;
+    case 'snap':
+      p.sfx('spit');
+      p.burst(e.x, GROUND - 4, {
+        n: 6,
+        colors: ['#8a5530', '#b47a4c', '#6a3f22'],
+        speed: 220,
+        size: 4,
+        life: 0.6,
+        gravity: 700,
+        shape: 'clod',
+        dir: UP,
+        spread: 1.4,
+      });
       break;
     case 'win':
     case 'lose':

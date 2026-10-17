@@ -1,6 +1,7 @@
 // Things that happen in the simulation that the outside world reacts to with sound, particles, shake or
 // text. The simulation only announces them; src/presentation.ts decides what each one looks and sounds like.
 import type { ProjectileKind } from './projectile';
+import type { EnemyKind } from './stage/enemies/enemy';
 
 export interface FightResult {
   time: number; // seconds of fight time
@@ -28,4 +29,11 @@ export type SimEvent =
   | { type: 'confetti' }
   | { type: 'playerDown' }
   | { type: 'win'; result: FightResult }
-  | { type: 'lose'; progress: number }; // progress = how much of the boss's bar was emptied, 1-100
+  | { type: 'lose'; progress: number } // progress = how much of the boss's bar was emptied, 1-100
+  // On a stage:
+  | { type: 'enemyHit'; x: number; y: number }
+  | { type: 'enemyCheered'; kind: EnemyKind; x: number; y: number; baseY: number } // it pops into a flower
+  | { type: 'enemyBlock'; x: number; y: number } // a seed bounced off something hiding
+  | { type: 'enemyWarn'; x: number; y: number } // the "!" before a small enemy attacks
+  | { type: 'pea'; x: number; y: number }
+  | { type: 'snap'; x: number; y: number };

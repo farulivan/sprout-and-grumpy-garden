@@ -1,6 +1,8 @@
 import { GROUND, H, W } from '../config';
 
-export type ProjectileKind = 'sprout' | 'bossSeed' | 'petal';
+export type ProjectileKind = 'sprout' | 'bossSeed' | 'petal' | 'pea';
+// Who threw it: Pip's seeds hurt the boss and a stage's small enemies; everything else hurts Pip.
+export type ProjectileOwner = 'player' | 'boss' | 'enemy';
 
 export interface ProjectileInit {
   x: number;
@@ -8,7 +10,7 @@ export interface ProjectileInit {
   vx: number;
   vy: number;
   r: number;
-  owner: 'player' | 'boss';
+  owner: ProjectileOwner;
   kind: ProjectileKind;
   life: number;
   gravity?: number;
@@ -23,7 +25,7 @@ export class Projectile {
   vy: number;
   r: number;
   gravity: number;
-  owner: 'player' | 'boss';
+  owner: ProjectileOwner;
   kind: ProjectileKind;
   life: number;
   t = 0;
