@@ -5,7 +5,7 @@
 import { TintModes, type GameObjects, type Scene } from 'phaser';
 import { GROUND, UP } from '../../config';
 import { DUST, type Burst } from '../../presentation';
-import type { Fight } from '../../sim/fight';
+import type { Level } from '../../sim/level';
 import { clamp, lerp } from '../../sim/math';
 import { bake, INV, part, show, SOFT } from '../art/bake';
 import { EARTH_LINE, PIP_LINE } from '../art/color';
@@ -192,8 +192,8 @@ export class PlayerView {
     this.skin = [...this.feet, ...this.leaves, backHand, bodyPart, blaster, this.face];
   }
 
-  sync(fight: Fight, alpha: number, dt: number) {
-    const p = fight.player,
+  sync(level: Level, alpha: number, dt: number) {
+    const p = level.player,
       t = (this.t += dt);
     this.blink -= dt;
     if (this.blink < -0.12) this.blink = 2 + Math.random() * 3;
@@ -203,12 +203,12 @@ export class PlayerView {
     const inAir = !p.onGround,
       forward = (p.vx * p.facing) / RUN_SPEED, // -1..1: how fast Pip moves the way Pip faces
       run = p.onGround && Math.abs(p.vx) > 30,
-      cheering = p.alive && (fight.state === 'ending' || fight.state === 'win'),
+      cheering = p.alive && level.cheering,
       idle = p.onGround && !run;
 
     // The shadow falls on whatever is under Pip: a leaf platform or the ground.
     let floor = GROUND;
-    for (const leafPad of fight.platforms)
+    for (const leafPad of level.platforms)
       if (x > leafPad.x - 4 && x < leafPad.x + leafPad.w + 4 && y <= leafPad.y + 1 && leafPad.y < floor)
         floor = leafPad.y;
     const near = clamp(1 - (floor - y) / 260, 0.35, 1);

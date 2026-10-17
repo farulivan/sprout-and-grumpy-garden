@@ -8,6 +8,7 @@ import { BOSSES, type BossId } from './bosses';
 import type { FightResult, SimEvent } from './events';
 import type { Hazard } from './hazards';
 import type { InputFrame } from './input';
+import type { Level } from './level';
 import { circleHit, prune } from './math';
 import type { Dewdrop } from './pickups';
 import { PIP_LOWEST, Player, type PlayerWorld } from './player';
@@ -23,7 +24,7 @@ export interface FightOptions {
   title?: boolean; // the sleepy scene behind the title card: nothing fights
 }
 
-export class Fight implements PlayerWorld {
+export class Fight implements PlayerWorld, Level {
   state: FightState;
   readonly easy: boolean;
   readonly rng: Rng;
@@ -54,6 +55,10 @@ export class Fight implements PlayerWorld {
       this.state = 'play';
       this.boss.state = 'intro';
     }
+  }
+
+  get cheering() {
+    return this.state === 'ending' || this.state === 'win';
   }
 
   emit(e: SimEvent) {
