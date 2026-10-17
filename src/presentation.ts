@@ -18,7 +18,12 @@ export type SfxName =
   | 'roar'
   | 'pickup'
   | 'win'
-  | 'lose';
+  | 'lose'
+  | 'cheer'
+  | 'snap'
+  | 'fall'
+  | 'seed'
+  | 'clear';
 
 export type ParticleShape =
   | 'circle'
@@ -401,7 +406,7 @@ export function present(e: SimEvent, p: Presenter, opts: { touch: boolean }) {
       break;
     case 'enemyCheered':
       // out of its mood: a cheer, a shower of petals and sparkles, and the stage holds still for a beat
-      p.sfx('faceHit');
+      p.sfx('cheer');
       p.hitStop(0.04);
       p.ring(e.x, e.y, { color: '#fff3b0', from: 8, to: 54, life: 0.35 });
       p.burst(e.x, e.y, {
@@ -431,7 +436,7 @@ export function present(e: SimEvent, p: Presenter, opts: { touch: boolean }) {
       p.sfx('spit');
       break;
     case 'snap':
-      p.sfx('spit');
+      p.sfx('snap');
       p.burst(e.x, GROUND - 4, {
         n: 6,
         colors: ['#8a5530', '#b47a4c', '#6a3f22'],
@@ -445,10 +450,11 @@ export function present(e: SimEvent, p: Presenter, opts: { touch: boolean }) {
       });
       break;
     case 'pitFall':
+      p.sfx('fall');
       p.burst(e.x, GROUND, { ...DUST, n: 6, speed: 90 });
       break;
     case 'goldenSeed':
-      p.sfx('pickup');
+      p.sfx('seed');
       p.toast(`Golden seed! ${e.found} of ${e.total}`, 2, 'good');
       p.ring(e.x, e.y, { color: '#ffe27a', from: 8, to: 60, life: 0.4 });
       p.burst(e.x, e.y, {
@@ -463,7 +469,7 @@ export function present(e: SimEvent, p: Presenter, opts: { touch: boolean }) {
       });
       break;
     case 'stageClear':
-      p.sfx('win');
+      p.sfx('clear');
       p.toast('Stage clear!', 2.2, 'good');
       p.burst(e.x, e.y - 40, {
         n: 30,
