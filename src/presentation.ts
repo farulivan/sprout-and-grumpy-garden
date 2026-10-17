@@ -444,6 +444,41 @@ export function present(e: SimEvent, p: Presenter, opts: { touch: boolean }) {
         spread: 1.4,
       });
       break;
+    case 'pitFall':
+      p.burst(e.x, GROUND, { ...DUST, n: 6, speed: 90 });
+      break;
+    case 'goldenSeed':
+      p.sfx('pickup');
+      p.toast(`Golden seed! ${e.found} of ${e.total}`, 2, 'good');
+      p.ring(e.x, e.y, { color: '#ffe27a', from: 8, to: 60, life: 0.4 });
+      p.burst(e.x, e.y, {
+        n: 10,
+        color: '#ffe066',
+        speed: 140,
+        size: 6,
+        life: 0.6,
+        gravity: -20,
+        shape: 'star',
+        glow: true,
+      });
+      break;
+    case 'stageClear':
+      p.sfx('win');
+      p.toast('Stage clear!', 2.2, 'good');
+      p.burst(e.x, e.y - 40, {
+        n: 30,
+        colors: CONFETTI,
+        speed: 280,
+        size: 7,
+        life: 1.4,
+        gravity: 300,
+        shape: 'confetti',
+        dir: UP,
+        spread: 1.2,
+      });
+      break;
+    case 'stageExit':
+      break; // the app moves on to the boss
     case 'win':
     case 'lose':
       break; // the app shows the result card

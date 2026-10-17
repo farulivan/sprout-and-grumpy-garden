@@ -29,3 +29,22 @@ export class Dewdrop {
     }
   }
 }
+
+// Placed along a stage: a dewdrop (heals one heart) or a golden seed (one of three to find). It floats where
+// it was put and never goes away until Pip takes it.
+export class Placed {
+  readonly r = 14;
+  dead = false;
+  constructor(
+    readonly kind: 'dew' | 'seed',
+    readonly x: number,
+    readonly y: number,
+    readonly index = 0, // which of the stage's golden seeds
+  ) {}
+  get px() {
+    return this.x;
+  }
+  get py() {
+    return this.y;
+  }
+}

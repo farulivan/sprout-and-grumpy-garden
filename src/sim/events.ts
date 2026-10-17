@@ -10,6 +10,15 @@ export interface FightResult {
   easy: boolean;
 }
 
+// How a stage went, at its gate. The hearts left go on into the boss fight.
+export interface StageResult {
+  time: number; // seconds from the start to the gate
+  hits: number; // times Pip was hurt; a fall into a pit counts
+  hearts: number;
+  seeds: number; // golden seeds found
+  easy: boolean;
+}
+
 export type SimEvent =
   | { type: 'jump'; x: number; y: number }
   | { type: 'land'; x: number; y: number }
@@ -29,11 +38,15 @@ export type SimEvent =
   | { type: 'confetti' }
   | { type: 'playerDown' }
   | { type: 'win'; result: FightResult }
-  | { type: 'lose'; progress: number } // progress = how much of the boss's bar was emptied, 1-100
+  | { type: 'lose'; progress: number } // how far Pip got, 1-100: of the boss's bar, or of the stage's path
   // On a stage:
   | { type: 'enemyHit'; x: number; y: number }
   | { type: 'enemyCheered'; kind: EnemyKind; x: number; y: number; baseY: number } // it pops into a flower
   | { type: 'enemyBlock'; x: number; y: number } // a seed bounced off something hiding
   | { type: 'enemyWarn'; x: number; y: number } // the "!" before a small enemy attacks
   | { type: 'pea'; x: number; y: number }
-  | { type: 'snap'; x: number; y: number };
+  | { type: 'snap'; x: number; y: number }
+  | { type: 'pitFall'; x: number }
+  | { type: 'goldenSeed'; x: number; y: number; found: number; total: number }
+  | { type: 'stageClear'; x: number; y: number; result: StageResult } // Pip reached the gate
+  | { type: 'stageExit' }; // ...and has walked through it: on to the boss
