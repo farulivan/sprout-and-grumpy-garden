@@ -145,14 +145,16 @@ export class Player {
     this.sq += (1 - this.sq) * Math.min(1, dt * 9);
   }
 
-  hurt(): boolean {
+  // fromX: where the hit came from, if the hazard knows, to knock Pip away from it. Otherwise he is knocked
+  // back the way he is facing from.
+  hurt(fromX?: number): boolean {
     if (this.inv > 0 || !this.alive) return false;
     this.hp--;
     this.hits++;
     this.inv = 1.6;
     this.hurtT = 0.5;
     this.vy = -280;
-    this.vx = -this.facing * 160;
+    this.vx = (fromX === undefined ? -this.facing : this.x < fromX ? -1 : 1) * 160;
     this.sq = 0.8;
     this.world.emit({ type: 'playerHurt', x: this.x, y: this.y - 24 });
     if (this.hp <= 0) this.alive = false;

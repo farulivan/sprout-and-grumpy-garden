@@ -153,6 +153,21 @@ describe('fight', () => {
     expect(pip.hurt()).toBe(true);
   });
 
+  it('knocks Pip back the way he faces from, or away from what hit him when it says where it was', () => {
+    const pip = fighting().player;
+    pip.x = 300;
+    pip.facing = 1;
+    pip.hurt();
+    expect(pip.vx).toBeLessThan(0);
+    pip.inv = 0;
+    pip.hurt(200); // from behind him: thrown forward
+    expect(pip.vx).toBeGreaterThan(0);
+    pip.inv = 0;
+    pip.facing = -1;
+    pip.hurt(360); // from behind again, now that he faces left
+    expect(pip.vx).toBeLessThan(0);
+  });
+
   it('heals one heart from a dewdrop, never above the maximum', () => {
     const fight = fighting();
     const pip = fight.player;
