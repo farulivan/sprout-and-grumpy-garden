@@ -40,25 +40,26 @@ export class Controls {
   };
   touch = false; // a touch screen is in use (src/ui/touch.ts): its buttons show, and the hints name them
   private just = new Set<Action>();
+  // The keys held down, by where they are on the keyboard (code), and what each does. Several keys share an
+  // action (→ and D both move right), so an action is let go only when the last key holding it is.
+  private keys = new Map<string, Action>();
+  private lastDir: 'left' | 'right' = 'right'; // with ← and → both held, the one pressed last wins
   private pad = readPad(null);
   private tabbed = false; // the focus was moved with Tab since the last click or touch
 
   constructor(onAnyKey: () => void = () => {}) {
     window.addEventListener('keydown', (e) => {
       if (e.key === 'Tab') this.tabbed = true;
-      const action = KEYS[e.key];
-      if (action && !(e.key === ' ' && this.tabbed && onCard(e.target))) {
+      if (KEYS[e.key] && !(e.key === ' ' && this.tabbed && onCard(e.target))) {
         e.preventDefault();
-        this.press(action);
+        this.keyDown(e);
       }
       onAnyKey();
     });
     window.addEventListener('pointerdown', () => (this.tabbed = false));
-    window.addEventListener('keyup', (e) => {
-      const action = KEYS[e.key];
-      if (action) this.release(action);
-    });
+    window.addEventListener('keyup', (e) => this.keyUp(e));
     window.addEventListener('blur', () => {
+      this.keys.clear();
       for (const a of Object.keys(this.held) as Action[]) this.held[a] = false;
     });
     // lets the title card show a gamepad's buttons instead of keys, to players who have one
@@ -77,9 +78,24 @@ export class Controls {
     this.pad = next;
   }
 
+  keyDown(e: Pick<KeyboardEvent, 'key' | 'code'>) {
+    const action = KEYS[e.key];
+    if (!action) return;
+    this.keys.set(e.code || e.key, action);
+    this.press(action);
+  }
+  // A key is known by its place, not by what it types, which Shift can change while it is held.
+  keyUp(e: Pick<KeyboardEvent, 'key' | 'code'>) {
+    const id = e.code || e.key,
+      action = this.keys.get(id) ?? KEYS[e.key];
+    this.keys.delete(id);
+    if (action && ![...this.keys.values()].includes(action)) this.release(action);
+  }
+
   press(action: Action) {
     if (!this.held[action]) this.just.add(action);
     this.held[action] = true;
+    if (action === 'left' || action === 'right') this.lastDir = action;
   }
   release(action: Action) {
     this.held[action] = false;
@@ -93,9 +109,14 @@ export class Controls {
   frame(): InputFrame {
     const h = this.held,
       pad = this.pad;
+    let left = h.left || pad.left,
+      right = h.right || pad.right;
+    // Both held, as when a keyboard player turns round before letting go of the other key: the one pressed
+    // last wins, instead of the two cancelling out and Pip stopping dead.
+    if (left && right) [left, right] = [this.lastDir === 'left', this.lastDir === 'right'];
     return {
-      left: h.left || pad.left,
-      right: h.right || pad.right,
+      left,
+      right,
       up: h.up || pad.up,
       jump: h.jump || pad.jump,
       shoot: h.shoot || pad.shoot,
