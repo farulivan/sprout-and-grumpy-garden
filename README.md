@@ -1,10 +1,12 @@
 # Sprout & the Grumpy Garden 🌱🌻
 
-A cute, kid-friendly boss-battle game in the style of Cuphead / Mega Man boss fights, themed around plants.
-Little **Pip** the sprout cheers up the garden's grumpy plants, one boss at a time, by showering them with seeds.
+A cute, kid-friendly run 'n gun game in the style of Cuphead and Mega Man, themed around plants. Little
+**Pip** the sprout cheers up the garden's grumpy plants by showering them with seeds: the small ones along a
+scrolling stage, then its boss.
 
-The game is named after the garden and each fight after its boss. So far there is one chapter,
-**The Grumpy Sunflower**: win by emptying **Sunny**'s bar without losing all your hearts.
+The game is named after the garden and each chapter after its boss. So far there is one chapter, **The
+Grumpy Sunflower**: walk the Garden Path to Sunny's meadow, then win by emptying **Sunny**'s bar without
+losing all your hearts.
 
 Built with TypeScript, Vite and Phaser 4. There are still no art or sound files: every picture is drawn in
 code when the game starts, and every sound is synthesized with WebAudio.
@@ -128,17 +130,55 @@ people play each version, and the second guards the rest of the domain.
 
 The title card keeps this short: one key for each of the four actions (Move ←→, Jump Space, Shoot X,
 Aim ↑), or a gamepad's or touch screen's own buttons once the game sees one. Everything else in the table
-still works; it is just not listed there, and pause and sound have buttons on screen during the fight.
+still works; it is just not listed there, and pause and sound have buttons on screen during play.
 
-The pause card has **Keep playing**, **Start over** (a new fight, with the same Easy setting) and **Title
-screen** (back to the title card, where Easy mode can be changed). Click or tap one, or choose one with the
-arrow keys, the d-pad or the stick and press it with Space, Enter or A. Pausing from the keyboard or a
-gamepad starts on Keep playing, so pressing A or Space right away just resumes.
+The pause card has **Keep playing**, **Start over** (the stage or the boss fight again from its start, with
+the same Easy setting) and **Title screen** (back to the title card, where Easy mode can be changed).
+
+Every card works the same way: click or tap a button, or choose one with the arrow keys, the d-pad or the
+stick and press it with Space, Enter or A. With nothing chosen, Enter or Start presses the card's main button
+(Play!, Try again, Play again, Keep playing), and so does Space or A on the title and pause cards. Pausing
+from the keyboard or a gamepad starts on Keep playing, so pressing A or Space right away just resumes.
 
 Face shots do 2 damage; stem shots do 1. The game auto-pauses when the tab loses focus.
 **Easy mode** (checkbox on the title and lose screens) gives 8 hearts instead of 5. With only a keyboard, Tab
-to it and press Space; after a click, Space starts the game as usual.
+to it and press Space; after a click, Space starts the game as usual. A gamepad reaches it with the d-pad and
+ticks it with A. Enter or Start never ticks it, so it starts the game right after.
 A jump pressed a moment before landing still counts, and so does one pressed a moment after walking off an edge.
+
+## How the stage works
+
+Play! starts **Stage 1, the Garden Path**: about 7,300 px of garden (7½ screens) from the cottage gate to
+Sunny's meadow, a minute or two of walking. Sunny's mood has spread to the little plants along it, and each
+one Pip cheers up pops into petals and leaves a flower where it stood. Sunny stands on the horizon all the
+way, growing as Pip gets closer, and the bar at the top shows how far along the path Pip is.
+
+- **On to Sunny:** walking through his gate clears the stage, and Pip goes into the boss fight with the
+  hearts he has left. Try again after losing to Sunny, or Start over during his fight, starts the fight
+  again with full hearts: the gate is a checkpoint. Once Pip has reached Sunny, the title card also offers
+  **🌻 Straight to Sunny**.
+- **Small enemies:** each one teaches something Sunny will test. None comes from behind, there are at most
+  three on screen, and every attack is announced by the same orange "!" as Sunny's.
+
+| Enemy | What it does | Seeds to cheer it up |
+| --- | --- | --- |
+| Grumbud, a flower bud on root feet | waddles along the ground or a leaf pad and turns back at its edges | 2 |
+| Puffball, a dandelion clock | drifts over and hangs just above Pip's head, in front of him: aim up | 1 |
+| Pea Pod | swells under a "!" for 0.9 s, then spits a pea at chest height: hop over it | 3 |
+| Snapper, a snapdragon in a mound | seeds bounce off the mound; it rumbles under a "!" for 0.8 s, then snaps up for 0.7 s | 2, while it is up |
+
+- **Obstacles:** logs to hop over (seeds fly over them), thorns that hurt to touch, one-way leaf pads, and
+  pits. A fall into a pit costs a heart, even while Pip is still flashing from a hit, and he comes back on
+  the last safe ground. A fall on his last heart ends the run.
+- **Pickups:** two dewdrops, a heart each (the second on a leaf pad just before the gate), and three
+  **golden seeds**: one in plain sight, one over the higher leaf pad and one over the pit. Their slots by the
+  hearts fill as Pip finds them, but they only count, and are only saved, once he reaches the gate.
+- **Results:** the lose card says how far along the path Pip got. A win over Sunny after walking the whole
+  way adds the stage's time and golden seeds to the win card. The save keeps the stage's best time and every
+  golden seed ever found there, ready for a level map.
+
+It is a warm-up for Sunny. The bot from `docs/future-improvements.md` ("About the numbers"), playing at a
+young child's reaction time (0.6 s), clears it every time and is hurt about once in two runs.
 
 ## How the fight works
 
@@ -179,6 +219,9 @@ one world:
   over the ground) or an orange ring where something will land. Things thrown at Pip carry a pale halo.
   The one helpful thing, the dewdrop, glows blue and sends out rings.
 - **Nothing covers the fight.** The only scenery drawn in front of it sits below the line everyone stands on.
+- **The stage is the same garden, walked.** Its layers repeat and slide past at their own speeds (the far
+  hills barely move, the fence hurries by), Sunny grows on the horizon as Pip gets closer, and every plant he
+  cheers up leaves a flower behind.
 
 ## How the code is organised
 
@@ -196,28 +239,37 @@ keyboard / gamepad / touch ─► Controls ─► App ──step(input)──►
 | --- | --- |
 | `src/sim/` | The game itself in plain TypeScript: no Phaser, no browser, no `Math.random`. Runs in tests as it runs in the game |
 | `src/sim/fight.ts` | `Fight`: one boss fight. `step(input)` advances exactly 1/60 s; `drainEvents()` reports what happened |
-| `src/sim/player.ts` | Pip: movement, jump, shooting, hurt and invulnerability |
+| `src/sim/player.ts` | Pip: movement, jump, shooting, hurt and invulnerability. He asks the level he is in for its edges, platforms and projectile list (`PlayerWorld`), so he isn't tied to a boss fight |
+| `src/sim/level.ts` | What the views need from the level being played (`Level`); `Fight` is one |
 | `src/sim/boss.ts` | What every boss shares: health, three phases, the intro, the attack scheduler |
 | `src/sim/bosses/` | One file per boss (`sunny.ts`) and the registry of all of them (`index.ts`) |
 | `src/sim/hazards.ts`, `projectile.ts`, `pickups.ts`, `arena.ts` | Vine, root and pollen; seeds and petals; the dewdrop; the leaf platforms |
 | `src/sim/events.ts` | The list of things the simulation announces (`jump`, `bossHit`, `phase`, ...) |
+| `src/sim/stage/stage.ts` | `Stage`: one scrolling stage, the way `Fight` is one boss fight. Ground in solid boxes with pits between, logs, thorns, leaf pads, the camera, pickups and the gate, and the rules that advance it |
+| `src/sim/stage/enemies/` | The small enemies a stage places (Grumbud, Puffball, Pea Pod, Snapper), one file each, and their registry (`index.ts`) |
+| `src/sim/stage/stages/` | The stages, as data: where everything goes. `gardenPath.ts` is Stage 1 |
 | `src/presentation.ts` | The one table that turns each event into a sound, particles, rings, a shake, a flash or a toast |
-| `src/app.ts` | Screen flow (title, pause, mute, win, lose), the fixed-step loop and hit-stop. Knows nothing about Phaser |
+| `src/app.ts` | Screen flow (title, pause, mute, win, lose; a stage, then its boss through the stage's gate), the fixed-step loop and hit-stop. Knows nothing about Phaser |
 | `src/controls.ts`, `src/gamepad.ts` | Keyboard, touch and gamepad merged into one input per step |
 | `src/audio.ts` | Synthesized sound effects and music |
-| `src/save.ts` | Easy mode, mute and best times in one versioned `localStorage` entry (or in a slot of its own: see "More than one version online") |
+| `src/save.ts` | Easy mode, mute, best times, cleared stages (best time and golden seeds) and the bosses reached, in one versioned `localStorage` entry (or in a slot of its own: see "More than one version online") |
 | `src/game/art/` | `draw.ts`: Canvas 2D paths, gradients and shading helpers. `face.ts`: the small shared face. `color.ts`: colour maths and the shared outline pens. `bake.ts`: turns drawings into textures, packs them into an atlas, and bends one along a curve (`Ribbon`). `shared.ts`: parts several views use |
-| `src/game/views/` | One view per thing on screen. Each bakes its own parts and animates them from the simulation: `PlayerView`, `SunnyView`, `ProjectileViews`, `HazardViews`, `PickupViews`, `WorldView`. `pool.ts` reuses the views of things that come and go |
+| `src/game/views/` | One view per thing on screen. Each bakes its own parts and animates them from the simulation: `PlayerView`, `SunnyView`, `ProjectileViews`, `HazardViews`, `PickupViews`, `WorldView`, and on a stage `EnemyViews` (parts in `enemies/art.ts`). `pool.ts` reuses the views of things that come and go |
+| `src/game/views/stage/` | A stage's world: `StageWorldView` (the sky that stays put, landscape strips that repeat and slide by how far away they are, the ground with its pits, logs, thorns and leaf pads, the sign, the gate, and the flowers cheered-up plants leave) and its parts (`art.ts`) |
 | `src/game/views/world/` | The arena, one file per layer: `sky.ts`, `land.ts`, `ground.ts`, `air.ts`, and `weather.ts`, which blends between the four moods |
 | `src/game/views/sunny/`, `hazards/` | The bigger views keep their drawing code beside them: Sunny's parts (`art.ts`) and layered face (`face.ts`), the hazards' parts (`art.ts`) |
-| `src/game/scenes/`, `src/game/hud/` | `BootScene` (font, baking), `FightScene` (syncs views every frame), `HudScene` (hearts, boss bar, toasts); `hud/art.ts` bakes the HUD's parts |
+| `src/game/scenes/`, `src/game/hud/` | `BootScene` (font, baking), `FightScene` and `StageScene` (sync the views every frame; only the one for what is being played runs), `HudScene` (hearts, the boss's bar or the stage's path bar and golden seeds, toasts); `hud/art.ts` bakes the HUD's parts |
 | `src/game/fx.ts`, `motion.ts`, `debug.ts` | Particles, rings, the screen flash, shake and camera punch; small helpers for moving things (`rand`, `easeOutBack`); the hitbox overlay |
 | `index.html`, `src/style.css`, `src/ui/` | The loading screen, the HTML cards (title, win, lose, pause) and the touch buttons layered over the canvas |
-| `tests/` | Simulation tests, bot fights, and tests for the save, gamepad, music and weather code and for moving through the pause card |
+| `tests/` | Simulation tests (the boss fight and the stages), bot fights, and tests for the save, gamepad, music and weather code and for moving between a card's buttons |
 
-Fight states: `title → play → ending (slow-mo bloom) → win`, or `play → down (Pip naps) → lose`. A new
-fight replaces the old one rather than resetting it: Play!, Play again, Try again and Start over each make
-one, and Title screen makes a sleeping `title` fight, as the game does when it opens.
+Fight states: `title → play → ending (slow-mo bloom) → win`, or `play → down (Pip naps) → lose`. Stage
+states: `play → clear (Pip walks through the gate) → exit` (on to the boss), or `play → down → lose`.
+
+A new level replaces the old one rather than resetting it. Play! and Play again make the chapter's stage
+(`CHAPTER` in `src/app.ts`); its gate makes the boss fight with the hearts Pip has left; Try again and Start
+over make the level being played again (a boss fight with full hearts); Straight to Sunny makes the boss
+fight; and Title screen makes a sleeping `title` fight, as the game does when it opens.
 
 ### Things to know before changing it
 
@@ -237,10 +289,12 @@ one, and Title screen makes a sleeping `title` fight, as the game does when it o
   the rules don't need: Sunny's head recoiling from a hit, Pip's sprout trailing behind a run, the wind-up
   before an attack. That state lives in the view and uses `Math.random` freely.
 - **Small parts share one atlas texture.** `bake()` only queues a small part; `finishBaking()` (called
-  once in `BootScene`) packs them onto a 2048-pixel page, which is about 90% full (it warns in the console
-  if a second page is ever needed). Make images with `part()` and swap them with `show()`; never call
-  `setTexture` yourself. Parts longer than 512 texture pixels keep their own texture. Big soft glows are
-  baked small (`SOFT`, `HAZY`) so they fit: scale those with `unit(key)`, not `INV`.
+  once in `BootScene`) packs them onto a 2048-pixel page, which is about 75% full (it warns in the console
+  if a second page is ever needed). Art that only a stage draws is baked inside `bakeApart('stage', ...)`
+  and goes on a page of its own: it doesn't crowd the shared page, and a boss fight never switches between
+  pages because of it. Make images with `part()` and swap them with `show()`; never call `setTexture`
+  yourself. Parts longer than 512 texture pixels keep their own texture. Big soft glows are baked small
+  (`SOFT`, `HAZY`) so they fit: scale those with `unit(key)`, not `INV`.
 - **One texture per draw batch, on purpose.** `BootScene` sets this for every device (Phaser's default on
   phones and tablets). Otherwise Phaser compiles a new shader the first time a batch uses a new number of
   textures, which drops frames mid-fight. Thanks to the atlas a frame is still only about 20-35 draw calls.
@@ -304,10 +358,22 @@ Pip's heels, steam from Sunny) are made by that view, which is handed the same `
 **Add a boss.** Write `src/sim/bosses/<name>.ts` extending `Boss` (its movement, hurtboxes and attacks) and
 add it to `src/sim/bosses/index.ts`. TypeScript then asks for its view in `src/game/views/bossViews.ts`. The
 toasts in `src/presentation.ts`, the lose text in `src/ui/overlay.ts` and the cards in `index.html` still
-name Sunny, the title card says "Chapter 1 · The Grumpy Sunflower", and the game always starts the
-`sunny` fight: choosing a boss needs a level-select screen. The portrait on the boss bar (`bar-icon-*` in
+name Sunny, the title card says "Chapter 1 · The Grumpy Sunflower", and the game always plays one chapter
+(`CHAPTER` in `src/app.ts`: the Garden Path, then `sunny`): choosing one needs a level-select screen. The portrait on the boss bar (`bar-icon-*` in
 `src/game/hud/art.ts`), the shed-petal colours in `src/presentation.ts` and the sunflower garden itself are
 Sunny's too. The weather already follows any boss's phase (`moodOf` in `src/game/views/world/weather.ts`).
+
+**Add a stage.** Write its layout as data in `src/sim/stage/stages/<name>.ts`, a `StageData`: its length,
+ground and pits, logs, thorns, leaf pads, enemies, dewdrops, golden seeds and gate. Add it to `STAGES` in
+`src/sim/stage/stages/index.ts`, and give it the Garden Path's checks in `tests/sim/stage.test.ts` (it can be
+played to the end, every pit can be jumped, every log and pad can be reached). `CHAPTER` in `src/app.ts`
+names the stage and the boss that Play! runs. `StageWorldView` draws any layout, but always as the garden
+path: a stage somewhere else needs strips and pieces of its own (`src/game/views/stage/art.ts`).
+
+**Add a small enemy.** Write a class extending `Enemy` (`src/sim/stage/enemies/enemy.ts`) next to the others,
+add its `kind` to `EnemyKind` and a line to `ENEMIES` in `index.ts`. TypeScript then asks for its view in
+`EnemyViews` (`src/game/views/EnemyViews.ts`, parts in `enemies/art.ts`). Like a hazard, it must warn before
+it hurts: draw its "!" with `showMark`.
 
 **Tune difficulty.**
 
@@ -315,6 +381,8 @@ Sunny's too. The weather already follows any boss's phase (`moodOf` in `src/game
 - Boss pacing: `idleTime` (pause between attacks) and `speedMuls` (projectile speed) per phase, in the same file.
 - Pip's movement, jump and fire rate: the constants at the top of `src/sim/player.ts`.
 - Invulnerability after a hit: `hurt()` in `src/sim/player.ts`.
+- A stage: where everything goes, in its data file; each enemy's speed and timing at the top of its file,
+  and `level` for a harder one (so far a level-2 Pea Pod spits two peas after each "!").
 
 **Replace the code-drawn art.** Every picture is made by a `bake(...)` call with a key such as `pip-body` or
 `sunny-petal-front-0`. `bake.ts` keeps a table of where each key lives (texture, frame, pivot, scale) and
@@ -349,13 +417,15 @@ once before anything else so the scenes start):
 
 ```js
 const S = window.sprout;
-S.startGame(); S.step(120);                // skip the "Ready? GO!" intro
+S.startBoss(); S.step(120);                // Sunny's fight; skip the "Ready? GO!" intro
 S.input.shoot = S.input.up = true;         // hold shoot + aim up
 S.step(60 * 10);                           // simulate 10 seconds
 console.log(S.game.boss.hp, S.game.player.hp, S.game.state);
 ```
 
 Add `?hitboxes` (or call `S.hitboxes(true)`) to draw what the simulation actually collides with.
+`S.startGame()` is Play! (the Garden Path, then Sunny through its gate); `S.startStage()` and
+`S.startBoss(hearts)` start either one directly.
 
 Two things to know when scripting it. Hit-stop (see `App.hitStop`) holds the simulation for a few frames
 after Pip is hurt or Sunny changes phase, so `step(n)` can advance the fight by a little less than `n`
@@ -363,7 +433,8 @@ steps. And timing a tight `step()` loop does not measure frame time: WebGL calls
 how fast the graphics card drains the queue. To check for stutter, let the game's own loop run and record
 the gaps between `requestAnimationFrame` callbacks. To see what a frame costs, count `drawElements` calls
 on `S.phaser.renderer.gl` and take a CPU profile while the loop runs. For reference, a phase-3 fight on an
-M4 Mac at 1920x1080 is about 30 draw calls, 0.2 ms of script and 140 kB of short-lived memory per frame.
+M4 Mac at 1920x1080 is about 30 draw calls, 0.2 ms of script and 140 kB of short-lived memory per frame,
+and the Garden Path about 35 draw calls.
 
 ## Ideas for later
 

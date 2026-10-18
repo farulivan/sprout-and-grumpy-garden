@@ -40,10 +40,25 @@ interface Job {
   ax: number;
   ay: number;
   draw: Draw;
+  group: string; // parts in different groups never share a page (see bakeApart)
 }
 const baked = new Map<string, Baked>();
 let queue: Job[] = [];
 let packed = false; // once the atlas is drawn, anything baked later gets a texture of its own
+let group = 'main';
+
+// Put the parts that bakeAll() bakes on atlas pages of their own. For art that only one kind of level draws
+// (a stage's ground and enemies, say): it then never crowds the parts every level shares off their page, and
+// a boss fight, which never shows it, never switches between pages because of it.
+export function bakeApart(name: string, bakeAll: () => void) {
+  const was = group;
+  group = name;
+  try {
+    bakeAll();
+  } finally {
+    group = was;
+  }
+}
 
 function paint(ctx: CanvasRenderingContext2D, job: Job, x: number, y: number) {
   ctx.save();
@@ -73,7 +88,7 @@ export function bake(
   res = RES,
 ) {
   if (baked.has(key)) throw new Error(`Part "${key}" is baked twice`);
-  const job: Job = { key, pw: Math.ceil(w * res), ph: Math.ceil(h * res), res, ax, ay, draw };
+  const job: Job = { key, pw: Math.ceil(w * res), ph: Math.ceil(h * res), res, ax, ay, draw, group };
   const part: Baked = { texture: key, origin: [ax / w, ay / h], unit: 1 / res };
   baked.set(key, part);
   if (!packed && job.pw <= SOLO && job.ph <= SOLO) {
@@ -86,20 +101,33 @@ export function bake(
   texture.refresh();
 }
 
-// Call once after every bake(): packs the queued parts onto atlas pages and draws them.
+// Call once after every bake(): packs the queued parts onto atlas pages and draws them, each group of parts
+// on pages of its own.
 export function finishBaking(scene: Scene) {
-  // Tallest first, in rows ("shelves"): simple, and it wastes little space when heights are sorted.
-  const jobs = queue.sort((a, b) => b.ph - a.ph);
+  const groups = new Map<string, Job[]>();
+  for (const job of queue) {
+    const jobs = groups.get(job.group);
+    if (jobs) jobs.push(job);
+    else groups.set(job.group, [job]);
+  }
   queue = [];
   packed = true;
+  let page = -1;
+  for (const [name, jobs] of groups) page = pack(scene, name, jobs, page);
+}
+
+// Packs one group's parts onto pages numbered from after `page`, and returns the last page it used.
+function pack(scene: Scene, name: string, all: Job[], page: number) {
+  // Tallest first, in rows ("shelves"): simple, and it wastes little space when heights are sorted.
+  const jobs = all.sort((a, b) => b.ph - a.ph),
+    first = page + 1;
   // Each part is drawn on this scratch canvas first and copied onto its page from there. (Drawing it
   // straight onto the page and copying edge pixels within the page is far slower: every copy from a
   // canvas to itself makes the browser duplicate the whole page first.)
   const scratch = document.createElement('canvas');
   scratch.width = scratch.height = SOLO;
   const pen = scratch.getContext('2d')!;
-  let page = -1,
-    ctx: CanvasRenderingContext2D | null = null,
+  let ctx: CanvasRenderingContext2D | null = null,
     x = PAGE, // forces the first part to open a row, and that row to open a page
     y = PAGE,
     rowH = 0;
@@ -118,7 +146,7 @@ export function finishBaking(scene: Scene) {
       if (!texture) throw new Error('Could not create an atlas page');
       // Everything still works on two pages, but each one is 16 MB of video memory, and parts on
       // different pages cannot be drawn in one go. Worth knowing the moment it happens.
-      if (page > 0) console.warn(`The art no longer fits on one atlas page: opening page ${page + 1}.`);
+      if (page > first) console.warn(`The ${name} art no longer fits on one atlas page: opening another.`);
       pages.push(texture);
       ctx = texture.getContext();
       x = y = 0;
@@ -145,6 +173,7 @@ export function finishBaking(scene: Scene) {
     x += w;
   }
   for (const texture of pages) texture.refresh();
+  return page;
 }
 
 function get(key: string): Baked {

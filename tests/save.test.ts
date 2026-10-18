@@ -95,3 +95,31 @@ it("a build with a save slot leaves the original game's keys untouched", () => {
   expect(store.items.get('sprout.best')).toBe('52.4');
   expect(createSave(store).best('sunny')).toBe(52.4); // still there for the main save to bring over
 });
+
+it('remembers a cleared stage: its best time, and every golden seed ever found there', () => {
+  const store = memoryStore();
+  const first = createSave(store);
+  expect(first.stage('gardenPath')).toEqual({ best: null, seeds: [] });
+  expect(first.recordStage('gardenPath', 60.04, [true, false, false])).toBe(true);
+  expect(first.recordStage('gardenPath', 71, [false, true, false])).toBe(false); // slower, but a new seed
+
+  const second = createSave(store);
+  expect(second.stage('gardenPath')).toEqual({ best: 60, seeds: [true, true, false] });
+});
+
+it('remembers which bosses Pip has walked up to', () => {
+  const store = memoryStore();
+  const first = createSave(store);
+  expect(first.reached('sunny')).toBe(false);
+  first.reach('sunny');
+  expect(createSave(store).reached('sunny')).toBe(true);
+});
+
+it('reads a save from before there were stages as having none cleared and no boss reached', () => {
+  const save = createSave(
+    memoryStore({ 'sprout.save': '{"v":1,"easy":true,"muted":false,"best":{"sunny":50}}' }),
+  );
+  expect([save.easy, save.best('sunny')]).toEqual([true, 50]);
+  expect(save.stage('gardenPath')).toEqual({ best: null, seeds: [] });
+  expect(save.reached('sunny')).toBe(false);
+});

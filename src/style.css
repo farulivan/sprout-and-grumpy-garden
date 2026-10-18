@@ -537,6 +537,13 @@ kbd {
     0 1px 0 var(--wood-dark),
     0 3px 6px rgba(0, 0, 0, 0.22);
 }
+/* "Straight to Sunny" on the title card, under Play! once Sunny has been reached */
+.shortcut {
+  margin-top: 14px;
+}
+.btn[hidden] {
+  display: none;
+}
 .btn.wood svg {
   width: 22px;
   height: 22px;
@@ -600,6 +607,9 @@ kbd {
   background: #fff0b0;
   border-color: #ffc93c;
 }
+.stats .break {
+  flex-basis: 100%;
+}
 /* how far the lost fight got: a bar that fills up */
 .meter {
   flex-basis: 100%;
@@ -647,7 +657,8 @@ kbd {
 .easy input:checked {
   background: #63c254;
 }
-.easy input:focus-visible {
+.easy input:focus-visible,
+#overlay.nav .easy input:focus {
   outline: 4px solid #ffd23f;
   outline-offset: 2px;
 }

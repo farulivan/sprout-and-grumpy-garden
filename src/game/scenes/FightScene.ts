@@ -1,6 +1,7 @@
 // Draws the fight. The App advances the simulation; every frame this scene makes the views match it.
 import { Scene } from 'phaser';
 import type { App } from '../../app';
+import { Fight } from '../../sim/fight';
 import { fitCamera } from '../createGame';
 import { HitboxOverlay } from '../debug';
 import { Fx } from '../fx';
@@ -59,13 +60,20 @@ export class FightScene extends Scene {
     this.hitboxes.visible = new URLSearchParams(location.search).has('hitboxes');
     this.presenter.fx = this.fx;
     this.scene.launch('hud');
+    // back from a stage: this scene's effects take over again, starting clean, and the arena fades in
+    this.events.on('wake', () => {
+      this.fx.clear();
+      this.presenter.fx = this.fx;
+      this.cameras.main.fadeIn(500, 255, 248, 225);
+    });
   }
 
   // Not called while the game is paused (the App pauses this scene), so everything freezes together.
   override update(_time: number, deltaMs: number) {
     const dt = deltaMs / 1000,
-      fight = this.app.fight,
+      fight = this.app.level,
       alpha = this.app.alpha;
+    if (!(fight instanceof Fight)) return; // a stage is being played: its own scene draws it
 
     this.world.sync(dt, fight, alpha);
     this.bossView(fight.boss.id).sync(fight, alpha, dt);

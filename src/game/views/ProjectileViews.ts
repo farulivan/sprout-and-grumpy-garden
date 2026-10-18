@@ -1,4 +1,4 @@
-// Things that fly: Pip's seeds, and the seeds and petals Sunny throws back.
+// Things that fly: Pip's seeds, the seeds and petals Sunny throws back, and the peas a Pea Pod spits.
 // Pip's seeds glow and leave a streak. Sunny's carry a pale halo, so they stand out against any sky.
 import { BlendModes, type GameObjects, type Scene } from 'phaser';
 import { TAU } from '../../config';
@@ -9,7 +9,7 @@ import { PIP_LINE } from '../art/color';
 import { circle, glow, inside, leaf, line, linear, radial, type Ctx } from '../art/draw';
 import { ViewPool, type PooledView } from './pool';
 
-const SPIN = { sprout: 0, bossSeed: 6, petal: 5 }; // radians per second
+const SPIN = { sprout: 0, bossSeed: 6, petal: 5, pea: 9 }; // radians per second
 // Pip's seed is born at Pip's middle. It stays hidden for a moment, so it appears at the blaster's mouth.
 const MUZZLE_TIME = 0.03;
 
@@ -88,6 +88,16 @@ export function bakeProjectiles(scene: Scene) {
     shape();
     line(c, '#a3520a', 2.6);
   });
+  // a round green pea with a shine on it; it rolls as it flies
+  bake(scene, 'shot-pea', 24, 24, 12, 12, (c) => {
+    circle(c, 0, 0, 8.5);
+    c.fillStyle = radial(c, 0, 0, 9, ['#c8f28a', '#7cc644', '#4f9a2f'], -3, -3);
+    c.fill();
+    line(c, '#2c5e1c', 2.4);
+    circle(c, -3, -3.2, 2.2);
+    c.fillStyle = 'rgba(255,255,255,0.85)';
+    c.fill();
+  });
 }
 
 class ShotView implements PooledView {
@@ -105,7 +115,7 @@ class ShotView implements PooledView {
             .setBlendMode(BlendModes.ADD)
             .setDepth(depth - 0.01)
         : part(scene, 'shot-halo')
-            .setTint(kind === 'petal' ? 0xfff3b0 : 0xffe9c8)
+            .setTint(kind === 'petal' ? 0xfff3b0 : kind === 'pea' ? 0xeaffd2 : 0xffe9c8)
             .setDepth(depth - 0.02);
     this.body = part(scene, `shot-${kind}`).setDepth(depth);
   }

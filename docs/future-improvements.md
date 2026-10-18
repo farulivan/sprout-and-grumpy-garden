@@ -10,11 +10,11 @@ running in headless Chrome (see "About the numbers").
 
 ## Suggested order
 
-1. The quick fixes (#18, #19, #20) and checks on pull requests (#15). They are small and safe, and none of
-   them changes how the fight plays.
+1. The quick fixes (#18, #20) and checks on pull requests (#15). They are small and safe, and neither
+   changes how the game plays.
 2. Sound (#13), the biggest gap left against the look of the game.
-3. The phone layout (#14).
-4. One boss profile (#17), then a second boss and a level map.
+3. The phone layout (#14), which the stage makes more pressing.
+4. One chapter profile (#17), then a second chapter (a harder stage and a new boss) and a level map.
 
 ## Quick fixes
 
@@ -25,16 +25,6 @@ someone holding a gamepad. These hints are `.keys-only`, which `src/style.css` h
 
 **Fix:** with a gamepad (`body.gamepad`), show its Start button instead, the way the title card switches its
 controls (`.on-keys` and `.on-pad` in `index.html`).
-
-### #19 Gamepad players can't turn on Easy mode
-
-The d-pad only moves between buttons on the pause card. On the title and lose cards a gamepad can start the
-fight, but it can't reach the Easy mode checkbox.
-
-**Fix:** make `Overlay.choose()` and `Overlay.press()` (`src/ui/overlay.ts`) work on every card and include
-the checkbox, and call them from the title, win and lose branches of `App.tick()` (`src/app.ts`). With
-nothing chosen, A must still start the game. On the title and lose cards the checkbox comes before the
-button, so "press the first control" would tick it instead.
 
 ### #20 A message freezes above the pause card
 
@@ -56,17 +46,17 @@ shows that the game builds, and nothing in the repo tests it in a browser.
 - A GitHub Actions workflow that runs `pnpm install --frozen-lockfile`, `pnpm check` and `pnpm build` on
   every pull request.
 - Then a smoke test in a real browser (Playwright, say) that opens the game with `?debug` and goes through
-  every screen with real key presses and taps: start, pause, Keep playing, Start over, Title screen, a win
-  and a loss, and Easy mode from the keyboard. PRs #6 and #7 were checked with scripts like that, kept outside
-  the repo.
+  every screen with real key presses, taps and a gamepad: start, pause, Keep playing, Start over, Title
+  screen, a win and a loss, Easy mode, the stage's gate and Straight to Sunny. PRs #6, #7 and #9–#12 were
+  checked with scripts like that, kept outside the repo.
 
 ## Sound
 
 ### #13 The music never changes
 
 Measured: the fight music is one 4.5 s loop of 16 notes. It plays about 20 times in a fight and sounds the
-same in all three phases. The title screen is silent. The sound heard most is the shot, a square-wave blip
-about six times a second.
+same in all three phases. The Garden Path has a quicker tune of its own, but it is a 3.5 s loop too. The
+title screen is silent. The sound heard most is the shot, a square-wave blip about six times a second.
 
 **Fix:** keep it all generated in code (`src/audio.ts`), but give each phase its own theme that gets faster
 and fuller as Sunny gets angrier, add a gentle tune for the title screen, and soften the shot. Recorded music
@@ -81,6 +71,7 @@ Measured on an 844×390 phone:
 - The touch buttons sit on the ground line, where the fight happens.
 - The vine's warning, a mound rumbling on the ground, hides under the Jump thumb.
 - At the far left, Pip stands behind the move pad.
+- On the Garden Path, the Jump thumb covers the ground at the right edge, where the enemies walk in from.
 - The buttons on the cards are small: about 29 px tall for Start over and Title screen, and 37 px for the
   green ones, against the 44 px that phone guidelines recommend.
 
@@ -89,20 +80,28 @@ buttons bigger on touch screens (or give them bigger hit areas).
 
 ## Content
 
-### #17 One boss profile, before a second boss
+### #17 One chapter profile, before a second chapter
 
-Sunny is written into many places: the messages in `src/presentation.ts`, the lose text in
-`src/ui/overlay.ts`, the cards in `index.html` (with "Chapter 1 · The Grumpy Sunflower"), the portrait on the
-boss bar (`bar-icon-*` in `src/game/hud/art.ts`) and the colours of his shed petals. `Boss.mood` in
+Sunny is written into many places: the messages in `src/presentation.ts`, the lose texts in
+`src/ui/overlay.ts` ("Sunny is still grumpy…", "of the way to Sunny"), the cards and the Straight to Sunny
+button in `index.html` (with "Chapter 1 · The Grumpy Sunflower"), the portrait on the boss bar and the
+stage's path bar (`bar-icon-*` in `src/game/hud/art.ts`), the sunflower on the stage's horizon, and the
+colours of his shed petals. `CHAPTER` in `src/app.ts` pairs him with the Garden Path. `Boss.mood` in
 `src/sim/boss.ts` is set but never read.
 
-**Fix:** one profile for each boss (name, chapter, story line, messages, lose text, colours, portrait) that
-the cards, the HUD and the presentation all read. Then a second boss and a level-select map; "Add a boss" in
-the README lists the steps. Use `Boss.mood` or remove it.
+**Fix:** one profile for each chapter (its stage, and its boss's name, story line, messages, lose texts,
+colours and portrait) that the cards, the HUD and the presentation all read. Then a second chapter and a
+level-select map; "Add a stage", "Add a small enemy" and "Add a boss" in the README list the steps. Use
+`Boss.mood` or remove it.
 
 ## Bigger ideas
 
-- A second chapter (e.g. "The Prickly Cactus" or "The Moody Mushroom") and a small level-select map.
+- A second chapter (e.g. "The Prickly Cactus" or "The Moody Mushroom"), and a small level-select map that
+  shows each stage's golden seeds and best time (the save already keeps both).
+- Harder stages for the chapters after the first, as Stage 1's plan set out: new kinds of small enemy (one
+  that drops from above, a charger, one that jumps pits), a mini-boss that blocks the path (as the Acorn
+  Maker does in Cuphead's Forest Follies), moving platforms, wider pits, and faster, busier enemies. Much of
+  it is data: the stage's layout and the enemies' `level`.
 - A dash or a "Sunshine Super" meter that fills with hits.
 - Recorded sound and music to replace the synthesized placeholders (the picture has had its overhaul).
 - An installable, offline version (PWA) for tablets. (Give its service worker the game's own folder as its
@@ -161,12 +160,16 @@ normal fight.
   hurt, the dewdrop message at full hearts, the hearts and boss bar fading under the result cards, petals
   bursting on the grass, and the rotate prompt on phones.
 - #11, Start over and Title screen on the pause card (PR #7).
+- Stage 1, the Garden Path, before Sunny (PRs #9–#12): a scrolling stage with four kinds of small enemy,
+  golden seeds, hearts carried through the gate into the boss fight, and Straight to Sunny on the title card.
+- #19, the d-pad and the arrow keys on every card, Easy mode's checkbox included (PR #12).
 
 ## About the numbers
 
 The simulation (`src/sim/`) runs without a browser, so a bot can play whole fights in a test. The bot behind
 the figures above looked 50 steps (0.8 s) ahead every few steps and tried nine moves (left, stay or right,
 each with no jump, a hop or a full jump). It ignored any attack younger than its reaction time and aimed up
-only near the spot where shots reach Sunny's face. It isn't in the repo; the README's "Tests" section shows
-how to play a fight in a test. The phone and button measurements came from the game running in headless
+only near the spot where shots reach Sunny's face. On the Garden Path it also weighed the stage's threats
+(enemies, peas, thorns and pits), and a "!" it had seen for less than its reaction time didn't count. It
+isn't in the repo; the README's "Tests" section shows how to play a fight in a test. The phone and button measurements came from the game running in headless
 Chrome.

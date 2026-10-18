@@ -143,6 +143,13 @@ describe('fight', () => {
     expect([easy.hp, easy.maxHp]).toEqual([8, 8]);
   });
 
+  it('starts Pip with the hearts he carried in from a stage, never more than he can hold', () => {
+    expect(new Fight({ seed: 1, hearts: 2 }).player.hp).toBe(2);
+    expect(new Fight({ seed: 1, hearts: 9 }).player.hp).toBe(5);
+    const easy = new Fight({ seed: 1, easy: true, hearts: 7 }).player;
+    expect([easy.hp, easy.maxHp]).toEqual([7, 8]);
+  });
+
   it('protects Pip for 1.6 s after a hit', () => {
     const fight = fighting();
     const pip = fight.player;
@@ -151,6 +158,21 @@ describe('fight', () => {
     expect(pip.hp).toBe(4);
     pip.inv = 0;
     expect(pip.hurt()).toBe(true);
+  });
+
+  it('knocks Pip back the way he faces from, or away from what hit him when it says where it was', () => {
+    const pip = fighting().player;
+    pip.x = 300;
+    pip.facing = 1;
+    pip.hurt();
+    expect(pip.vx).toBeLessThan(0);
+    pip.inv = 0;
+    pip.hurt(200); // from behind him: thrown forward
+    expect(pip.vx).toBeGreaterThan(0);
+    pip.inv = 0;
+    pip.facing = -1;
+    pip.hurt(360); // from behind again, now that he faces left
+    expect(pip.vx).toBeLessThan(0);
   });
 
   it('heals one heart from a dewdrop, never above the maximum', () => {

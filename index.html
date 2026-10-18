@@ -390,12 +390,12 @@
           </h1>
           <p class="chapter"><span>Chapter 1 · The Grumpy Sunflower</span></p>
           <p class="sub">
-            Sunny the Sunflower woke up grumpy and is blocking the garden path! Help little Pip cheer him up
-            with a shower of seeds.
+            Sunny the Sunflower woke up grumpy, and his mood has spread all down the garden path! Help little
+            Pip cheer up every plant on the way, and then Sunny himself.
           </p>
           <!-- The four things Pip does, with one key each, for whatever the player is using: the keyboard,
                a touch screen or a gamepad (body.touch and body.gamepad choose). The other keys still work
-               and are listed in the README; pause and sound have buttons of their own during the fight. -->
+               and are listed in the README; pause and sound have buttons of their own during play. -->
           <ul class="controls">
             <li>
               <span class="on-keys"><kbd>←</kbd><kbd>→</kbd></span>
@@ -427,6 +427,8 @@
             <label class="easy"><input type="checkbox" class="easy-toggle" /> 🌱 Easy mode (8 hearts)</label>
             <button id="btn-start" class="btn big">Play!</button>
           </div>
+          <!-- Once Pip has walked up to Sunny, he can be faced again without the garden path first -->
+          <button id="btn-sunny" class="btn wood shortcut" hidden>🌻 Straight to Sunny</button>
         </div>
         <div class="card hidden" id="win-card">
           <div class="badge">🌻</div>
@@ -441,8 +443,8 @@
           <div class="badge">😴</div>
           <h1>Pip needs a nap</h1>
           <p class="sub">
-            Sunny is still grumpy… but you've got this! Watch for the <b class="bang">!</b> bubble, then hop
-            or scoot away.
+            <span id="lose-who">Sunny is</span> still grumpy… but you've got this! Watch for the
+            <b class="bang">!</b> bubble, then hop or scoot away.
           </p>
           <div class="stats" id="lose-progress"></div>
           <div class="actions">
@@ -456,7 +458,7 @@
           <h1>Taking a breather</h1>
           <p class="sub keys-only">Press <kbd>P</kbd> or <kbd>Esc</kbd> to keep going.</p>
           <button id="btn-resume" class="btn">Keep playing</button>
-          <!-- The ways out of the fight, quieter than "Keep playing" so that one stands out -->
+          <!-- The ways out of the level, quieter than "Keep playing" so that one stands out -->
           <div class="actions leave">
             <button id="btn-restart" class="btn wood">
               <svg viewBox="0 0 24 24" aria-hidden="true">

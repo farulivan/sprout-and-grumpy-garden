@@ -1,16 +1,17 @@
 // One boss fight: the whole game state plus the rules that advance it.
 // States: title (boss asleep behind the title card) | play -> ending (boss blooms) -> win
 //                                                    | play -> down (Pip naps) -> lose
-import { STEP } from '../config';
+import { ARENA_R, STEP } from '../config';
 import { platforms } from './arena';
 import type { Boss } from './boss';
 import { BOSSES, type BossId } from './bosses';
 import type { FightResult, SimEvent } from './events';
 import type { Hazard } from './hazards';
 import type { InputFrame } from './input';
-import { circleHit, prune } from './math';
+import type { Level } from './level';
+import { circleHit, clamp, prune } from './math';
 import type { Dewdrop } from './pickups';
-import { PIP_LOWEST, Player } from './player';
+import { PIP_LOWEST, Player, type PlayerWorld } from './player';
 import type { Projectile } from './projectile';
 import { Rng } from './rng';
 
@@ -20,13 +21,16 @@ export interface FightOptions {
   seed: number;
   boss?: BossId;
   easy?: boolean; // 8 hearts instead of 5
+  hearts?: number; // start with this many: the hearts Pip carried in from the stage before
   title?: boolean; // the sleepy scene behind the title card: nothing fights
 }
 
-export class Fight {
+export class Fight implements PlayerWorld, Level {
   state: FightState;
   readonly easy: boolean;
   readonly rng: Rng;
+  readonly minX = 24;
+  readonly maxX = ARENA_R;
   readonly platforms = platforms;
   readonly player: Player;
   readonly boss: Boss;
@@ -46,12 +50,17 @@ export class Fight {
     this.player = new Player(this);
     this.boss = BOSSES[opts.boss ?? 'sunny'](this);
     if (this.easy) this.player.hp = this.player.maxHp = 8;
+    if (opts.hearts !== undefined) this.player.hp = clamp(Math.round(opts.hearts), 1, this.player.maxHp);
     if (opts.title) {
       this.state = 'title';
     } else {
       this.state = 'play';
       this.boss.state = 'intro';
     }
+  }
+
+  get cheering() {
+    return this.state === 'ending' || this.state === 'win';
   }
 
   emit(e: SimEvent) {

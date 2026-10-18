@@ -1,10 +1,13 @@
-// Hearts, the boss's bar, toasts and "Ready? GO!". It runs on top of the fight scene with its own camera,
-// so screen shake does not move it. The parts are baked in src/game/hud/art.ts.
+// Hearts, the boss's bar, toasts and "Ready? GO!" (on a stage, its name and then "GO!"). It runs on top of
+// the fight and stage scenes with its own camera, so screen shake does not move it. The parts are baked in
+// src/game/hud/art.ts.
 import { BlendModes, Scene, type GameObjects } from 'phaser';
-import type { App } from '../../app';
+import type { App, Played } from '../../app';
 import { H, RES, TAU, W } from '../../config';
 import type { ToastTone } from '../../presentation';
-import type { Fight } from '../../sim/fight';
+import { Fight } from '../../sim/fight';
+import type { Player } from '../../sim/player';
+import { Stage } from '../../sim/stage/stage';
 import { clamp } from '../../sim/math';
 import { INV, part, show, unit } from '../art/bake';
 import { FONT } from '../art/draw';
@@ -59,6 +62,12 @@ export class HudScene extends Scene {
   private hitFill!: Fill; // white: flashes over the bar when a hit lands
   private barIcon!: GameObjects.Image;
   private bossName!: GameObjects.Text;
+  // On a stage, instead of the boss's bar: the path to Sunny, Pip's head showing how far along it he is
+  private path!: GameObjects.Container;
+  private pathFill!: Fill;
+  private pathPip!: GameObjects.Image;
+  private stageName!: GameObjects.Text;
+  private seeds: { slot: GameObjects.Image; seed: GameObjects.Image; had: boolean; pop: number }[] = [];
   private toastPlate!: GameObjects.Image;
   // One line of text per tone, each styled once. Text is drawn on a canvas of its own that has to be sent
   // to the graphics card again whenever it changes, and every change of style counts: restyling one line
@@ -71,7 +80,7 @@ export class HudScene extends Scene {
   private go!: GameObjects.Text;
   private naps: GameObjects.Image[] = [];
 
-  private seen: Fight | null = null;
+  private seen: Played | null = null;
   private clock = 0;
   private toastT = 0; // seconds left
   private toastAge = 0;
@@ -141,6 +150,28 @@ export class HudScene extends Scene {
       this.barIcon,
       this.bossName,
     ]);
+    this.pathFill = fill();
+    this.pathPip = part(this, 'hud-pip', FILL_X, BAR_H / 2);
+    this.stageName = shadowed(text(14, '600', '#ffffff', '#1f6b2f', 4))
+      .setOrigin(0, 0)
+      .setPosition(16, BAR_H + 3);
+    this.path = this.add.container(BAR_X, BAR_Y, [
+      part(this, 'bar-back'),
+      this.pathFill.left,
+      this.pathFill.mid,
+      this.pathFill.right,
+      part(this, 'bar-gloss'),
+      part(this, 'bar-icon-angry', BAR_W + 18, BAR_H / 2), // Sunny, waiting at the end of the path
+      this.pathPip,
+      this.stageName,
+    ]);
+    for (let i = 0; i < 3; i++)
+      this.seeds.push({
+        slot: part(this, 'seed-slot', 30 + i * 26, 74).setScale(INV * 0.7),
+        seed: part(this, 'golden-seed', 30 + i * 26, 74).setVisible(false),
+        had: false,
+        pop: 0,
+      });
 
     // centred over the open sky left of the boss, so it never covers the "!" warning bubble
     this.toastPlate = part(this, 'toast-plate', 400, 112);
@@ -168,7 +199,9 @@ export class HudScene extends Scene {
     this.all = this.add.container(0, 0, [
       this.danger,
       ...this.hearts.flatMap((h) => [h.slot, h.full, h.ghost]),
+      ...this.seeds.flatMap((s) => [s.slot, s.seed]),
       this.bar,
+      this.path,
       this.toastPlate,
       ...Object.values(this.toasts),
       this.burst,
@@ -193,25 +226,33 @@ export class HudScene extends Scene {
   // Not called while the game is paused.
   override update(_time: number, deltaMs: number) {
     const dt = deltaMs / 1000,
-      fight = this.app.fight,
-      p = fight.player,
-      b = fight.boss;
+      level = this.app.level,
+      p = level.player,
+      fight = level instanceof Fight ? level : null,
+      stage = level instanceof Stage ? level : null;
     this.clock += dt;
-    const fresh = fight !== this.seen; // a new fight: nothing should animate as if it had just changed
+    const fresh = level !== this.seen; // a new level: nothing should animate as if it had just changed
     if (fresh) {
-      this.seen = fight;
+      this.seen = level;
       this.lag = this.shown = 1;
-      this.prevPhase = b.phase;
+      this.prevPhase = fight?.boss.phase ?? 1;
       this.iconPop = this.barShake = 0;
+      this.ready.setText(stage ? stage.name : 'Ready?'); // redrawn only when it changes
     }
     // The result cards sit over the middle of the screen, and the boss's bar would poke out above them.
-    const result = fight.state === 'win' || fight.state === 'lose';
+    const result = level.state === 'win' || level.state === 'lose';
     this.shownA = fresh ? 1 : clamp(this.shownA + (result ? -dt : dt) * 5, 0, 1);
-    this.all.setVisible(fight.state !== 'title' && this.shownA > 0).setAlpha(this.shownA);
-    const live = fight.state === 'play' || fight.state === 'ending' || fight.state === 'down';
+    this.all.setVisible(level.state !== 'title' && this.shownA > 0).setAlpha(this.shownA);
+    const live =
+      level.state === 'play' || level.state === 'ending' || level.state === 'down' || level.state === 'clear';
 
-    this.syncHearts(dt, fight, fresh);
-    this.syncBar(dt, fight);
+    this.syncHearts(dt, p, fresh);
+    this.bar.setVisible(!!fight);
+    if (fight) this.syncBar(dt, fight);
+    this.path.setVisible(!!stage);
+    for (const s of this.seeds) s.slot.setVisible(!!stage);
+    if (stage) this.syncPath(dt, stage, fresh);
+    else for (const s of this.seeds) s.seed.setVisible(false);
 
     // ---- toast ----
     if (live) {
@@ -232,9 +273,9 @@ export class HudScene extends Scene {
       .setAlpha(fade * 0.85)
       .setDisplaySize(this.toastText.width * pop + 110, 62);
 
-    // ---- "Ready?" while the boss wakes up, then "GO!" ----
-    const intro = b.state === 'intro',
-      t = b.introT,
+    // ---- "Ready?" while the boss wakes up (on a stage, its name), then "GO!" ----
+    const intro = fight ? fight.boss.state === 'intro' : !!stage && stage.t < 1.7,
+      t = fight ? fight.boss.introT : (stage?.t ?? 0),
       isGo = t >= 0.9;
     this.ready.setVisible(intro && !isGo);
     this.go.setVisible(intro && isGo);
@@ -261,23 +302,23 @@ export class HudScene extends Scene {
     }
 
     // ---- Pip is napping ----
+    const viewX = stage ? stage.camX : 0; // this scene does not scroll: a stage's camera has moved on
     this.naps.forEach((z, i) => {
-      const u = (fight.endT * 0.7 + i / 3) % 1;
-      z.setVisible(fight.state === 'down')
+      const u = (level.endT * 0.7 + i / 3) % 1;
+      z.setVisible(level.state === 'down')
         .setScale(INV * (0.6 + u * 0.7))
         .setAlpha(Math.sin(u * Math.PI))
-        .setPosition(p.x + 34 + u * 34, p.y - 44 - u * 44);
+        .setPosition(p.x - viewX + 34 + u * 34, p.y - 44 - u * 44);
     });
 
     // ---- the last heart: red creeps in from the corners, in time with the heartbeat ----
-    const scared = fight.state === 'play' && p.hp === 1;
+    const scared = level.state === 'play' && p.hp === 1;
     this.dangerA += ((scared ? 1 : 0) - this.dangerA) * Math.min(1, dt * 4);
     this.danger.setVisible(this.dangerA > 0.01).setAlpha(this.dangerA * (0.42 + 0.3 * heartbeat(this.clock)));
   }
 
-  private syncHearts(dt: number, fight: Fight, fresh: boolean) {
-    const p = fight.player,
-      gap = p.maxHp > 5 ? 31 : 36;
+  private syncHearts(dt: number, p: Player, fresh: boolean) {
+    const gap = p.maxHp > 5 ? 31 : 36;
     this.hearts.forEach((h, i) => {
       const full = i < p.hp,
         used = i < p.maxHp,
@@ -305,6 +346,30 @@ export class HudScene extends Scene {
         .setPosition(x, y - gone * 12)
         .setScale(INV * (1 + gone * 1.2))
         .setAlpha(h.pop * h.pop);
+    });
+  }
+
+  // Pip's head travels along the path to Sunny, and the golden seeds found fill their places.
+  private syncPath(dt: number, stage: Stage, fresh: boolean) {
+    const k = stage.progress,
+      moving = Math.abs(stage.player.vx) > 30;
+    this.setFill(this.pathFill, k, 0x7fd65a, 1);
+    this.pathPip
+      .setPosition(FILL_X + k * FILL_W, BAR_H / 2 - (moving ? Math.abs(Math.sin(this.clock * 12)) * 3 : 0))
+      .setRotation(moving ? Math.sin(this.clock * 12) * 0.08 : 0);
+    if (this.stageName.text !== stage.name) this.stageName.setText(stage.name);
+    this.seeds.forEach((s, i) => {
+      const has = !!stage.seeds[i];
+      if (fresh) s.had = has;
+      else if (has && !s.had) {
+        s.had = true;
+        s.pop = 1;
+      }
+      s.pop = Math.max(0, s.pop - dt * 2);
+      s.seed
+        .setVisible(has)
+        .setScale(INV * 0.7 * (1 + Math.sin(s.pop * Math.PI) * 0.6))
+        .setRotation(Math.sin(s.pop * Math.PI * 3) * 0.3 * s.pop);
     });
   }
 

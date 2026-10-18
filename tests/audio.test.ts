@@ -76,3 +76,25 @@ it('stops when asked', () => {
   vi.advanceTimersByTime(1000);
   expect(starts.length).toBe(before);
 });
+
+it("plays a stage's own tune, quicker, and gives way to the boss's from its first beat", () => {
+  const { audio, context, starts } = play(() => {});
+  audio.startMusic('stage');
+  const from = starts.length;
+  for (let i = 0; i < 20; i++) {
+    context.currentTime += 0.05;
+    vi.advanceTimersByTime(50);
+  }
+  const stage = melody(starts.slice(from));
+  expect(stage.length).toBeGreaterThan(3);
+  for (let i = 1; i < stage.length; i++) expect(stage[i] - stage[i - 1]).toBeCloseTo(0.22, 6);
+
+  audio.startMusic('boss');
+  const switched = starts.length;
+  for (let i = 0; i < 20; i++) {
+    context.currentTime += 0.05;
+    vi.advanceTimersByTime(50);
+  }
+  const boss = melody(starts.slice(switched));
+  for (let i = 1; i < boss.length; i++) expect(boss[i] - boss[i - 1]).toBeCloseTo(0.28, 6);
+});
