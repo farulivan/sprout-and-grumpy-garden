@@ -734,63 +734,113 @@ body.touch .keys-only {
 }
 
 /* ---------- touch controls ---------- */
+/* The icons' drawings (index.html) take their colours from here: fill and color for the icon, stroke for
+   its outline. */
+.sprite {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+.ico {
+  --ico: #8ee05e; /* Pip's green */
+  --ico-line: #1f5a26;
+  fill: var(--ico);
+  color: var(--ico);
+  stroke: var(--ico-line);
+}
 #touch {
   display: none;
 }
 body.touch #stage[data-state='play'] #touch {
   display: block;
 }
-.tbtn {
+/* One touch area for each thumb, bigger than its buttons (src/ui/touch.ts decides what a finger presses) */
+.tarea {
   position: absolute;
-  bottom: calc(var(--ui) * 14px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  color: #3f2812;
-  /* see-through: Pip can walk behind the move pad */
-  background: rgba(255, 250, 230, 0.36);
-  border: calc(var(--ui) * 4px) solid rgba(56, 32, 15, 0.7);
-  border-radius: 999px;
-  box-shadow:
-    inset 0 calc(var(--ui) * 3px) 0 rgba(255, 255, 255, 0.45),
-    0 calc(var(--ui) * 4px) 0 rgba(56, 32, 15, 0.35);
+  bottom: 0;
   touch-action: none;
 }
 #t-move {
-  left: calc(var(--ui) * 14px);
-  width: calc(var(--ui) * 200px);
-  height: calc(var(--ui) * 86px);
-  justify-content: space-around;
-  font-size: calc(var(--ui) * 34px);
+  left: 0;
+  width: calc(var(--ui) * 230px);
+  height: calc(var(--ui) * 150px);
 }
-#t-move.l span:first-child,
-#t-move.r span:last-child {
-  color: #fff;
-  text-shadow: 0 0 calc(var(--ui) * 8px) #2f7a33;
+#t-act {
+  right: 0;
+  width: calc(var(--ui) * 250px);
+  height: calc(var(--ui) * 230px);
 }
-#t-jump {
-  right: calc(var(--ui) * 14px);
-  width: calc(var(--ui) * 110px);
-  height: calc(var(--ui) * 110px);
-  font-size: calc(var(--ui) * 24px);
+/* A button: a see-through cream disc lit from the top left, with a dark wood rim, like the round buttons
+   over the game, so the garden shows through and Pip can be seen behind it */
+.tbtn {
+  position: absolute;
+  bottom: calc(var(--ui) * 16px);
+  width: calc(var(--ui) * 84px);
+  height: calc(var(--ui) * 84px);
+  background: radial-gradient(
+    circle at 34% 28%,
+    rgba(255, 253, 244, 0.8),
+    rgba(250, 232, 194, 0.52) 58%,
+    rgba(214, 168, 106, 0.5)
+  );
+  border: calc(var(--ui) * 3.5px) solid rgba(56, 32, 15, 0.78);
+  border-radius: 50%;
+  box-shadow:
+    inset 0 calc(var(--ui) * 3px) 0 rgba(255, 255, 255, 0.55),
+    inset 0 calc(var(--ui) * -4px) 0 rgba(120, 72, 30, 0.22),
+    0 calc(var(--ui) * 4px) 0 rgba(56, 32, 15, 0.4),
+    0 calc(var(--ui) * 8px) calc(var(--ui) * 10px) rgba(0, 0, 0, 0.16);
+  transition: transform 0.07s ease-out;
+  pointer-events: none; /* the touch area takes the fingers */
 }
-#t-aim {
-  right: calc(var(--ui) * 138px);
-  width: calc(var(--ui) * 78px);
-  height: calc(var(--ui) * 78px);
-  font-size: calc(var(--ui) * 28px);
-  flex-direction: column;
-  line-height: 1;
+.tbtn .ico {
+  position: absolute;
+  left: 18%;
+  top: 18%;
+  width: 64%;
+  height: 64%;
+  overflow: visible;
 }
-#t-aim small {
-  font-size: 0.45em;
+.tbtn[data-act='left'] {
+  left: calc(var(--ui) * 18px);
 }
+.tbtn[data-act='right'] {
+  left: calc(var(--ui) * 114px);
+}
+/* the main action: bigger, with a gold ring inside its rim */
+.tbtn.shoot {
+  right: calc(var(--ui) * 96px);
+  bottom: calc(var(--ui) * 14px);
+  width: calc(var(--ui) * 116px);
+  height: calc(var(--ui) * 116px);
+  box-shadow:
+    inset 0 0 0 calc(var(--ui) * 4px) rgba(255, 205, 64, 0.72),
+    inset 0 calc(var(--ui) * 5px) 0 calc(var(--ui) * 2px) rgba(255, 255, 255, 0.45),
+    0 calc(var(--ui) * 4px) 0 rgba(56, 32, 15, 0.4),
+    0 calc(var(--ui) * 8px) calc(var(--ui) * 10px) rgba(0, 0, 0, 0.16);
+}
+.tbtn.jump {
+  right: calc(var(--ui) * 18px);
+  bottom: calc(var(--ui) * 104px);
+  width: calc(var(--ui) * 80px);
+  height: calc(var(--ui) * 80px);
+}
+/* pressed: it sinks into the ground a little and turns leaf green, with a white icon */
 .tbtn.on {
-  color: #fff;
-  background: rgba(120, 214, 92, 0.92);
-  box-shadow: inset 0 calc(var(--ui) * 3px) 0 rgba(255, 255, 255, 0.5);
-  transform: translateY(calc(var(--ui) * 3px));
+  background: radial-gradient(
+    circle at 34% 28%,
+    rgba(205, 247, 168, 0.96),
+    rgba(108, 198, 78, 0.94) 60%,
+    #3f9a3a
+  );
+  box-shadow:
+    inset 0 calc(var(--ui) * 3px) 0 rgba(255, 255, 255, 0.5),
+    0 calc(var(--ui) * 1px) 0 rgba(56, 32, 15, 0.4);
+  transform: translateY(calc(var(--ui) * 3px)) scale(0.94);
+}
+.tbtn.on .ico {
+  --ico: #ffffff;
 }
 
 #rotate {

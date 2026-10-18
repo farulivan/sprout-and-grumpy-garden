@@ -38,10 +38,7 @@ export class Controls {
     pause: false,
     mute: false,
   };
-  // Set by the touch controls: Pip fires by himself, and the aim button is a toggle.
-  touch = false;
-  autoFire = false;
-  aimLock = false;
+  touch = false; // a touch screen is in use (src/ui/touch.ts): its buttons show, and the hints name them
   private just = new Set<Action>();
   private pad = readPad(null);
   private tabbed = false; // the focus was moved with Tab since the last click or touch
@@ -99,9 +96,9 @@ export class Controls {
     return {
       left: h.left || pad.left,
       right: h.right || pad.right,
-      up: h.up || pad.up || this.aimLock,
+      up: h.up || pad.up,
       jump: h.jump || pad.jump,
-      shoot: h.shoot || pad.shoot || this.autoFire,
+      shoot: h.shoot || pad.shoot,
       jumpPressed: this.just.has('jump'),
     };
   }
