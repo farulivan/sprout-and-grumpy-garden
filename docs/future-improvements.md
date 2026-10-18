@@ -66,17 +66,19 @@ is the bigger step (see "Bigger ideas").
 
 ### #14 The touch layout on phones
 
-Measured on an 844×390 phone:
+Measured on an 844×390 phone, with the touch controls from PR #15:
 
-- The touch buttons sit on the ground line, where the fight happens.
-- The vine's warning, a mound rumbling on the ground, hides under the Jump thumb.
-- At the far left, Pip stands behind the move pad.
-- On the Garden Path, the Jump thumb covers the ground at the right edge, where the enemies walk in from.
+- Jump now sits above the ground line, but ◀ ▶ and the big Shoot button still sit on it. Shoot covers the
+  ground at about x 750–865 of the 960-wide world, so a warning on the ground there (a rumbling mound) hides
+  under the thumb.
+- At the far left, Pip stands behind ◀.
+- The game keeps its 16:9 picture, so a phone this wide shows a plain green band about 75 px wide at each
+  side.
 - The buttons on the cards are small: about 29 px tall for Start over and Title screen, and 37 px for the
   green ones, against the 44 px that phone guidelines recommend.
 
-**Fix:** on short screens, make the touch buttons smaller and push them into the corners, and make the cards'
-buttons bigger on touch screens (or give them bigger hit areas).
+**Fix:** on phones wider than 16:9, move the touch buttons out into the side bands, off the picture; and make
+the cards' buttons bigger on touch screens (or give them bigger hit areas).
 
 ## Content
 
@@ -154,7 +156,10 @@ normal fight.
   Normal and 64% on Easy, and petals cause most of its hits. The fight keeps its challenge.
 - **A fuller Easy mode (#9).** Easy mode stays at 8 hearts instead of 5.
 - **A different warning for each attack (#12).** The one "!" bubble is enough.
-- **Auto-fire on keyboard and gamepad.** Shoot stays a key to hold (X); touch screens fire by themselves.
+- **Auto-fire.** Shoot is held on every device: X on a keyboard, X, RB or RT on a gamepad, and the big seed
+  button on a touch screen, where Pip used to fire by himself until PR #15. It made touch play too easy.
+- **Aiming on a touch screen.** The aim toggle went in PR #15, to keep the touch controls to four buttons.
+  Seeds fly straight there, and Sunny's face is reached from the high leaf.
 - **Straight to Sunny.** A title-card button that went straight to Sunny once Pip had reached him (PR #12).
   It skipped the stage for good, which made the game too easy, and Mega Man never lets a new try at a stage
   skip it. Removed in PR #14.
@@ -172,6 +177,9 @@ normal fight.
   again. They used to count only on the win card.
 - Lives (PR #14): three a game, as in Super Mario Bros. Losing a level, or Start over, costs one; with none
   left the game starts again from the first stage. Retrying Sunny at his gate used to be free and endless.
+- Touch controls (PR #15): a big Shoot button held to fire, a smaller Jump up and to its right, and ◀ ▶ as
+  two buttons, all drawn as icons. A thumb can slide between them, and between Shoot and Jump it presses
+  both. No auto-fire and no aim button any more.
 
 ## About the numbers
 

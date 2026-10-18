@@ -121,16 +121,21 @@ people play each version, and the second guards the rest of the domain.
 
 | Action | Keyboard | Gamepad | Touch (tablet/phone) |
 | --- | --- | --- | --- |
-| Move | ← → or A D | left stick or d-pad | slide on the ◀ ▶ pad |
-| Jump (hold = higher) | Space, Z or K | A | Jump button |
-| Shoot | hold X, J or L | hold X, RB or RT | automatic |
-| Aim diagonally up | hold ↑ or W | stick or d-pad up | tap ⬆ to toggle |
+| Move | ← → or A D | left stick or d-pad | ◀ ▶ buttons (bottom left) |
+| Jump (hold = higher) | Space, Z or K | A | the smaller button, up and to the right of Shoot |
+| Shoot | hold X, J or L | hold X, RB or RT | hold the big seed button (bottom right) |
+| Aim diagonally up | hold ↑ or W | stick or d-pad up | no aiming: seeds fly straight |
 | Pause / resume | P or Esc | Start | ⏸ button |
 | Sound on/off | M | | 🔊 button |
 
 The title card keeps this short: one key for each of the four actions (Move ←→, Jump Space, Shoot X,
 Aim ↑), or a gamepad's or touch screen's own buttons once the game sees one. Everything else in the table
 still works; it is just not listed there, and pause and sound have buttons on screen during play.
+
+On a touch screen the buttons are icons, as in other mobile action games: arrowheads, an arrow up, and one
+of Pip's seeds. Shoot is the biggest, as the main action. A thumb can slide from button to button without
+lifting, and resting it between Shoot and Jump presses both, to jump while shooting. There is no aiming on a
+touch screen: Sunny's face is still in reach of a straight seed from the high leaf.
 
 The pause card has **Keep playing**, **Start over** (the stage or the boss fight again from its start, with
 the same Easy setting, for one of Pip's lives) and **Title screen** (back to the title card, where Easy mode
