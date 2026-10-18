@@ -107,19 +107,18 @@ it('remembers a cleared stage: its best time, and every golden seed ever found t
   expect(second.stage('gardenPath')).toEqual({ best: 60, seeds: [true, true, false] });
 });
 
-it('remembers which bosses Pip has walked up to', () => {
-  const store = memoryStore();
-  const first = createSave(store);
-  expect(first.reached('sunny')).toBe(false);
-  first.reach('sunny');
-  expect(createSave(store).reached('sunny')).toBe(true);
-});
-
-it('reads a save from before there were stages as having none cleared and no boss reached', () => {
+it('reads a save from before there were stages as having none cleared', () => {
   const save = createSave(
     memoryStore({ 'sprout.save': '{"v":1,"easy":true,"muted":false,"best":{"sunny":50}}' }),
   );
   expect([save.easy, save.best('sunny')]).toEqual([true, 50]);
   expect(save.stage('gardenPath')).toEqual({ best: null, seeds: [] });
-  expect(save.reached('sunny')).toBe(false);
+});
+
+it('leaves out what an earlier version kept and this one no longer does', () => {
+  const store = memoryStore({
+    'sprout.save': '{"v":1,"easy":false,"muted":false,"best":{},"stages":{},"reached":{"sunny":true}}',
+  });
+  createSave(store).easy = true; // any change writes the save again
+  expect(JSON.parse(store.items.get('sprout.save') ?? '{}')).not.toHaveProperty('reached');
 });

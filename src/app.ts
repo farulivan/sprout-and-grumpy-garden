@@ -44,7 +44,6 @@ export class App {
       {
         start: () => this.start(),
         retry: () => this.retry(),
-        boss: () => this.skipToBoss(),
         resume: () => this.setPaused(false),
         pause: () => this.setPaused(true),
         title: () => this.toTitle(),
@@ -60,7 +59,6 @@ export class App {
       o.audio.muted = true;
       this.overlay.setMuted(true);
     }
-    this.overlay.setShortcut(save.reached(CHAPTER.boss));
     this.overlay.show('title');
   }
 
@@ -84,12 +82,6 @@ export class App {
   // hearts: what Pip carried in from the stage; without it he starts with all of them.
   startBoss(hearts?: number) {
     this.begin(new Fight({ seed: newSeed(), boss: CHAPTER.boss, easy: this.overlay.easy, hearts }), 'boss');
-  }
-
-  // "Straight to Sunny" on the title card: the boss with full hearts, and no stage in this run.
-  skipToBoss() {
-    this.path = null;
-    this.startBoss();
   }
 
   private begin(level: Played, tune: Tune) {
@@ -215,8 +207,6 @@ export class App {
       save.recordStage(stage.id, e.result.time, stage.seeds);
       this.path = { ...e.result, name: stage.name, total: stage.seeds.length };
     } else if (e.type === 'stageExit') {
-      save.reach(CHAPTER.boss);
-      this.overlay.setShortcut(true);
       this.startBoss(this.level.player.hp);
     } else if (e.type === 'lose') {
       this.overlay.showLose(e.progress, this.level instanceof Stage ? 'stage' : 'boss');
