@@ -448,29 +448,40 @@
           </p>
           <!-- The four things Pip does, with one key each, for whatever the player is using: the keyboard,
                a touch screen or a gamepad (body.touch and body.gamepad choose). The other keys still work
-               and are listed in the README; pause and sound have buttons of their own during play. -->
+               and are listed in the README; pause and sound have buttons of their own during play. A touch
+               screen shows small copies of its buttons, and has no aiming. -->
           <ul class="controls">
             <li>
               <span class="on-keys"><kbd>←</kbd><kbd>→</kbd></span>
-              <span class="on-touch"><kbd>◀ ▶</kbd></span>
+              <span class="on-touch"
+                ><i class="tkey"
+                  ><svg class="ico"><use href="#i-left" /></svg></i
+                ><i class="tkey"
+                  ><svg class="ico"><use href="#i-right" /></svg></i
+              ></span>
               <span class="on-pad"><kbd>◀ ▶</kbd></span>
               <b>Move</b>
             </li>
             <li>
               <span class="on-keys"><kbd>Space</kbd></span>
-              <span class="on-touch"><kbd class="round">Jump</kbd></span>
+              <span class="on-touch"
+                ><i class="tkey"
+                  ><svg class="ico"><use href="#i-jump" /></svg></i
+              ></span>
               <span class="on-pad"><kbd class="pad a">A</kbd></span>
               <b>Jump</b>
             </li>
             <li>
               <span class="on-keys"><kbd>X</kbd></span>
-              <span class="on-touch"><kbd class="auto">auto</kbd></span>
+              <span class="on-touch"
+                ><i class="tkey main"
+                  ><svg class="ico"><use href="#i-shoot" /></svg></i
+              ></span>
               <span class="on-pad"><kbd class="pad x">X</kbd></span>
               <b>Shoot</b>
             </li>
-            <li>
+            <li class="no-touch">
               <span class="on-keys"><kbd>↑</kbd></span>
-              <span class="on-touch"><kbd>⬆</kbd></span>
               <span class="on-pad"><kbd>↑</kbd></span>
               <b>Aim</b>
             </li>
