@@ -1,9 +1,12 @@
 // The HTML layer over the game: title, win, lose and pause cards, plus the round sound and pause buttons.
-import type { FightResult, StageResult } from '../sim/events';
+import type { FightResult } from '../sim/events';
 
 export type Card = 'title' | 'win' | 'lose' | 'pause';
-// How a run's stage went, for the win card: its result, its name, and how many golden seeds it hides.
-export type StagePath = StageResult & { name: string; total: number };
+// The stage a run came through on the way to the boss, for the win card: its name and how long it took.
+export interface StagePath {
+  name: string;
+  time: number;
+}
 
 export interface OverlayHandlers {
   start(): void; // the chapter from the beginning
@@ -167,12 +170,7 @@ export class Overlay {
     ];
     if (r.easy) stats.push(el('span', '', 'Easy mode'));
     // the stage's own row under the boss's
-    if (path)
-      stats.push(
-        el('i', 'break'),
-        el('span', '', `${path.name} ${path.time.toFixed(1)}s`),
-        el('span', path.seeds === path.total ? 'best' : '', `Golden seeds ${path.seeds}/${path.total}`),
-      );
+    if (path) stats.push(el('i', 'break'), el('span', '', `${path.name} ${path.time.toFixed(1)}s`));
     byId('win-stats').replaceChildren(...stats);
     this.show('win');
   }

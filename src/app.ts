@@ -202,10 +202,8 @@ export class App {
         best = save.best(boss);
       this.overlay.showWin(e.result, best, save.recordWin(boss, e.result.time), this.path ?? undefined);
     } else if (e.type === 'stageClear' && this.level instanceof Stage) {
-      // golden seeds count, and are kept, only once the stage is cleared
-      const stage = this.level;
-      save.recordStage(stage.id, e.result.time, stage.seeds);
-      this.path = { ...e.result, name: stage.name, total: stage.seeds.length };
+      save.recordStage(this.level.id, e.result.time);
+      this.path = { name: this.level.name, time: e.result.time };
     } else if (e.type === 'stageExit') {
       this.startBoss(this.level.player.hp);
     } else if (e.type === 'lose') {

@@ -45,6 +45,8 @@ const SAFE = 48; // after a fall, Pip comes back on ground at least this far fro
 const FELL = H + 40; // Pip's feet below this: he fell into a pit
 const THORN_H = 22;
 const WALK_IN = { ...NO_INPUT, right: true }; // at the gate, Pip walks on through by himself
+// Every this many golden seeds make a heart, as a dewdrop does, and then the count starts again.
+export const SEEDS_PER_HEART = 3;
 
 export class Stage implements PlayerWorld, EnemyWorld, Level {
   state: StageState = 'play';
@@ -64,7 +66,7 @@ export class Stage implements PlayerWorld, EnemyWorld, Level {
   enemies: Enemy[];
   projectiles: Projectile[] = [];
   pickups: Placed[];
-  readonly seeds: boolean[]; // which golden seeds Pip has picked up
+  goldenSeeds = 0; // golden seeds found toward the next heart
   camX = 0; // the world x of the view's left edge
   pcamX = 0; // ...one step ago, for smooth drawing between steps
   t = 0;
@@ -95,9 +97,8 @@ export class Stage implements PlayerWorld, EnemyWorld, Level {
     this.enemies = data.enemies.map((s) => ENEMIES[s.kind](s.x, s.y ?? GROUND, s.level ?? 1));
     this.pickups = [
       ...data.dewdrops.map(([x, y]) => new Placed('dew', x, y)),
-      ...data.seeds.map(([x, y], i) => new Placed('seed', x, y, i)),
+      ...data.seeds.map(([x, y]) => new Placed('seed', x, y)),
     ];
-    this.seeds = data.seeds.map(() => false);
     this.player = new Player(this);
     this.player.x = this.player.px = data.startX;
     if (this.easy) this.player.hp = this.player.maxHp = 8;
@@ -171,7 +172,6 @@ export class Stage implements PlayerWorld, EnemyWorld, Level {
       time: this.stageTime,
       hits: p.hits,
       hearts: p.hp,
-      seeds: this.seeds.filter(Boolean).length,
       easy: this.easy,
     };
   }
@@ -258,17 +258,27 @@ export class Stage implements PlayerWorld, EnemyWorld, Level {
   }
 
   private take(d: Placed) {
-    const p = this.player;
     d.dead = true;
-    if (d.kind === 'seed') {
-      this.seeds[d.index] = true;
-      const found = this.seeds.filter(Boolean).length;
-      this.emit({ type: 'goldenSeed', x: d.x, y: d.y, found, total: this.seeds.length });
-    } else {
-      const healed = p.hp < p.maxHp;
-      if (healed) p.hp++;
-      this.emit({ type: 'pickup', x: d.x, y: d.y, healed });
+    if (d.kind === 'dew') {
+      this.emit({ type: 'pickup', x: d.x, y: d.y, healed: this.heal() });
+      return;
     }
+    const found = ++this.goldenSeeds;
+    if (found < SEEDS_PER_HEART) {
+      this.emit({ type: 'goldenSeed', x: d.x, y: d.y, found });
+      return;
+    }
+    // the set is complete: it heals a heart, unless the hearts are full, and the count starts again
+    this.goldenSeeds = 0;
+    this.emit({ type: 'goldenSeed', x: d.x, y: d.y, found, healed: this.heal() });
+  }
+
+  // One heart back, never above the most. Returns whether there was one to fill.
+  private heal() {
+    const p = this.player,
+      healed = p.hp < p.maxHp;
+    if (healed) p.hp++;
+    return healed;
   }
 
   private onPlayerDown() {

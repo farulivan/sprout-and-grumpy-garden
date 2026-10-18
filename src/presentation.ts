@@ -3,6 +3,7 @@
 // Phaser scenes in src/game) supplies a Presenter, and this table knows nothing about how it works.
 import { GROUND, UP, W } from './config';
 import type { SimEvent } from './sim/events';
+import { SEEDS_PER_HEART } from './sim/stage/stage';
 
 export type SfxName =
   | 'shoot'
@@ -455,7 +456,23 @@ export function present(e: SimEvent, p: Presenter, opts: { touch: boolean }) {
       break;
     case 'goldenSeed':
       p.sfx('seed');
-      p.toast(`Golden seed! ${e.found} of ${e.total}`, 2, 'good');
+      if (e.healed === undefined) p.toast(`Golden seed! ${e.found} of ${SEEDS_PER_HEART}`, 2, 'good');
+      else p.toast(e.healed ? 'Golden seeds! +1 heart' : 'Golden seeds! Hearts already full', 2.4, 'good');
+      // the set that makes a heart: the dewdrop's chime and hearts too
+      if (e.healed) {
+        p.sfx('pickup');
+        p.burst(e.x, e.y - 8, {
+          n: 2,
+          color: '#ff8fa8',
+          speed: 60,
+          size: 6,
+          life: 0.9,
+          gravity: -60,
+          shape: 'heart',
+          dir: UP,
+          spread: 1,
+        });
+      }
       p.ring(e.x, e.y, { color: '#ffe27a', from: 8, to: 60, life: 0.4 });
       p.burst(e.x, e.y, {
         n: 10,
