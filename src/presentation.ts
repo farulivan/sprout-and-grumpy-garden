@@ -235,8 +235,9 @@ export function present(e: SimEvent, p: Presenter, opts: { touch: boolean }) {
       break;
     case 'fightStart':
       p.toast(
+        // a touch screen can't aim, but a straight seed from the high leaf reaches his face
         opts.touch
-          ? 'Tap ⬆ to aim at his face for double damage!'
+          ? 'Shoot his face from the high leaf: double damage!'
           : 'Hold ↑ to aim at his face for double damage!',
         4,
       );

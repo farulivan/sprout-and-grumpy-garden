@@ -137,6 +137,23 @@ describe('jumping', () => {
 });
 
 describe('fight', () => {
+  it('lets a straight seed from the high leaf hit his face, for players who cannot aim (touch screens)', () => {
+    const fight = fighting(),
+      pip = fight.player,
+      leaf = fight.platforms.reduce((a, b) => (b.y < a.y ? b : a)); // the higher of the two
+    pip.x = pip.px = leaf.x + leaf.w / 2;
+    pip.y = pip.py = leaf.y;
+    pip.vy = 0;
+    pip.facing = 1;
+    const hits: SimEvent[] = [];
+    for (let i = 0; i < 60 * 3; i++) {
+      fight.step({ ...NO_INPUT, shoot: true });
+      hits.push(...fight.drainEvents().filter((e) => e.type === 'bossHit'));
+    }
+    expect(hits.length).toBeGreaterThan(5);
+    expect(hits.every((e) => e.type === 'bossHit' && e.weak)).toBe(true);
+  });
+
   it('gives 5 hearts, or 8 in easy mode', () => {
     expect(new Fight({ seed: 1 }).player.hp).toBe(5);
     const easy = new Fight({ seed: 1, easy: true }).player;

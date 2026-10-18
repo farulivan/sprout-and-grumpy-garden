@@ -298,10 +298,63 @@
           </svg>
         </button>
       </div>
+      <!-- The touch buttons' icons, drawn once for the buttons and the title card's hints. Their colours come
+           from the svg using them: fill and color are the icon's colour, stroke its outline (.ico in style.css). -->
+      <svg class="sprite" aria-hidden="true">
+        <symbol id="i-left" viewBox="0 0 48 48">
+          <path d="M32.5 9 11.5 24 32.5 39Z" stroke-width="5" stroke-linejoin="round" paint-order="stroke" />
+        </symbol>
+        <symbol id="i-right" viewBox="0 0 48 48">
+          <path d="M15.5 9 36.5 24 15.5 39Z" stroke-width="5" stroke-linejoin="round" paint-order="stroke" />
+        </symbol>
+        <!-- an arrow up, pushing off the ground -->
+        <symbol id="i-jump" viewBox="0 0 48 48">
+          <path
+            d="M24 6.5 40 22.5H31V33H17V22.5H8Z"
+            stroke-width="4.5"
+            stroke-linejoin="round"
+            paint-order="stroke"
+          />
+          <path d="M14 41.5H34" fill="none" stroke-width="3.5" stroke-linecap="round" />
+        </symbol>
+        <!-- one of Pip's seeds flying right, as his shots look in the game -->
+        <symbol id="i-shoot" viewBox="0 0 48 48">
+          <path d="M4 17.5H12M2.5 30.5H11" fill="none" stroke-width="7" stroke-linecap="round" />
+          <path
+            d="M4 17.5H12M2.5 30.5H11"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="3"
+            stroke-linecap="round"
+          />
+          <path
+            d="M10.6 24Q25 10.4 36.4 13.7A10.9 10.9 0 0 1 36.4 34.3Q25 37.6 10.6 24Z"
+            stroke-width="4.5"
+            stroke-linejoin="round"
+            paint-order="stroke"
+          />
+          <circle cx="35.4" cy="19.8" r="3" fill="#fff" stroke="none" />
+        </symbol>
+      </svg>
       <div id="touch" aria-hidden="true">
-        <div id="t-move" class="tbtn"><span>◀</span><span>▶</span></div>
-        <div id="t-aim" class="tbtn">⬆<small>aim</small></div>
-        <div id="t-jump" class="tbtn">Jump</div>
+        <!-- ◀ and ▶: one touch area, so a thumb can roll from one to the other (src/ui/touch.ts) -->
+        <div id="t-move" class="tarea">
+          <div class="tbtn" data-act="left">
+            <svg class="ico"><use href="#i-left" /></svg>
+          </div>
+          <div class="tbtn" data-act="right">
+            <svg class="ico"><use href="#i-right" /></svg>
+          </div>
+        </div>
+        <!-- Shoot, big and held to fire, with Jump up and to its right: a thumb between them presses both -->
+        <div id="t-act" class="tarea">
+          <div class="tbtn shoot" data-act="shoot">
+            <svg class="ico"><use href="#i-shoot" /></svg>
+          </div>
+          <div class="tbtn jump" data-act="jump">
+            <svg class="ico"><use href="#i-jump" /></svg>
+          </div>
+        </div>
       </div>
       <div id="overlay" class="screen">
         <div class="card" id="title-card">
@@ -395,29 +448,40 @@
           </p>
           <!-- The four things Pip does, with one key each, for whatever the player is using: the keyboard,
                a touch screen or a gamepad (body.touch and body.gamepad choose). The other keys still work
-               and are listed in the README; pause and sound have buttons of their own during play. -->
+               and are listed in the README; pause and sound have buttons of their own during play. A touch
+               screen shows small copies of its buttons, and has no aiming. -->
           <ul class="controls">
             <li>
               <span class="on-keys"><kbd>←</kbd><kbd>→</kbd></span>
-              <span class="on-touch"><kbd>◀ ▶</kbd></span>
+              <span class="on-touch"
+                ><i class="tkey"
+                  ><svg class="ico"><use href="#i-left" /></svg></i
+                ><i class="tkey"
+                  ><svg class="ico"><use href="#i-right" /></svg></i
+              ></span>
               <span class="on-pad"><kbd>◀ ▶</kbd></span>
               <b>Move</b>
             </li>
             <li>
               <span class="on-keys"><kbd>Space</kbd></span>
-              <span class="on-touch"><kbd class="round">Jump</kbd></span>
+              <span class="on-touch"
+                ><i class="tkey"
+                  ><svg class="ico"><use href="#i-jump" /></svg></i
+              ></span>
               <span class="on-pad"><kbd class="pad a">A</kbd></span>
               <b>Jump</b>
             </li>
             <li>
               <span class="on-keys"><kbd>X</kbd></span>
-              <span class="on-touch"><kbd class="auto">auto</kbd></span>
+              <span class="on-touch"
+                ><i class="tkey main"
+                  ><svg class="ico"><use href="#i-shoot" /></svg></i
+              ></span>
               <span class="on-pad"><kbd class="pad x">X</kbd></span>
               <b>Shoot</b>
             </li>
-            <li>
+            <li class="no-touch">
               <span class="on-keys"><kbd>↑</kbd></span>
-              <span class="on-touch"><kbd>⬆</kbd></span>
               <span class="on-pad"><kbd>↑</kbd></span>
               <b>Aim</b>
             </li>
