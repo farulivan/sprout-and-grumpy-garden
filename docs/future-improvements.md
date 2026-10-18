@@ -47,8 +47,8 @@ shows that the game builds, and nothing in the repo tests it in a browser.
   every pull request.
 - Then a smoke test in a real browser (Playwright, say) that opens the game with `?debug` and goes through
   every screen with real key presses, taps and a gamepad: start, pause, Keep playing, Start over, Title
-  screen, a win and a loss, Easy mode, the stage's gate and Straight to Sunny. PRs #6, #7 and #9–#12 were
-  checked with scripts like that, kept outside the repo.
+  screen, a win and a loss, Easy mode, the stage's gate, golden seeds, and lives down to Game over. PRs #6, #7
+  and #9–#14 were checked with scripts like that, kept outside the repo.
 
 ## Sound
 
@@ -83,8 +83,7 @@ buttons bigger on touch screens (or give them bigger hit areas).
 ### #17 One chapter profile, before a second chapter
 
 Sunny is written into many places: the messages in `src/presentation.ts`, the lose texts in
-`src/ui/overlay.ts` ("Sunny is still grumpy…", "of the way to Sunny"), the cards and the Straight to Sunny
-button in `index.html` (with "Chapter 1 · The Grumpy Sunflower"), the portrait on the boss bar and the
+`src/ui/overlay.ts` ("Sunny is still grumpy…", "of the way to Sunny"), the cards in `index.html` (with "Chapter 1 · The Grumpy Sunflower"), the portrait on the boss bar and the
 stage's path bar (`bar-icon-*` in `src/game/hud/art.ts`), the sunflower on the stage's horizon, and the
 colours of his shed petals. `CHAPTER` in `src/app.ts` pairs him with the Garden Path. `Boss.mood` in
 `src/sim/boss.ts` is set but never read.
@@ -97,7 +96,10 @@ level-select map; "Add a stage", "Add a small enemy" and "Add a boss" in the REA
 ## Bigger ideas
 
 - A second chapter (e.g. "The Prickly Cactus" or "The Moody Mushroom"), and a small level-select map that
-  shows each stage's golden seeds and best time (the save already keeps both).
+  shows each stage's best time (the save already keeps it).
+- Ways to win lives back, as Super Mario Bros.' 1-Up mushrooms and hundred coins do: a rare 1-Up on a later
+  stage, say, or a set of golden seeds that gives a life when the hearts are already full. With more stages
+  between Pip and the start, three lives will be tighter than they are now.
 - Harder stages for the chapters after the first, as Stage 1's plan set out: new kinds of small enemy (one
   that drops from above, a charger, one that jumps pits), a mini-boss that blocks the path (as the Acorn
   Maker does in Cuphead's Forest Follies), moving platforms, wider pits, and faster, busier enemies. Much of
@@ -153,6 +155,9 @@ normal fight.
 - **A fuller Easy mode (#9).** Easy mode stays at 8 hearts instead of 5.
 - **A different warning for each attack (#12).** The one "!" bubble is enough.
 - **Auto-fire on keyboard and gamepad.** Shoot stays a key to hold (X); touch screens fire by themselves.
+- **Straight to Sunny.** A title-card button that went straight to Sunny once Pip had reached him (PR #12).
+  It skipped the stage for good, which made the game too easy, and Mega Man never lets a new try at a stage
+  skip it. Removed in PR #14.
 
 ## Done
 
@@ -161,8 +166,12 @@ normal fight.
   bursting on the grass, and the rotate prompt on phones.
 - #11, Start over and Title screen on the pause card (PR #7).
 - Stage 1, the Garden Path, before Sunny (PRs #9–#12): a scrolling stage with four kinds of small enemy,
-  golden seeds, hearts carried through the gate into the boss fight, and Straight to Sunny on the title card.
+  golden seeds, and hearts carried through the gate into the boss fight.
 - #19, the d-pad and the arrow keys on every card, Easy mode's checkbox included (PR #12).
+- Golden seeds that heal (PR #14): every third one fills a heart, as a dewdrop does, and the count starts
+  again. They used to count only on the win card.
+- Lives (PR #14): three a game, as in Super Mario Bros. Losing a level, or Start over, costs one; with none
+  left the game starts again from the first stage. Retrying Sunny at his gate used to be free and endless.
 
 ## About the numbers
 
