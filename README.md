@@ -147,6 +147,9 @@ stick and press it with Space, Enter or A. With nothing chosen, Enter or Start p
 from the keyboard or a gamepad starts on Keep playing, so pressing A or Space right away just resumes.
 
 Face shots do 2 damage; stem shots do 1. The game auto-pauses when the tab loses focus.
+With ← and → both held, the one pressed last wins, so turning round never stops Pip. Some keyboards can't
+send certain three-key combinations at all (arrows with Space is a common one), and the game never sees the
+third key. If a key seems to drop out, try the other keys in the table (A D, W, K or Z, J or L).
 **Easy mode** (checkbox on the title and lose screens) gives 8 hearts instead of 5. With only a keyboard, Tab
 to it and press Space; after a click, Space starts the game as usual. A gamepad reaches it with the d-pad and
 ticks it with A. Enter or Start never ticks it, so it starts the game right after.
