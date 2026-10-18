@@ -250,15 +250,45 @@ describe('pickups and the gate', () => {
     stage.player.hp = 3;
     const events = run(stage, 2.5, RIGHT);
     expect(stage.player.hp).toBe(4);
-    expect(stage.seeds).toEqual([true, false]);
-    expect(events.find((e) => e.type === 'goldenSeed')).toMatchObject({ found: 1, total: 2 });
+    expect(stage.goldenSeeds).toBe(1);
+    expect(events.find((e) => e.type === 'goldenSeed')).toEqual({
+      type: 'goldenSeed',
+      x: 600,
+      y: GROUND - 36,
+      found: 1,
+    });
   });
 
-  it('clears at the gate with the time, hits, hearts and seeds, then walks Pip through and moves on', () => {
-    const stage = stageWith({ gateX: 800, seeds: [[600, GROUND - 36]] });
+  it('turns every third golden seed into a heart, unless the hearts are full, and starts counting again', () => {
+    const three: Partial<StageData> = {
+      seeds: [
+        [500, GROUND - 36],
+        [600, GROUND - 36],
+        [700, GROUND - 36],
+      ],
+    };
+    const seedsOf = (events: SimEvent[]) =>
+      events.flatMap((e) => (e.type === 'goldenSeed' ? [{ found: e.found, healed: e.healed }] : []));
+
+    const hurt = stageWith(three);
+    hurt.player.hp = 3;
+    expect(seedsOf(run(hurt, 3, RIGHT))).toEqual([
+      { found: 1, healed: undefined },
+      { found: 2, healed: undefined },
+      { found: 3, healed: true },
+    ]);
+    expect([hurt.player.hp, hurt.goldenSeeds]).toEqual([4, 0]);
+
+    const full = stageWith(three);
+    expect(seedsOf(run(full, 3, RIGHT)).at(-1)).toEqual({ found: 3, healed: false });
+    expect([full.player.hp, full.goldenSeeds]).toEqual([5, 0]);
+  });
+
+  it('clears at the gate with the time, hits and hearts, then walks Pip through and moves on', () => {
+    const stage = stageWith({ gateX: 800 });
     const events = run(stage, 5, RIGHT, (e) => e.type === 'stageClear');
     const clear = events.find((e) => e.type === 'stageClear');
-    expect(clear).toMatchObject({ result: { hits: 0, hearts: 5, seeds: 1, easy: false } });
+    expect(clear).toMatchObject({ result: { hits: 0, hearts: 5, easy: false } });
     expect(stage.state).toBe('clear');
     expect(stage.cheering).toBe(true);
     const after = run(stage, 2.4);

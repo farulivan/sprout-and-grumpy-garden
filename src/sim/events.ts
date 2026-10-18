@@ -15,7 +15,6 @@ export interface StageResult {
   time: number; // seconds from the start to the gate
   hits: number; // times Pip was hurt; a fall into a pit counts
   hearts: number;
-  seeds: number; // golden seeds found
   easy: boolean;
 }
 
@@ -47,6 +46,8 @@ export type SimEvent =
   | { type: 'pea'; x: number; y: number }
   | { type: 'snap'; x: number; y: number }
   | { type: 'pitFall'; x: number }
-  | { type: 'goldenSeed'; x: number; y: number; found: number; total: number }
+  // found: toward the next heart (see SEEDS_PER_HEART); healed: on the seed that makes a heart, whether there
+  // was an empty heart to fill
+  | { type: 'goldenSeed'; x: number; y: number; found: number; healed?: boolean }
   | { type: 'stageClear'; x: number; y: number; result: StageResult } // Pip reached the gate
   | { type: 'stageExit' }; // ...and has walked through it: on to the boss

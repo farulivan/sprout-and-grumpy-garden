@@ -8,8 +8,7 @@ import type { BossId } from './sim/bosses';
 import type { StageId } from './sim/stage/stages';
 
 interface StageRecord {
-  best?: number; // fastest clear, in seconds
-  seeds: boolean[]; // which golden seeds have been found there
+  best: number; // fastest clear, in seconds
 }
 interface SaveData {
   v: 1;
@@ -17,7 +16,6 @@ interface SaveData {
   muted: boolean;
   best: Partial<Record<BossId, number>>; // fastest win per boss, in seconds
   stages: Partial<Record<StageId, StageRecord>>; // stages cleared
-  reached: Partial<Record<BossId, boolean>>; // bosses Pip has walked up to; the title card offers them directly
 }
 type Store = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
 
@@ -38,7 +36,7 @@ export function createSave(store: Store | null, slot = '') {
   };
 
   function load(): SaveData {
-    const data: SaveData = { v: 1, easy: false, muted: false, best: {}, stages: {}, reached: {} };
+    const data: SaveData = { v: 1, easy: false, muted: false, best: {}, stages: {} };
     try {
       const saved = JSON.parse(read(key) ?? 'null') as Partial<SaveData> | null;
       if (saved && typeof saved === 'object') {
@@ -46,16 +44,10 @@ export function createSave(store: Store | null, slot = '') {
         data.muted = saved.muted === true;
         for (const [boss, time] of Object.entries(saved.best ?? {}))
           if (typeof time === 'number' && Number.isFinite(time)) data.best[boss as BossId] = time;
-        // saves from before there were stages have neither of these
-        for (const [stage, record] of Object.entries(saved.stages ?? {})) {
-          if (!record || typeof record !== 'object') continue;
-          const best =
-            typeof record.best === 'number' && Number.isFinite(record.best) ? record.best : undefined;
-          const seeds = Array.isArray(record.seeds) ? record.seeds.map((s) => s === true) : [];
-          data.stages[stage as StageId] = { best, seeds };
-        }
-        for (const [boss, yes] of Object.entries(saved.reached ?? {}))
-          if (yes === true) data.reached[boss as BossId] = true;
+        // saves from before there were stages have none
+        for (const [stage, record] of Object.entries(saved.stages ?? {}))
+          if (typeof record?.best === 'number' && Number.isFinite(record.best))
+            data.stages[stage as StageId] = { best: record.best };
         return data;
       }
     } catch {
@@ -107,29 +99,17 @@ export function createSave(store: Store | null, slot = '') {
       write();
       return true;
     },
-    // A cleared stage's fastest time (null if never cleared) and which golden seeds have been found there.
-    stage(id: StageId): { best: number | null; seeds: readonly boolean[] } {
-      const record = data.stages[id];
-      return { best: record?.best ?? null, seeds: record?.seeds ?? [] };
+    // Fastest clear of this stage in seconds, or null if it has never been cleared.
+    stageBest(id: StageId): number | null {
+      return data.stages[id]?.best ?? null;
     },
-    // Records a cleared stage: its time if it beats the best so far (returns whether it did), and the
-    // golden seeds found, which stay found.
-    recordStage(id: StageId, seconds: number, seeds: readonly boolean[]): boolean {
-      const record = (data.stages[id] ??= { seeds: [] });
-      record.seeds = seeds.map((found, i) => found || record.seeds[i] === true);
-      const faster = record.best === undefined || seconds < record.best;
-      if (faster) record.best = Math.round(seconds * 10) / 10;
+    // Records a cleared stage's time if it beats the best so far. Returns whether it did.
+    recordStage(id: StageId, seconds: number): boolean {
+      const best = data.stages[id]?.best;
+      if (best !== undefined && best <= seconds) return false;
+      data.stages[id] = { best: Math.round(seconds * 10) / 10 };
       write();
-      return faster;
-    },
-    // Whether Pip has ever walked up to this boss, at the end of the stage before it.
-    reached(boss: BossId): boolean {
-      return data.reached[boss] === true;
-    },
-    reach(boss: BossId) {
-      if (data.reached[boss]) return;
-      data.reached[boss] = true;
-      write();
+      return true;
     },
   };
 }

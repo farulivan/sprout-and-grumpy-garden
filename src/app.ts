@@ -16,6 +16,9 @@ const MAX_FRAME = 0.05; // after a long hitch, slow down instead of catching up 
 const newSeed = () => Math.floor(Math.random() * 2 ** 32);
 // The chapter: a stage, then its boss through the stage's gate.
 const CHAPTER = { stage: 'gardenPath', boss: 'sunny' } as const;
+// Pip's lives in a game, as in Super Mario Bros.: losing a level, or giving it up with Start over, costs one,
+// and with none left the game starts again from its first level.
+export const LIVES = 3;
 
 // What is being played: a boss fight (or the sleepy one behind the title card), or a stage.
 export type Played = Fight | Stage;
@@ -36,6 +39,7 @@ export class App {
   alpha = 1;
   private acc = 0;
   private frozen = 0; // seconds of hit-stop left
+  lives = LIVES; // left in this game, counting the one being played
   private overlay: Overlay;
   private path: StagePath | null = null; // how this run's stage went, for the win card
 
@@ -44,7 +48,7 @@ export class App {
       {
         start: () => this.start(),
         retry: () => this.retry(),
-        boss: () => this.skipToBoss(),
+        restart: () => this.startOver(),
         resume: () => this.setPaused(false),
         pause: () => this.setPaused(true),
         title: () => this.toTitle(),
@@ -60,20 +64,28 @@ export class App {
       o.audio.muted = true;
       this.overlay.setMuted(true);
     }
-    this.overlay.setShortcut(save.reached(CHAPTER.boss));
     this.overlay.show('title');
   }
 
-  // Play! and Play again: the chapter from its first level, the stage.
+  // Play! and Play again, and Start again once the lives are gone: a new game from its first level, with
+  // all of Pip's lives.
   start() {
+    this.lives = LIVES;
     this.startStage();
   }
 
-  // Try again, and Start over on the pause card: the level being played, from its start. A boss fight
-  // starts with full hearts this time, whatever Pip carried in.
+  // Try again on the lose card: the level that was lost, from its start. A boss fight starts with full
+  // hearts this time, whatever Pip carried in. With no lives left, a new game instead.
   retry() {
-    if (this.level instanceof Stage) this.startStage();
+    if (this.lives <= 0) this.start();
+    else if (this.level instanceof Stage) this.startStage();
     else this.startBoss();
+  }
+
+  // Start over on the pause card gives up this life: the level again, or a new game if it was the last.
+  startOver() {
+    this.lives--;
+    this.retry();
   }
 
   startStage() {
@@ -84,12 +96,6 @@ export class App {
   // hearts: what Pip carried in from the stage; without it he starts with all of them.
   startBoss(hearts?: number) {
     this.begin(new Fight({ seed: newSeed(), boss: CHAPTER.boss, easy: this.overlay.easy, hearts }), 'boss');
-  }
-
-  // "Straight to Sunny" on the title card: the boss with full hearts, and no stage in this run.
-  skipToBoss() {
-    this.path = null;
-    this.startBoss();
   }
 
   private begin(level: Played, tune: Tune) {
@@ -210,16 +216,13 @@ export class App {
         best = save.best(boss);
       this.overlay.showWin(e.result, best, save.recordWin(boss, e.result.time), this.path ?? undefined);
     } else if (e.type === 'stageClear' && this.level instanceof Stage) {
-      // golden seeds count, and are kept, only once the stage is cleared
-      const stage = this.level;
-      save.recordStage(stage.id, e.result.time, stage.seeds);
-      this.path = { ...e.result, name: stage.name, total: stage.seeds.length };
+      save.recordStage(this.level.id, e.result.time);
+      this.path = { name: this.level.name, time: e.result.time };
     } else if (e.type === 'stageExit') {
-      save.reach(CHAPTER.boss);
-      this.overlay.setShortcut(true);
       this.startBoss(this.level.player.hp);
     } else if (e.type === 'lose') {
-      this.overlay.showLose(e.progress, this.level instanceof Stage ? 'stage' : 'boss');
+      this.lives--;
+      this.overlay.showLose(e.progress, this.level instanceof Stage ? 'stage' : 'boss', this.lives);
     }
   }
 }

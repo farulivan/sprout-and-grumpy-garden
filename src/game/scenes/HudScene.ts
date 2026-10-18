@@ -7,7 +7,7 @@ import { H, RES, TAU, W } from '../../config';
 import type { ToastTone } from '../../presentation';
 import { Fight } from '../../sim/fight';
 import type { Player } from '../../sim/player';
-import { Stage } from '../../sim/stage/stage';
+import { SEEDS_PER_HEART, Stage } from '../../sim/stage/stage';
 import { clamp } from '../../sim/math';
 import { INV, part, show, unit } from '../art/bake';
 import { FONT } from '../art/draw';
@@ -19,6 +19,15 @@ import type { GamePresenter } from '../presenter';
 export { bakeHud } from '../hud/art';
 
 const MAX_HEARTS = 8;
+// Where heart i sits in the row, which closes up a little when there are more than five.
+const heartX = (i: number, maxHp: number) => 36 + i * (maxHp > 5 ? 31 : 36),
+  HEART_Y = 36;
+// Under the hearts: Pip's lives, then on a stage the golden seeds' slots.
+const LIVES_X = 30,
+  seedX = (i: number) => 104 + i * 26,
+  SEED_Y = 74;
+const SEED_FLY = 0.4, // seconds each seed of a full set takes to fly to the hearts
+  SEED_STAGGER = 0.07; // ...one after another
 const BAR_X = W / 2 - BAR_W / 2 + 30,
   BAR_Y = 20;
 const PHASE_COLOR = [0xffd23f, 0xffa42e, 0xff5f3c]; // the bar heats up with Sunny
@@ -67,7 +76,14 @@ export class HudScene extends Scene {
   private pathFill!: Fill;
   private pathPip!: GameObjects.Image;
   private stageName!: GameObjects.Text;
-  private seeds: { slot: GameObjects.Image; seed: GameObjects.Image; had: boolean; pop: number }[] = [];
+  private seeds: { slot: GameObjects.Image; seed: GameObjects.Image; pop: number }[] = [];
+  private seedCount = 0; // the golden seeds shown in their slots
+  private seedFly = -1; // seconds since a full set of seeds left for the hearts, or -1
+  private seedTo = { x: 0, y: 0 }; // ...where they fly to
+  private seedHeart = -1; // ...and the heart they fill, if there was one to fill
+  private livesIcon!: GameObjects.Image; // Pip's head, and how many lives he has left in this game
+  private livesText!: GameObjects.Text;
+  private shownLives = -1;
   private toastPlate!: GameObjects.Image;
   // One line of text per tone, each styled once. Text is drawn on a canvas of its own that has to be sent
   // to the graphics card again whenever it changes, and every change of style counts: restyling one line
@@ -165,13 +181,16 @@ export class HudScene extends Scene {
       this.pathPip,
       this.stageName,
     ]);
-    for (let i = 0; i < 3; i++)
+    for (let i = 0; i < SEEDS_PER_HEART; i++)
       this.seeds.push({
-        slot: part(this, 'seed-slot', 30 + i * 26, 74).setScale(INV * 0.7),
-        seed: part(this, 'golden-seed', 30 + i * 26, 74).setVisible(false),
-        had: false,
+        slot: part(this, 'seed-slot', seedX(i), SEED_Y).setScale(INV * 0.7),
+        seed: part(this, 'golden-seed', seedX(i), SEED_Y).setVisible(false),
         pop: 0,
       });
+    this.livesIcon = part(this, 'hud-pip', LIVES_X, SEED_Y + 2).setScale(INV * 0.62);
+    this.livesText = text(17, '700', '#ffffff', '#1f6b2f', 5)
+      .setOrigin(0, 0.5)
+      .setPosition(LIVES_X + 9, SEED_Y);
 
     // centred over the open sky left of the boss, so it never covers the "!" warning bubble
     this.toastPlate = part(this, 'toast-plate', 400, 112);
@@ -200,6 +219,8 @@ export class HudScene extends Scene {
       this.danger,
       ...this.hearts.flatMap((h) => [h.slot, h.full, h.ghost]),
       ...this.seeds.flatMap((s) => [s.slot, s.seed]),
+      this.livesIcon,
+      this.livesText,
       this.bar,
       this.path,
       this.toastPlate,
@@ -246,12 +267,17 @@ export class HudScene extends Scene {
     const live =
       level.state === 'play' || level.state === 'ending' || level.state === 'down' || level.state === 'clear';
 
+    if (stage) this.watchSeeds(stage, p, fresh);
     this.syncHearts(dt, p, fresh);
+    if (this.app.lives !== this.shownLives) {
+      this.shownLives = this.app.lives;
+      this.livesText.setText(`×${Math.max(0, this.app.lives)}`); // redrawn only when it changes
+    }
     this.bar.setVisible(!!fight);
     if (fight) this.syncBar(dt, fight);
     this.path.setVisible(!!stage);
     for (const s of this.seeds) s.slot.setVisible(!!stage);
-    if (stage) this.syncPath(dt, stage, fresh);
+    if (stage) this.syncPath(dt, stage);
     else for (const s of this.seeds) s.seed.setVisible(false);
 
     // ---- toast ----
@@ -318,12 +344,13 @@ export class HudScene extends Scene {
   }
 
   private syncHearts(dt: number, p: Player, fresh: boolean) {
-    const gap = p.maxHp > 5 ? 31 : 36;
     this.hearts.forEach((h, i) => {
-      const full = i < p.hp,
+      // a heart filled by golden seeds stays empty until the first of them lands in it
+      const landing = i === this.seedHeart && this.seedFly < SEED_FLY,
+        full = i < p.hp && !landing,
         used = i < p.maxHp,
-        x = 36 + i * gap,
-        y = 36;
+        x = heartX(i, p.maxHp),
+        y = HEART_Y;
       if (fresh) {
         h.was = full;
         h.pop = 0;
@@ -349,8 +376,23 @@ export class HudScene extends Scene {
     });
   }
 
-  // Pip's head travels along the path to Sunny, and the golden seeds found fill their places.
-  private syncPath(dt: number, stage: Stage, fresh: boolean) {
+  // A golden seed found fills its slot; a full set leaves the slots for the hearts (see syncPath), and the
+  // heart it fills, if any, waits for the seeds to land before it pops (syncHearts).
+  private watchSeeds(stage: Stage, p: Player, fresh: boolean) {
+    const count = stage.goldenSeeds;
+    if (fresh) this.seedFly = this.seedHeart = -1;
+    else if (count < this.seedCount) {
+      const i = Math.max(0, p.hp - 1); // the heart just filled, or the last one when they were all full
+      this.seedFly = 0;
+      this.seedTo = { x: heartX(i, p.maxHp), y: HEART_Y };
+      this.seedHeart = this.hearts[i].was ? -1 : i;
+    } else for (let i = this.seedCount; i < count; i++) this.seeds[i].pop = 1;
+    this.seedCount = count;
+  }
+
+  // Pip's head travels along the path to Sunny, and the golden seeds found sit in their slots, or fly up
+  // into the hearts as a full set.
+  private syncPath(dt: number, stage: Stage) {
     const k = stage.progress,
       moving = Math.abs(stage.player.vx) > 30;
     this.setFill(this.pathFill, k, 0x7fd65a, 1);
@@ -358,18 +400,32 @@ export class HudScene extends Scene {
       .setPosition(FILL_X + k * FILL_W, BAR_H / 2 - (moving ? Math.abs(Math.sin(this.clock * 12)) * 3 : 0))
       .setRotation(moving ? Math.sin(this.clock * 12) * 0.08 : 0);
     if (this.stageName.text !== stage.name) this.stageName.setText(stage.name);
+    const count = stage.goldenSeeds;
+    if (this.seedFly >= 0) this.seedFly += dt;
+    if (this.seedFly > SEED_FLY + SEED_STAGGER * (SEEDS_PER_HEART - 1)) this.seedFly = this.seedHeart = -1;
     this.seeds.forEach((s, i) => {
-      const has = !!stage.seeds[i];
-      if (fresh) s.had = has;
-      else if (has && !s.had) {
-        s.had = true;
-        s.pop = 1;
-      }
       s.pop = Math.max(0, s.pop - dt * 2);
+      if (this.seedFly >= 0) {
+        // up and over into the heart, shrinking, and gone as it gets there
+        const k = clamp((this.seedFly - i * SEED_STAGGER) / SEED_FLY, 0, 1),
+          e = k * k * (3 - 2 * k);
+        s.seed
+          .setVisible(k < 1)
+          .setPosition(
+            seedX(i) + (this.seedTo.x - seedX(i)) * e,
+            SEED_Y + (this.seedTo.y - SEED_Y) * e - Math.sin(k * Math.PI) * 18,
+          )
+          .setScale(INV * 0.7 * (1 - e * 0.5))
+          .setRotation(k * Math.PI * 2)
+          .setAlpha(k > 0.8 ? (1 - k) * 5 : 1);
+        return;
+      }
       s.seed
-        .setVisible(has)
+        .setVisible(i < count)
+        .setPosition(seedX(i), SEED_Y)
         .setScale(INV * 0.7 * (1 + Math.sin(s.pop * Math.PI) * 0.6))
-        .setRotation(Math.sin(s.pop * Math.PI * 3) * 0.3 * s.pop);
+        .setRotation(Math.sin(s.pop * Math.PI * 3) * 0.3 * s.pop)
+        .setAlpha(1);
     });
   }
 

@@ -427,8 +427,6 @@
             <label class="easy"><input type="checkbox" class="easy-toggle" /> 🌱 Easy mode (8 hearts)</label>
             <button id="btn-start" class="btn big">Play!</button>
           </div>
-          <!-- Once Pip has walked up to Sunny, he can be faced again without the garden path first -->
-          <button id="btn-sunny" class="btn wood shortcut" hidden>🌻 Straight to Sunny</button>
         </div>
         <div class="card hidden" id="win-card">
           <div class="badge">🌻</div>
@@ -441,10 +439,14 @@
         </div>
         <div class="card hidden" id="lose-card">
           <div class="badge">😴</div>
-          <h1>Pip needs a nap</h1>
-          <p class="sub">
+          <h1 id="lose-title">Pip needs a nap</h1>
+          <p class="sub" id="lose-tip">
             <span id="lose-who">Sunny is</span> still grumpy… but you've got this! Watch for the
             <b class="bang">!</b> bubble, then hop or scoot away.
+          </p>
+          <!-- the last life gone: as in Super Mario Bros., the game starts again from its first level -->
+          <p class="sub" id="lose-over" hidden>
+            Pip is out of lives, so it's back to the very start of the garden path. You've got this!
           </p>
           <div class="stats" id="lose-progress"></div>
           <div class="actions">

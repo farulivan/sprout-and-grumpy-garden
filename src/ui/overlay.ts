@@ -1,14 +1,17 @@
 // The HTML layer over the game: title, win, lose and pause cards, plus the round sound and pause buttons.
-import type { FightResult, StageResult } from '../sim/events';
+import type { FightResult } from '../sim/events';
 
 export type Card = 'title' | 'win' | 'lose' | 'pause';
-// How a run's stage went, for the win card: its result, its name, and how many golden seeds it hides.
-export type StagePath = StageResult & { name: string; total: number };
+// The stage a run came through on the way to the boss, for the win card: its name and how long it took.
+export interface StagePath {
+  name: string;
+  time: number;
+}
 
 export interface OverlayHandlers {
-  start(): void; // the chapter from the beginning
-  retry(): void; // the level being played, again
-  boss(): void; // straight to the boss, past the stage before it
+  start(): void; // a new game, from its first level
+  retry(): void; // the level that was lost, again; with no lives left, a new game
+  restart(): void; // Start over: gives up this life for the level again
   resume(): void;
   pause(): void;
   title(): void;
@@ -81,8 +84,8 @@ export class Overlay {
       });
     }
     for (const id of ['btn-start', 'btn-again']) byId(id).addEventListener('click', handlers.start);
-    for (const id of ['btn-retry', 'btn-restart']) byId(id).addEventListener('click', handlers.retry);
-    byId('btn-sunny').addEventListener('click', handlers.boss);
+    byId('btn-retry').addEventListener('click', handlers.retry);
+    byId('btn-restart').addEventListener('click', handlers.restart);
     byId('btn-resume').addEventListener('click', handlers.resume);
     byId('btn-title').addEventListener('click', handlers.title);
     // blur(): otherwise Space or Enter would "click" the focused button again mid-level
@@ -142,13 +145,9 @@ export class Overlay {
     (this.chosen(controls) ?? (orMain ? controls[main(controls)] : undefined))?.click();
   }
 
-  // The card's buttons and checkbox, leaving out a hidden one ("Straight to Sunny" before Sunny has been
-  // reached).
+  // The card's buttons and checkbox.
   private controls(): HTMLElement[] {
-    if (!this.showing) return [];
-    return [...this.cards[this.showing].querySelectorAll<HTMLElement>('button, input')].filter(
-      (c) => !c.hidden,
-    );
+    return this.showing ? [...this.cards[this.showing].querySelectorAll<HTMLElement>('button, input')] : [];
   }
 
   // The control the player has moved to and can see outlined, if any: with the arrow keys, the d-pad or Tab
@@ -158,11 +157,6 @@ export class Overlay {
     return this.root.classList.contains('nav')
       ? controls.find((c) => c === document.activeElement)
       : undefined;
-  }
-
-  // Show "Straight to Sunny" on the title card (once he has been reached).
-  setShortcut(on: boolean) {
-    byId('btn-sunny').hidden = !on;
   }
 
   // path: how the stage before the boss went, if this run came that way.
@@ -178,32 +172,35 @@ export class Overlay {
     ];
     if (r.easy) stats.push(el('span', '', 'Easy mode'));
     // the stage's own row under the boss's
-    if (path)
-      stats.push(
-        el('i', 'break'),
-        el('span', '', `${path.name} ${path.time.toFixed(1)}s`),
-        el('span', path.seeds === path.total ? 'best' : '', `Golden seeds ${path.seeds}/${path.total}`),
-      );
+    if (path) stats.push(el('i', 'break'), el('span', '', `${path.name} ${path.time.toFixed(1)}s`));
     byId('win-stats').replaceChildren(...stats);
     this.show('win');
   }
 
-  // where: lost on the way to the boss (a stage) or against him
-  showLose(progress: number, where: 'stage' | 'boss') {
-    const meter = el('div', 'meter'),
+  // where: lost on the way to the boss (a stage) or against him. lives: how many Pip has left; with none
+  // the game is over, and its button starts a new one from the first level.
+  showLose(progress: number, where: 'stage' | 'boss', lives: number) {
+    const over = lives <= 0,
+      meter = el('div', 'meter'),
       fill = el('i', '');
     fill.style.width = `${progress}%`;
     meter.append(fill);
+    byId('lose-title').textContent = over ? 'Game over' : 'Pip needs a nap';
+    byId('lose-tip').hidden = over;
+    byId('lose-over').hidden = !over;
     byId('lose-who').textContent = where === 'stage' ? 'The garden path is' : 'Sunny is';
+    byId('btn-retry').textContent = over ? 'Start again' : 'Try again';
+    const progressLine = el(
+      'span',
+      '',
+      where === 'stage'
+        ? `You made it ${progress}% of the way to Sunny!`
+        : `You cheered Sunny up ${progress}% of the way!`,
+    );
     byId('lose-progress').replaceChildren(
-      el(
-        'span',
-        '',
-        where === 'stage'
-          ? `You made it ${progress}% of the way to Sunny!`
-          : `You cheered Sunny up ${progress}% of the way!`,
-      ),
+      progressLine,
       meter,
+      ...(over ? [] : [el('span', 'lives', lives === 1 ? 'Last life!' : `${lives} lives left`)]),
     );
     this.show('lose');
   }
