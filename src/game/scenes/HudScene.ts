@@ -22,8 +22,9 @@ const MAX_HEARTS = 8;
 // Where heart i sits in the row, which closes up a little when there are more than five.
 const heartX = (i: number, maxHp: number) => 36 + i * (maxHp > 5 ? 31 : 36),
   HEART_Y = 36;
-// The golden seeds' slots, under the hearts.
-const seedX = (i: number) => 30 + i * 26,
+// Under the hearts: Pip's lives, then on a stage the golden seeds' slots.
+const LIVES_X = 30,
+  seedX = (i: number) => 104 + i * 26,
   SEED_Y = 74;
 const SEED_FLY = 0.4, // seconds each seed of a full set takes to fly to the hearts
   SEED_STAGGER = 0.07; // ...one after another
@@ -80,6 +81,9 @@ export class HudScene extends Scene {
   private seedFly = -1; // seconds since a full set of seeds left for the hearts, or -1
   private seedTo = { x: 0, y: 0 }; // ...where they fly to
   private seedHeart = -1; // ...and the heart they fill, if there was one to fill
+  private livesIcon!: GameObjects.Image; // Pip's head, and how many lives he has left in this game
+  private livesText!: GameObjects.Text;
+  private shownLives = -1;
   private toastPlate!: GameObjects.Image;
   // One line of text per tone, each styled once. Text is drawn on a canvas of its own that has to be sent
   // to the graphics card again whenever it changes, and every change of style counts: restyling one line
@@ -183,6 +187,10 @@ export class HudScene extends Scene {
         seed: part(this, 'golden-seed', seedX(i), SEED_Y).setVisible(false),
         pop: 0,
       });
+    this.livesIcon = part(this, 'hud-pip', LIVES_X, SEED_Y + 2).setScale(INV * 0.62);
+    this.livesText = text(17, '700', '#ffffff', '#1f6b2f', 5)
+      .setOrigin(0, 0.5)
+      .setPosition(LIVES_X + 9, SEED_Y);
 
     // centred over the open sky left of the boss, so it never covers the "!" warning bubble
     this.toastPlate = part(this, 'toast-plate', 400, 112);
@@ -211,6 +219,8 @@ export class HudScene extends Scene {
       this.danger,
       ...this.hearts.flatMap((h) => [h.slot, h.full, h.ghost]),
       ...this.seeds.flatMap((s) => [s.slot, s.seed]),
+      this.livesIcon,
+      this.livesText,
       this.bar,
       this.path,
       this.toastPlate,
@@ -259,6 +269,10 @@ export class HudScene extends Scene {
 
     if (stage) this.watchSeeds(stage, p, fresh);
     this.syncHearts(dt, p, fresh);
+    if (this.app.lives !== this.shownLives) {
+      this.shownLives = this.app.lives;
+      this.livesText.setText(`×${Math.max(0, this.app.lives)}`); // redrawn only when it changes
+    }
     this.bar.setVisible(!!fight);
     if (fight) this.syncBar(dt, fight);
     this.path.setVisible(!!stage);
