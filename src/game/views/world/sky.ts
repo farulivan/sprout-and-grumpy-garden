@@ -1,5 +1,6 @@
 // The sky: one gradient per mood (cross-faded), the sun with its glow and turning rays, drifting clouds,
-// the storm clouds that roll in from above, and the rainbow that comes out when Sunny cheers up.
+// the storm clouds that roll in from above, and the rainbow that comes out when Sunny cheers up. At dawn,
+// the sun can be held down behind the hills (sync's rise).
 import { BlendModes, type GameObjects, type Scene } from 'phaser';
 import { GROUND, H, TAU, W } from '../../../config';
 import { bake, HAZY, INV, part, show, SOFT, unit } from '../../art/bake';
@@ -40,6 +41,13 @@ const SKIES: Record<Mood, Stops> = {
     [0.68, '#c6efff'],
     [0.86, '#fff5cc'],
     [1, '#ffe7a3'],
+  ],
+  dawn: [
+    [0, '#27306e'],
+    [0.34, '#55559f'],
+    [0.6, '#b98bb8'],
+    [0.8, '#ffad8c'],
+    [1, '#ffe2a6'],
   ],
 };
 
@@ -211,7 +219,7 @@ export function bakeSky(scene: Scene) {
     c.arc(0, 0, 38, Math.PI * 1.05, Math.PI * 1.6);
     c.stroke();
   });
-  bakeFaces(scene, 'sun', 1.3, ['happy', 'joy', 'worried']);
+  bakeFaces(scene, 'sun', 1.3, ['happy', 'joy', 'worried', 'sleepy']);
 
   CLOUD_SHAPES.forEach(([w, h], i) =>
     bake(scene, `cloud-${i}`, w + 20, h * 1.25 + 14, w / 2 + 10, h * 1.25 + 8, (c) =>
@@ -266,9 +274,15 @@ export class Sky {
   private ceiling: GameObjects.Image[];
   private drift = 0;
 
-  constructor(scene: Scene, layer: GameObjects.Container) {
+  constructor(
+    scene: Scene,
+    private layer: GameObjects.Container,
+  ) {
     const sky = (mood: Mood) => part(scene, `sky-${mood}`, -PAD, 0).setScale((W + PAD * 2) / 8, 1);
-    this.skies = { calm: sky('calm'), grumpy: sky('grumpy'), stormy: sky('stormy'), bloom: sky('bloom') };
+    this.skies = Object.fromEntries(MOODS.map((mood) => [mood, sky(mood)])) as Record<
+      Mood,
+      GameObjects.Image
+    >;
     const wisp = unit('sky-wisps');
     this.wisps = [0, 1].map((i) =>
       part(scene, 'sky-wisps', i * 640, 20 + i * 30).setScale(wisp * 1.6, wisp * 1.2),
@@ -308,21 +322,29 @@ export class Sky {
     ]);
   }
 
-  // t = seconds the world has been running, pan = -1..1 (where the camera would be looking).
-  sync(t: number, dt: number, weather: Weather, pan: number, sunMood: FaceMood, blink: boolean) {
+  // Show these between the sky's colours and the sun: the stars of the dawn, say.
+  behindSun(objects: GameObjects.GameObject[]) {
+    this.layer.addAt(objects, MOODS.length);
+  }
+
+  // t = seconds the world has been running, pan = -1..1 (where the camera would be looking), rise = how far
+  // the sun is still below its place, in pixels (it rises at dawn).
+  sync(t: number, dt: number, weather: Weather, pan: number, sunMood: FaceMood, blink: boolean, rise = 0) {
     const { look, weight } = weather;
 
-    // Stacked back to front as calm, grumpy, stormy, bloom; these opacities add up to the weighted blend.
-    const top = 1 - weight.bloom,
-      mid = top - weight.stormy,
-      grumpy = mid > 0.001 ? weight.grumpy / mid : 0,
-      stormy = top > 0.001 ? weight.stormy / top : 0,
-      solid = 0.997, // a sky this opaque hides the ones under it, so they need not be drawn
+    // Stacked back to front in the order of MOODS. Each sky's opacity is its share of the moods up to and
+    // including it, so together they add up to the weighted blend.
+    const solid = 0.997, // a sky this opaque hides the ones under it, so they need not be drawn
       faint = 0.004;
-    this.skies.bloom.setAlpha(weight.bloom).setVisible(weight.bloom > faint);
-    this.skies.stormy.setAlpha(stormy).setVisible(stormy > faint && weight.bloom < solid);
-    this.skies.grumpy.setAlpha(grumpy).setVisible(grumpy > faint && weight.bloom < solid && stormy < solid);
-    this.skies.calm.setVisible(weight.bloom < solid && stormy < solid && grumpy < solid);
+    let below = 1, // the moods' weights up to and including this one: all of them, to begin with
+      hidden = false; // a sky above is solid
+    for (let i = MOODS.length - 1; i >= 0; i--) {
+      const w = weight[MOODS[i]],
+        alpha = i === 0 ? 1 : below > 0.001 ? w / below : 0;
+      this.skies[MOODS[i]].setAlpha(alpha).setVisible(!hidden && (i === 0 || alpha > faint));
+      if (alpha >= solid) hidden = true;
+      below -= w;
+    }
 
     this.wisps.forEach((w, i) =>
       w
@@ -332,7 +354,7 @@ export class Sky {
     );
 
     const sx = SUN.x + pan * 15,
-      sy = SUN.y - look.ceiling * 64, // it ducks behind the storm clouds
+      sy = SUN.y - look.ceiling * 64 + rise, // it ducks behind the storm clouds
       sun = look.sun,
       pulse = 1 + Math.sin(t * 1.3) * 0.03;
     const shining = sun > 0.08; // behind the storm clouds there is nothing left to draw

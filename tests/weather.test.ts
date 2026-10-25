@@ -56,7 +56,7 @@ it('ends up in the same weather however long each frame is', () => {
 it('comes to rest once it has turned, and stirs again when the mood changes', () => {
   const weather = new Weather();
   for (let i = 0; i < 900; i++) weather.update('stormy', 1 / 60); // fifteen seconds: long settled
-  expect(weather.weight).toEqual({ calm: 0, grumpy: 0, stormy: 1, bloom: 0 }); // exactly, not nearly
+  expect(weather.weight).toEqual({ calm: 0, grumpy: 0, stormy: 1, bloom: 0, dawn: 0 }); // exactly, not nearly
   expect(weather.look.ceiling).toBe(1);
 
   const resting = { ...weather.look };
@@ -67,4 +67,14 @@ it('comes to rest once it has turned, and stirs again when the mood changes', ()
   expect(weather.weight.bloom).toBeGreaterThan(0);
   expect(weather.weight.stormy).toBeLessThan(1);
   expect(weather.look.rainbow).toBeGreaterThan(0);
+});
+
+it('dawns: snaps straight to a look, then blends from it to a clear morning', () => {
+  const weather = new Weather();
+  weather.snap('dawn');
+  expect(weather.weight.dawn).toBe(1);
+  expect(weather.look.sun).toBeLessThan(1);
+  for (let i = 0; i < 60; i++) weather.update('calm', 1 / 60);
+  expect(weather.weight.calm).toBeGreaterThan(0.8);
+  expect(MOODS.reduce((sum, mood) => sum + weather.weight[mood], 0)).toBeCloseTo(1);
 });

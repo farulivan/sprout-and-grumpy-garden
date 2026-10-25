@@ -1,9 +1,10 @@
 // The garden's weather follows Sunny's mood: a clear morning while he is asleep or only a little grumpy,
 // clouds rolling in as he gets grumpier, a stormy dusk when he is furious, and the sun bursting back out
 // (with a rainbow) once he has been cheered up. Nothing here changes the fight; it is only how the world looks.
+// One more look belongs to no boss: the dawn the game opens on, before the sun is up over Pip's yard.
 import type { Fight } from '../../../sim/fight';
 
-export const MOODS = ['calm', 'grumpy', 'stormy', 'bloom'] as const;
+export const MOODS = ['calm', 'grumpy', 'stormy', 'bloom', 'dawn'] as const;
 export type Mood = (typeof MOODS)[number];
 
 // What the world looks like in one mood. Tints multiply the baked art (white = as painted).
@@ -74,6 +75,20 @@ const LOOKS: Record<Mood, Look> = {
     life: 1.6,
     rainbow: 1,
   },
+  // cool violet shadows and pink clouds, the sun still low
+  dawn: {
+    cloudTint: 0xf4c6d6,
+    hillTint: 0xa9a8de,
+    landTint: 0xb7b2dc,
+    groundTint: 0xc6bcdc,
+    sun: 0.6,
+    ceiling: 0,
+    vignette: 0.5,
+    vignetteTint: 0x2a2266,
+    wind: 0,
+    life: 0,
+    rainbow: 0,
+  },
 };
 
 export function moodOf(fight: Fight): Mood {
@@ -88,9 +103,16 @@ const LEVELS = ['sun', 'ceiling', 'vignette', 'wind', 'life', 'rainbow'] as cons
 // Blends between moods so the weather turns gradually. Every view reads `look`.
 export class Weather {
   // How much of each mood is showing; always adds up to 1.
-  readonly weight: Record<Mood, number> = { calm: 1, grumpy: 0, stormy: 0, bloom: 0 };
+  readonly weight: Record<Mood, number> = { calm: 1, grumpy: 0, stormy: 0, bloom: 0, dawn: 0 };
   readonly look: Look = { ...LOOKS.calm };
   private settled: Mood | null = 'calm'; // the mood the weather has fully turned to, if it has
+
+  // Straight to a mood, with no blend: the opening skipped, say.
+  snap(mood: Mood) {
+    for (const m of MOODS) this.weight[m] = m === mood ? 1 : 0;
+    Object.assign(this.look, LOOKS[mood]);
+    this.settled = mood;
+  }
 
   update(mood: Mood, dt: number) {
     if (mood === this.settled) return; // nothing to blend until the mood changes
@@ -123,9 +145,7 @@ export class Weather {
 
     // The blend only creeps toward its goal, so call it done once it is too close to tell.
     if (this.weight[mood] > 0.9995) {
-      for (const m of MOODS) this.weight[m] = m === mood ? 1 : 0;
-      Object.assign(this.look, LOOKS[mood]);
-      this.settled = mood;
+      this.snap(mood);
     } else {
       this.settled = null;
     }
