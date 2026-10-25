@@ -1,6 +1,6 @@
 // One boss fight: the whole game state plus the rules that advance it.
-// States: title (boss asleep behind the title card) | play -> ending (boss blooms) -> win
-//                                                    | play -> down (Pip naps) -> lose
+// States: play -> ending (boss blooms) -> win
+//         play -> down (Pip naps) -> lose
 import { ARENA_R, STEP } from '../config';
 import { platforms } from './arena';
 import type { Boss } from './boss';
@@ -15,18 +15,17 @@ import { PIP_LOWEST, Player, type PlayerWorld } from './player';
 import type { Projectile } from './projectile';
 import { Rng } from './rng';
 
-export type FightState = 'title' | 'play' | 'ending' | 'win' | 'down' | 'lose';
+export type FightState = 'play' | 'ending' | 'win' | 'down' | 'lose';
 
 export interface FightOptions {
   seed: number;
   boss?: BossId;
   easy?: boolean; // 8 hearts instead of 5
   hearts?: number; // start with this many: the hearts Pip carried in from the stage before
-  title?: boolean; // the sleepy scene behind the title card: nothing fights
 }
 
 export class Fight implements PlayerWorld, Level {
-  state: FightState;
+  state: FightState = 'play';
   readonly easy: boolean;
   readonly rng: Rng;
   readonly minX = 24;
@@ -51,12 +50,7 @@ export class Fight implements PlayerWorld, Level {
     this.boss = BOSSES[opts.boss ?? 'sunny'](this);
     if (this.easy) this.player.hp = this.player.maxHp = 8;
     if (opts.hearts !== undefined) this.player.hp = clamp(Math.round(opts.hearts), 1, this.player.maxHp);
-    if (opts.title) {
-      this.state = 'title';
-    } else {
-      this.state = 'play';
-      this.boss.state = 'intro';
-    }
+    this.boss.state = 'intro';
   }
 
   get cheering() {
@@ -77,7 +71,7 @@ export class Fight implements PlayerWorld, Level {
   step(input: InputFrame) {
     const dt = STEP;
     this.remember();
-    if (this.state === 'title' || this.state === 'win' || this.state === 'lose') {
+    if (this.state === 'win' || this.state === 'lose') {
       this.boss.update(dt);
       return;
     }

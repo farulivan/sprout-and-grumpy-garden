@@ -6,8 +6,6 @@ import { Fight } from '../src/sim/fight';
 import { NO_INPUT } from '../src/sim/input';
 
 it('takes its mood from the fight: calm, grumpy, stormy, then bloom', () => {
-  expect(moodOf(new Fight({ seed: 1, title: true }))).toBe('calm');
-
   const fight = new Fight({ seed: 1 });
   for (let i = 0; i < 110; i++) fight.step(NO_INPUT); // past "Ready? GO!"
   const boss = fight.boss;

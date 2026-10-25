@@ -85,7 +85,7 @@ export class FightScene extends Scene {
     this.hitboxes.sync(fight);
 
     // Particles slow down with the fight during the win slow-motion; the camera always settles in real time.
-    const still = fight.state === 'title' || fight.state === 'win' || fight.state === 'lose';
+    const still = fight.state === 'win' || fight.state === 'lose';
     this.fx.update(still ? dt : dt * fight.timeScale, dt);
   }
 

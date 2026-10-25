@@ -78,7 +78,6 @@ const LOOKS: Record<Mood, Look> = {
 
 export function moodOf(fight: Fight): Mood {
   if (!fight.boss.alive) return 'bloom';
-  if (fight.state === 'title') return 'calm';
   return MOODS[Math.min(fight.boss.phase, 3) - 1];
 }
 
