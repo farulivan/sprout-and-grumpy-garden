@@ -98,3 +98,18 @@ it("plays a stage's own tune, quicker, and gives way to the boss's from its firs
   const boss = melody(starts.slice(switched));
   for (let i = 1; i < boss.length; i++) expect(boss[i] - boss[i - 1]).toBeCloseTo(0.28, 6);
 });
+
+it('drops sounds the browser is still holding back, instead of saving them all up', () => {
+  const { context, starts } = fakeContext();
+  context.state = 'suspended'; // no key pressed yet
+  const audio = new GameAudio();
+  audio.attach(context as unknown as AudioContext, {} as AudioNode);
+  expect(audio.canPlay).toBe(false);
+  audio.play('jump');
+  expect(starts).toEqual([]);
+
+  context.state = 'running';
+  expect(audio.canPlay).toBe(true);
+  audio.play('jump');
+  expect(starts.length).toBeGreaterThan(0);
+});

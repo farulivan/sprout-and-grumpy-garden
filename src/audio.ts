@@ -177,9 +177,16 @@ export class GameAudio {
     }
   }
 
+  // Whether a sound played now would be heard. Until the player first presses a key, clicks or taps, the
+  // browser holds the sound back (the opening of the game is usually silent for that reason), and a note
+  // scheduled meanwhile would only pile up and play with all the others once it lets go.
+  get canPlay() {
+    return !!this.ac && !!this.master && !this.muted && !this.paused && this.ac.state === 'running';
+  }
+
   private tone: Tone = (freq, { end = freq, type = 'square', dur = 0.12, vol = 0.2, delay = 0 } = {}) => {
     const ac = this.ac;
-    if (!ac || !this.master || this.muted || this.paused) return;
+    if (!ac || !this.master || !this.canPlay) return;
     const t0 = ac.currentTime + delay,
       o = ac.createOscillator(),
       g = ac.createGain();
