@@ -181,7 +181,7 @@ normal fight.
   again. They used to count only on the win card.
 - Lives (PR #14): three a game, as in Super Mario Bros. Losing a level, or Start over, costs one; with none
   left the game starts again from the first stage. Retrying Sunny at his gate used to be free and endless.
-- The opening and the main menu (branch `feat/title-sequence`): the studio's sting, a cold open over Pip's
+- The opening and the main menu (PR #17): the studio's sting, a cold open over Pip's
   yard at dawn, "Press any key" and a signpost menu (Play, How to play, Options, Credits), with irises into
   each stage and the chapter's title as it begins. The title used to sit over a sleeping Sunny fight.
 - Touch controls (PR #15): a big Shoot button held to fire, a smaller Jump up and to its right, and ◀ ▶ as
