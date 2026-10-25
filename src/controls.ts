@@ -3,8 +3,10 @@
 import { PAD_ACTIONS, readPad } from './gamepad';
 import type { InputFrame } from './sim/input';
 
-// Down only moves between a card's buttons (see App.tick): Pip has no use for it.
-export type Action = 'left' | 'right' | 'up' | 'down' | 'jump' | 'shoot' | 'start' | 'pause' | 'mute';
+// Down only moves between a card's buttons (see App.tick): Pip has no use for it, nor for back, which leaves
+// a menu's page.
+export type Action =
+  'left' | 'right' | 'up' | 'down' | 'jump' | 'shoot' | 'start' | 'pause' | 'mute' | 'back';
 
 const KEYS: Record<string, Action> = {
   ArrowLeft: 'left', a: 'left', A: 'left',
@@ -16,7 +18,10 @@ const KEYS: Record<string, Action> = {
   Enter: 'start',
   p: 'pause', P: 'pause', Escape: 'pause',
   m: 'mute', M: 'mute',
+  Backspace: 'back',
 }; // prettier-ignore
+// Keys that are never "any key" on the title: they only change what another key does, or move the focus.
+const NOT_ANY = new Set(['Shift', 'Control', 'Alt', 'Meta', 'Tab', 'CapsLock']);
 
 // A button or checkbox on the card that is showing. When the player has tabbed to one, Space presses or
 // ticks it, as on any web page, instead of making Pip jump (which on the title card starts the game). A
@@ -37,6 +42,7 @@ export class Controls {
     start: false,
     pause: false,
     mute: false,
+    back: false,
   };
   touch = false; // a touch screen is in use (src/ui/touch.ts): its buttons show, and the hints name them
   private just = new Set<Action>();
@@ -46,6 +52,8 @@ export class Controls {
   private lastDir: 'left' | 'right' = 'right'; // with ← and → both held, the one pressed last wins
   private pad = readPad(null);
   private tabbed = false; // the focus was moved with Tab since the last click or touch
+  private any = false; // any key, click, tap or gamepad button since the end of the last frame
+  private padButtons: boolean[] = [];
 
   constructor(onAnyKey: () => void = () => {}) {
     window.addEventListener('keydown', (e) => {
@@ -54,9 +62,13 @@ export class Controls {
         e.preventDefault();
         this.keyDown(e);
       }
+      if (!NOT_ANY.has(e.key) && !e.repeat) this.any = true;
       onAnyKey();
     });
-    window.addEventListener('pointerdown', () => (this.tabbed = false));
+    window.addEventListener('pointerdown', () => {
+      this.tabbed = false;
+      this.any = true;
+    });
     window.addEventListener('keyup', (e) => this.keyUp(e));
     window.addEventListener('blur', () => {
       this.keys.clear();
@@ -68,8 +80,12 @@ export class Controls {
 
   // Gamepads have no events for buttons: call this once per display frame to read them.
   poll() {
-    const pads = navigator.getGamepads?.() ?? [];
-    const next = readPad([...pads].find((p) => p?.connected));
+    const pads = navigator.getGamepads?.() ?? [],
+      pad = [...pads].find((p) => p?.connected);
+    const next = readPad(pad);
+    const buttons = pad ? pad.buttons.map((b) => b.pressed) : [];
+    if (buttons.some((down, i) => down && !this.padButtons[i])) this.any = true;
+    this.padButtons = buttons;
     for (const action of PAD_ACTIONS) {
       if (!next[action] || this.pad[action]) continue;
       this.just.add(action);
@@ -104,6 +120,10 @@ export class Controls {
   pressed(action: Action) {
     return this.just.has(action);
   }
+  // Any key, click, tap or gamepad button this frame: "Press any key" on the title.
+  anyPressed() {
+    return this.any;
+  }
 
   // What the simulation gets for one step.
   frame(): InputFrame {
@@ -132,6 +152,7 @@ export class Controls {
   endFrame(keepJump = false) {
     const jump = keepJump && this.just.has('jump');
     this.just.clear();
+    this.any = false;
     if (jump) this.just.add('jump');
   }
 }

@@ -36,6 +36,11 @@ it('aims up, jumps, shoots and pauses', () => {
   expect(readPad(pad([9])).start).toBe(true);
 });
 
+it('goes back with B, on the menu', () => {
+  expect(readPad(pad([1])).back).toBe(true);
+  expect(readPad(pad([0])).back).toBe(false);
+});
+
 it('copes with a pad that has fewer buttons than the standard layout', () => {
   expect(readPad({ buttons: [{ pressed: true }], axes: [] })).toMatchObject({
     jump: true,
