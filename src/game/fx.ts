@@ -297,7 +297,8 @@ export class Fx {
 
   // dt drives the particles (slowed during the win slow-motion); realDt settles the camera in real time.
   // focusX: the world x the camera looks at, the middle of the arena unless the world scrolls.
-  update(dt: number, realDt: number, focusX = W / 2) {
+  // The camera rests looking at (focusX, focusY), zoomed in by zoom; the shake and punch move it from there.
+  update(dt: number, realDt: number, focusX = W / 2, focusY = H / 2, zoom = 1) {
     const particles = this.particles;
     for (let i = particles.length - 1; i >= 0; i--) {
       const p = particles[i];
@@ -348,10 +349,13 @@ export class Fx {
     this.shakePx = Math.max(0, this.shakePx - realDt * 40);
     this.punchK *= Math.pow(0.0015, realDt);
     const s = this.shakePx;
-    // the camera rests on (focusX, the middle of the world's height); scroll is in world units
+    // scroll is in world units: the camera's middle sits that far plus half the canvas from the world's corner
     this.camera
-      .setZoom(RES * (1 + this.punchK))
-      .setScroll(focusX - (W * RES) / 2 - (s ? rand(-s, s) : 0), (H - H * RES) / 2 - (s ? rand(-s, s) : 0))
+      .setZoom(RES * zoom * (1 + this.punchK))
+      .setScroll(
+        focusX - (W * RES) / 2 - (s ? rand(-s, s) : 0),
+        focusY - (H * RES) / 2 - (s ? rand(-s, s) : 0),
+      )
       .setRotation(s ? rand(-s, s) * 0.0011 : 0);
   }
 
