@@ -861,6 +861,69 @@ body.gamepad .press .on-pad {
 .options .toggle[aria-pressed='false'] {
   color: #9a8a76;
 }
+/* a volume: a groove that fills with green up to a round wooden knob */
+.volume {
+  --fill: 100%;
+  appearance: none;
+  -webkit-appearance: none;
+  width: 190px;
+  height: 26px;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.volume::-webkit-slider-runnable-track {
+  height: 12px;
+  background: linear-gradient(90deg, #6fcd4c var(--fill), #efe2c2 var(--fill));
+  border: 2.5px solid var(--wood);
+  border-radius: 999px;
+}
+.volume::-moz-range-track {
+  height: 7px;
+  background: linear-gradient(90deg, #6fcd4c var(--fill), #efe2c2 var(--fill));
+  border: 2.5px solid var(--wood);
+  border-radius: 999px;
+}
+.volume::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 24px;
+  height: 24px;
+  margin-top: -8.5px;
+  background: radial-gradient(circle at 35% 30%, #fffdf4, #f6e3bb 60%, #e2c48e);
+  border: 3px solid var(--wood);
+  border-radius: 50%;
+  box-shadow: 0 2px 0 var(--wood-dark);
+}
+.volume::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  background: radial-gradient(circle at 35% 30%, #fffdf4, #f6e3bb 60%, #e2c48e);
+  border: 3px solid var(--wood);
+  border-radius: 50%;
+  box-shadow: 0 2px 0 var(--wood-dark);
+}
+.volume:focus-visible,
+#overlay.nav .volume:focus {
+  outline: 4px solid #ffd23f;
+  outline-offset: 3px;
+  border-radius: 999px;
+}
+/* under the signpost, on the soil: how to get sound after Start on a gamepad */
+.sound-hint {
+  position: absolute;
+  top: calc(100% + 44px);
+  left: 50%;
+  margin: 0;
+  padding: 3px 14px 4px;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--ink);
+  background: var(--cream);
+  border: 2px solid var(--wood);
+  border-radius: 999px;
+  transform: translateX(-50%);
+}
 .credits {
   display: grid;
   grid-template-columns: auto 1fr;

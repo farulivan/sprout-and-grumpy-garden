@@ -235,6 +235,9 @@
             <button class="plank" data-page="options">Options</button>
             <button class="plank" data-page="credits">Credits</button>
           </nav>
+          <!-- A gamepad's buttons don't count, for the browser, as asking for sound: until a key, a click or
+               a tap, the game stays silent, and this says so -->
+          <p class="sound-hint" id="sound-hint" hidden>🔈 Sound starts with any key or tap</p>
         </div>
         <div class="card hidden page" id="howto-card">
           <h1>How to play</h1>
@@ -291,6 +294,31 @@
             <div class="row">
               <span>Sound</span>
               <button id="btn-sound" class="btn wood toggle" aria-pressed="true">On</button>
+            </div>
+            <!-- five steps each; ◀ ▶ move a chosen one (src/ui/overlay.ts) -->
+            <div class="row">
+              <span id="vol-music-label">Music</span>
+              <input
+                type="range"
+                class="volume"
+                data-volume="music"
+                min="0"
+                max="5"
+                step="1"
+                aria-labelledby="vol-music-label"
+              />
+            </div>
+            <div class="row">
+              <span id="vol-sfx-label">Effects</span>
+              <input
+                type="range"
+                class="volume"
+                data-volume="sfx"
+                min="0"
+                max="5"
+                step="1"
+                aria-labelledby="vol-sfx-label"
+              />
             </div>
             <div class="row">
               <span>Hearts</span>

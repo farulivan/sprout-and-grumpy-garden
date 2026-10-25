@@ -23,7 +23,18 @@ export interface OverlayHandlers {
   title(): void; // back to the main menu
   mute(): void;
   easy(on: boolean): void;
+  volume(which: 'music' | 'sfx', level: number): void; // 0 to 1
+  // A sound for the menus: moving to another control, pressing one, going back a page.
+  sound(name: MenuSound): void;
 }
+export type MenuSound = 'menuMove' | 'menuPick' | 'menuBack';
+// What the cards show for settings the player has chosen before.
+export interface Settings {
+  easy: boolean;
+  music: number;
+  sfx: number;
+}
+const VOLUME_STEPS = 5;
 
 // Where something sits on the screen, as getBoundingClientRect() reports it.
 export interface Box {
@@ -96,9 +107,12 @@ export class Overlay {
   private arriving: ReturnType<typeof setTimeout> | undefined;
   private easyToggles = [...document.querySelectorAll<HTMLInputElement>('.easy-toggle')];
 
-  constructor(handlers: OverlayHandlers, easy: boolean) {
+  constructor(
+    private handlers: OverlayHandlers,
+    settings: Settings,
+  ) {
     for (const el of this.easyToggles) {
-      el.checked = easy;
+      el.checked = settings.easy;
       el.addEventListener('change', () => {
         for (const other of this.easyToggles) other.checked = el.checked; // the title and lose cards each have one
         handlers.easy(el.checked);
@@ -115,6 +129,21 @@ export class Overlay {
       plank.addEventListener('click', () => this.show(plank.dataset.page as Page));
     for (const btn of this.root.querySelectorAll('.back')) btn.addEventListener('click', () => this.back());
     byId('btn-sound').addEventListener('click', handlers.mute);
+    for (const slider of this.root.querySelectorAll<HTMLInputElement>('.volume')) {
+      const which = slider.dataset.volume as 'music' | 'sfx';
+      slider.value = String(Math.round(settings[which] * VOLUME_STEPS));
+      this.paintVolume(slider);
+      slider.addEventListener('input', () => {
+        this.paintVolume(slider);
+        handlers.volume(which, +slider.value / VOLUME_STEPS);
+        handlers.sound('menuMove'); // heard at the new loudness, when it's the effects
+      });
+    }
+    // every button pressed on a card has the menu's sound (the arrow keys and Back have theirs)
+    this.root.addEventListener('click', (e) => {
+      if ((e.target as HTMLElement).closest('button:not(.back), input[type=checkbox]'))
+        handlers.sound('menuPick');
+    });
     // blur(): otherwise Space or Enter would "click" the focused button again mid-level
     byId('btn-pause').addEventListener('click', (e) => {
       (e.currentTarget as HTMLElement).blur();
@@ -175,24 +204,48 @@ export class Overlay {
   // Esc, Backspace or B on a menu page: back to the signpost. Returns whether there was a page to leave.
   back() {
     if (!PAGES.includes(this.showing as Page)) return false;
+    this.handlers.sound('menuBack');
     this.show('menu');
     return true;
+  }
+
+  // Under the signpost: sound is waiting for a key press, click or tap.
+  setSoundHint(show: boolean) {
+    const hint = byId('sound-hint');
+    if (hint.hidden === show) hint.hidden = !show;
+  }
+
+  // A volume slider's groove fills up to its knob.
+  private paintVolume(slider: HTMLInputElement) {
+    slider.style.setProperty('--fill', `${(+slider.value / VOLUME_STEPS) * 100}%`);
   }
 
   // Keyboard and gamepad players move between the card's controls (its buttons, and its Easy mode checkbox)
   // with the arrow keys or the d-pad. The one they are on has the browser's focus, outlined as when tabbing
   // to it, until a click or a touch (#overlay.nav in style.css). With no direction, or on the first press,
   // they start on the card's main button.
+  // On a volume slider, ◀ and ▶ turn it down or up instead of moving off it. Returns whether the choice
+  // moved, or a slider turned.
   choose(dx = 0, dy = 0) {
     const controls = this.controls(),
       // a checkbox goes by its label, the pill the player sees
       boxes = controls.map((c) => trim((c.closest('label') ?? c).getBoundingClientRect()));
     let i = controls.findIndex((c) => c === document.activeElement);
+    const on = controls[i];
+    if (dx && on instanceof HTMLInputElement && on.type === 'range' && this.root.classList.contains('nav')) {
+      const was = on.value;
+      on.value = String(+on.value + dx);
+      if (on.value !== was) on.dispatchEvent(new Event('input'));
+      return on.value !== was;
+    }
     if (i < 0) i = main(controls);
     else if (dx || dy) i = nearest(boxes, i, dx, dy);
-    if (!controls[i]) return;
+    if (!controls[i]) return false;
+    const moved = controls[i] !== document.activeElement;
     controls[i].focus({ preventScroll: true });
     this.root.classList.add('nav');
+    if (moved) this.handlers.sound('menuMove');
+    return moved;
   }
 
   // Enter or Start: press the button the player has moved to on the card that is showing, or else its main

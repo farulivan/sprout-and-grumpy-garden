@@ -16,8 +16,12 @@ import { Overlay, type StagePath } from './ui/overlay';
 
 const MAX_FRAME = 0.05; // after a long hitch, slow down instead of catching up all at once
 const newSeed = () => Math.floor(Math.random() * 2 ** 32);
-// The chapter: a stage, then its boss through the stage's gate.
-const CHAPTER = { stage: 'gardenPath', boss: 'sunny' } as const;
+// The chapter: a stage, then its boss through the stage's gate. Its title shows as the stage begins.
+export const CHAPTER = {
+  title: 'Chapter 1 · The Grumpy Sunflower',
+  stage: 'gardenPath',
+  boss: 'sunny',
+} as const;
 // Pip's lives in a game, as in Super Mario Bros.: losing a level, or giving it up with Start over, costs one,
 // and with none left the game starts again from its first level.
 export const LIVES = 3;
@@ -61,9 +65,18 @@ export class App {
           this.toggleMute();
         },
         easy: (on) => (save.easy = on),
+        volume: (which, level) => {
+          o.audio.setVolume(which, level);
+          save.setVolume(which, level);
+        },
+        sound: (name) => {
+          o.audio.play(name);
+          if (name === 'menuMove' && this.level instanceof Yard) this.level.nod(); // Pip watches the menu
+        },
       },
-      save.easy,
+      { easy: save.easy, music: save.volume('music'), sfx: save.volume('sfx') },
     );
+    for (const which of ['music', 'sfx'] as const) o.audio.setVolume(which, save.volume(which));
     if (save.muted) {
       o.audio.muted = true;
       this.overlay.setMuted(true);
@@ -123,13 +136,16 @@ export class App {
   toTitle() {
     this.replaceLevel(new Yard({ beat: 'menu' }));
     this.overlay.show('menu');
-    this.o.audio.stopMusic();
+    this.o.audio.startMusic('title');
   }
 
   // "Press any key" passed: Pip jumps for joy and the menu comes. A key press, click or tap is also what
-  // lets the browser play sound, so this is where the game's sound begins.
+  // lets the browser play sound, so this is where the game's sound begins: a chime, and the title's tune.
   private toMenu(yard: Yard) {
-    this.o.audio.init();
+    const { audio } = this.o;
+    audio.init();
+    audio.play('start');
+    audio.startMusic('title');
     yard.toMenu();
     this.overlay.started();
   }
@@ -212,6 +228,8 @@ export class App {
       else this.chooseOnCard(c);
     }
     if (yard.beat === 'press' && this.overlay.card !== 'press') this.overlay.show('press');
+    // pressed Start on a gamepad, which the browser doesn't count as asking for sound: say how to get it
+    this.overlay.setSoundHint(yard.beat === 'menu' && !this.o.audio.canPlay && !this.o.audio.muted);
   }
 
   // The arrow keys or the d-pad: move between the controls on the card that is showing.
