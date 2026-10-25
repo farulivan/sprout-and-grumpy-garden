@@ -2,6 +2,7 @@
 // text. The simulation only announces them; src/presentation.ts decides what each one looks and sounds like.
 import type { ProjectileKind } from './projectile';
 import type { EnemyKind } from './stage/enemies/enemy';
+import type { TitleCue } from './yard';
 
 export interface FightResult {
   time: number; // seconds of fight time
@@ -50,4 +51,6 @@ export type SimEvent =
   // was an empty heart to fill
   | { type: 'goldenSeed'; x: number; y: number; found: number; healed?: boolean }
   | { type: 'stageClear'; x: number; y: number; result: StageResult } // Pip reached the gate
-  | { type: 'stageExit' }; // ...and has walked through it: on to the boss
+  | { type: 'stageExit' } // ...and has walked through it: on to the boss
+  // In Pip's yard behind the title: a moment in the opening (a seed landing, the logo stamping down)
+  | { type: 'cue'; cue: TitleCue };

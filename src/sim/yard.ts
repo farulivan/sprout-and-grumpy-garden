@@ -20,16 +20,36 @@ export const DOOR_X = 190;
 export const HOME_X = 400; // where Pip waits on the title and the menu
 // After Play, how long Pip runs before the game starts: the screen closes in on him as he goes.
 export const LEAVE = 1.1;
-// The beats that end by themselves, and the moments in the cold open that the view times itself to.
-export const STING = 2.4;
+// The beats that end by themselves, and the moments in them that the view times itself to.
+export const STING = 2.7;
+export const STING_AT = {
+  letters: 0.4, // the studio's name pops in, letter by letter, once the loading screen has faded
+  seed: 1.05, // a seed drops toward the i...
+  land: 1.35, // ...lands on it and bounces...
+  sprout: 1.6, // ...and sprouts as the i's dot
+  presents: 1.85, // "presents"
+  leave: 2.3, // the words go, and the sprout is left for the dawn to open from
+} as const;
 export const INTRO = {
+  open: 0.7, // the iris opens from the sprout onto the dawn
   sunrise: 0.5, // the sun peeks over the hills
   pullBack: 2, // the camera pulls back from the sky onto the yard
   door: 3.3, // the cottage door swings open
   hop: 3.55, // Pip hops out
-  logo: 4.4, // the logo drops in
+  logo: 4.4, // the logo's first line drops in...
+  stamp: 4.95, // ...and the second stamps down under it
   end: 6, // "Press any key"
 } as const;
+export const LOGO_DROP = 0.3; // how long the first line falls
+// The moments of the opening that have a sound (src/presentation.ts).
+export type TitleCue = 'seed' | 'sprout' | 'door' | 'logo' | 'stamp';
+const CUES: { beat: YardBeat; at: number; cue: TitleCue }[] = [
+  { beat: 'sting', at: STING_AT.land, cue: 'seed' },
+  { beat: 'sting', at: STING_AT.sprout, cue: 'sprout' },
+  { beat: 'intro', at: INTRO.door, cue: 'door' },
+  { beat: 'intro', at: INTRO.logo + LOGO_DROP, cue: 'logo' },
+  { beat: 'intro', at: INTRO.stamp, cue: 'stamp' },
+];
 // After a skip, presses are ignored this long, so a key mashed through the opening doesn't also press Start.
 export const PRESS_GUARD = 0.35;
 // How long Pip waits between the little things he does while the title waits.
@@ -100,6 +120,9 @@ export class Yard implements Level, PlayerWorld {
     p.py = p.y;
     this.t += dt;
     this.cheerT = Math.max(0, this.cheerT - dt);
+    for (const c of CUES)
+      if (c.beat === this.beat && this.t >= c.at && this.t - dt < c.at)
+        this.emit({ type: 'cue', cue: c.cue });
 
     if (this.beat === 'sting' && this.t >= STING) this.setBeat('intro', this.intro());
     else if (this.beat === 'intro' && this.t >= INTRO.end) this.setBeat('press', null);

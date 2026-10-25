@@ -88,3 +88,20 @@ it('sends Pip off down the path when Play is pressed', () => {
   expect(yard.player.vx).toBeGreaterThan(200); // still running when the game takes over
   expect(yard.player.x).toBeGreaterThan(HOME_X + 150);
 });
+
+it('announces each moment of the opening once, for its sounds, and none that a skip passed', () => {
+  const cues = (yard: Yard, seconds: number) => {
+    const heard: string[] = [];
+    for (let i = 0; i < Math.round(seconds / STEP); i++) {
+      yard.step();
+      for (const e of yard.drainEvents()) if (e.type === 'cue') heard.push(e.cue);
+    }
+    return heard;
+  };
+  expect(cues(new Yard(), STING + INTRO.end + 1)).toEqual(['seed', 'sprout', 'door', 'logo', 'stamp']);
+
+  const skipped = new Yard();
+  cues(skipped, 0.5);
+  skipped.skip();
+  expect(cues(skipped, 10)).toEqual([]);
+});

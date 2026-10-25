@@ -6,6 +6,7 @@ import { bakeApart, finishBaking } from '../art/bake';
 import { bakeShared } from '../art/shared';
 import { bakeFx } from '../fx';
 import { BOSS_VIEWS } from '../views/bossViews';
+import { bakeIris } from '../views/Iris';
 import { bakeEnemies } from '../views/EnemyViews';
 import { bakeHazards } from '../views/HazardViews';
 import { bakePickups } from '../views/PickupViews';
@@ -58,6 +59,7 @@ export class BootScene extends Scene {
         bakeEnemies(this);
       });
       bakeTitle(this);
+      bakeIris(this);
       bakeFx(this);
       bakeHud(this);
       finishBaking(this);
