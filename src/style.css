@@ -73,7 +73,7 @@ canvas {
   background: #a8dcff;
 }
 
-/* ---------- the loading screen, until the garden has been drawn (src/ui/loading.ts) ---------- */
+/* ---------- the loading screen, until the title has been drawn (src/ui/loading.ts) ---------- */
 #loading {
   position: absolute;
   inset: 0;
@@ -83,7 +83,8 @@ canvas {
   font-size: calc(var(--h) * 16 / 540);
   color: #fff;
   text-align: center;
-  background: #7fcbff;
+  /* the paper the studio's sting is printed on, so the opening carries straight on from here */
+  background: #fff8e1;
   transition:
     opacity 0.4s ease,
     visibility 0s 0.4s;
@@ -92,24 +93,16 @@ canvas {
   opacity: 0;
   visibility: hidden;
 }
-/* The cards wait for the garden, so the title card pops in over it rather than over an empty frame. */
+/* The cards wait for the title, so nothing pops in over an empty frame. */
 #stage:not(.loaded) #overlay {
   display: none;
 }
-.loading-garden {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-}
-.loading-garden .drift {
-  animation: drift 14s ease-in-out infinite alternate;
-}
-/* Pip hops on the turf: Pip's feet (y = 0 in its picture, 8 units above the bottom) on the ground line. */
+/* Pip hops in the middle of the paper, where the studio's name will be: Pip's feet (y = 0 in its picture,
+   8 units above the bottom) on an invisible floor. */
 .loading-pip {
   position: absolute;
   left: 50%;
-  bottom: calc(13.33% - 0.67em);
+  bottom: calc(46% - 0.67em);
   height: 10.5em;
   overflow: visible;
   transform: translateX(-50%);
@@ -140,7 +133,7 @@ canvas {
 }
 #loading p {
   position: absolute;
-  top: 31%;
+  top: 58%;
   left: 0;
   right: 0;
   margin: 0;
@@ -179,7 +172,7 @@ canvas {
 #loading .slow,
 #loading .nojs {
   position: absolute;
-  top: calc(31% + 3.9em);
+  top: calc(58% + 3.9em);
   left: 50%;
   margin: 0;
   padding: 0.3em 0.35em 0.3em 1em;
@@ -1181,11 +1174,6 @@ body.touch #stage[data-state='play'] #touch {
     transform: rotate(-8deg);
   }
 }
-@keyframes drift {
-  to {
-    transform: translateX(-28px);
-  }
-}
 @keyframes blink {
   0%,
   92%,
@@ -1222,7 +1210,6 @@ body.touch #stage[data-state='play'] #touch {
   .plank,
   .star.on,
   .meter i,
-  .loading-garden .drift,
   .loading-pip .hop,
   .loading-pip .floor,
   .loading-pip .leaf,
