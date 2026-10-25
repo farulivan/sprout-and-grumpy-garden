@@ -8,6 +8,7 @@ import type { ToastTone } from '../../presentation';
 import { Fight } from '../../sim/fight';
 import type { Player } from '../../sim/player';
 import { SEEDS_PER_HEART, Stage } from '../../sim/stage/stage';
+import { Yard } from '../../sim/yard';
 import { clamp } from '../../sim/math';
 import { INV, part, show, unit } from '../art/bake';
 import { FONT } from '../art/draw';
@@ -246,8 +247,12 @@ export class HudScene extends Scene {
 
   // Not called while the game is paused.
   override update(_time: number, deltaMs: number) {
+    const level = this.app.level;
+    if (level instanceof Yard) {
+      this.all.setVisible(false); // Pip's yard behind the title and the menu has no HUD
+      return;
+    }
     const dt = deltaMs / 1000,
-      level = this.app.level,
       p = level.player,
       fight = level instanceof Fight ? level : null,
       stage = level instanceof Stage ? level : null;
@@ -263,7 +268,7 @@ export class HudScene extends Scene {
     // The result cards sit over the middle of the screen, and the boss's bar would poke out above them.
     const result = level.state === 'win' || level.state === 'lose';
     this.shownA = fresh ? 1 : clamp(this.shownA + (result ? -dt : dt) * 5, 0, 1);
-    this.all.setVisible(level.state !== 'title' && this.shownA > 0).setAlpha(this.shownA);
+    this.all.setVisible(this.shownA > 0).setAlpha(this.shownA);
     const live =
       level.state === 'play' || level.state === 'ending' || level.state === 'down' || level.state === 'clear';
 

@@ -10,7 +10,7 @@
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🌻%3C/text%3E%3C/svg%3E"
     />
     <link rel="stylesheet" href="/src/style.css" />
-    <!-- The loading screen and the title card are written in Fredoka, and the game waits for it before it
+    <!-- The loading screen, the logo and the cards are written in Fredoka, and the game waits for it before it
          draws anything: fetch it with the page, not once the script has arrived and asked for it. -->
     <link
       rel="preload"
@@ -298,7 +298,7 @@
           </svg>
         </button>
       </div>
-      <!-- The touch buttons' icons, drawn once for the buttons and the title card's hints. Their colours come
+      <!-- The touch buttons' icons, drawn once for the buttons and the hints on How to play. Their colours come
            from the svg using them: fill and color are the icon's colour, stroke its outline (.ico in style.css). -->
       <svg class="sprite" aria-hidden="true">
         <symbol id="i-left" viewBox="0 0 48 48">
@@ -357,91 +357,24 @@
         </div>
       </div>
       <div id="overlay" class="screen">
-        <div class="card" id="title-card">
-          <h1 class="logo" aria-label="Sprout and the Grumpy Garden">
-            <svg viewBox="0 0 460 168" role="img" aria-hidden="true">
-              <defs>
-                <linearGradient id="logo-green" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0" stop-color="#f1ffb0" />
-                  <stop offset="0.55" stop-color="#a9ec62" />
-                  <stop offset="1" stop-color="#63c245" />
-                </linearGradient>
-                <linearGradient id="logo-gold" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0" stop-color="#fff7a8" />
-                  <stop offset="0.5" stop-color="#ffd23f" />
-                  <stop offset="1" stop-color="#ff9a2e" />
-                </linearGradient>
-              </defs>
-              <g transform="rotate(-3 230 84)">
-                <!-- a sprout growing out of the first line -->
-                <g transform="translate(86 26)">
-                  <path
-                    d="M0 22 Q-2 10 1 0"
-                    fill="none"
-                    stroke="#1c5f2a"
-                    stroke-width="7"
-                    stroke-linecap="round"
-                  />
-                  <path
-                    d="M0 22 Q-2 10 1 0"
-                    fill="none"
-                    stroke="#7fd65a"
-                    stroke-width="3"
-                    stroke-linecap="round"
-                  />
-                  <path
-                    d="M1 2 C-8 -14 -26 -12 -30 -2 C-20 6 -6 8 1 2Z"
-                    fill="#8ee05f"
-                    stroke="#1c5f2a"
-                    stroke-width="3.5"
-                    stroke-linejoin="round"
-                  />
-                  <path
-                    d="M1 2 C8 -16 28 -16 33 -5 C24 6 8 8 1 2Z"
-                    fill="#b6f07c"
-                    stroke="#1c5f2a"
-                    stroke-width="3.5"
-                    stroke-linejoin="round"
-                  />
-                </g>
-                <g
-                  font-family="Fredoka, sans-serif"
-                  font-weight="700"
-                  text-anchor="middle"
-                  stroke-linejoin="round"
-                  paint-order="stroke"
-                >
-                  <text x="230" y="76" font-size="50" fill="#134a20" stroke="#134a20" stroke-width="12">
-                    Sprout &amp; the
-                  </text>
-                  <text
-                    x="230"
-                    y="70"
-                    font-size="50"
-                    fill="url(#logo-green)"
-                    stroke="#1c5f2a"
-                    stroke-width="10"
-                  >
-                    Sprout &amp; the
-                  </text>
-                  <text x="230" y="146" font-size="68" fill="#4a2206" stroke="#4a2206" stroke-width="14">
-                    Grumpy Garden
-                  </text>
-                  <text
-                    x="230"
-                    y="139"
-                    font-size="68"
-                    fill="url(#logo-gold)"
-                    stroke="#6b3408"
-                    stroke-width="12"
-                  >
-                    Grumpy Garden
-                  </text>
-                </g>
-              </g>
-            </svg>
-          </h1>
-          <p class="chapter"><span>Chapter 1 · The Grumpy Sunflower</span></p>
+        <!-- The title waits: "Press any key", in the words of whatever the player is using -->
+        <div class="card hidden prompt" id="press-card">
+          <p class="press">
+            <span class="on-keys">Press any key</span><span class="on-touch">Tap to start</span
+            ><span class="on-pad">Press <kbd class="pad start">Start</kbd></span>
+          </p>
+        </div>
+        <!-- The main menu: a signpost by the path, one plank for each place to go -->
+        <div class="card hidden sign" id="menu-card">
+          <nav class="planks" aria-label="Main menu">
+            <button id="btn-play" class="plank go">Play</button>
+            <button class="plank" data-page="howto">How to play</button>
+            <button class="plank" data-page="options">Options</button>
+            <button class="plank" data-page="credits">Credits</button>
+          </nav>
+        </div>
+        <div class="card hidden page" id="howto-card">
+          <h1>How to play</h1>
           <p class="sub">
             Sunny the Sunflower woke up grumpy, and his mood has spread all down the garden path! Help little
             Pip cheer up every plant on the way, and then Sunny himself.
@@ -487,10 +420,36 @@
             </li>
           </ul>
           <p class="tip">⭐ Face shots do double damage!</p>
-          <div class="actions">
-            <label class="easy"><input type="checkbox" class="easy-toggle" /> 🌱 Easy mode (8 hearts)</label>
-            <button id="btn-start" class="btn big">Play!</button>
+          <button class="btn back">Back</button>
+        </div>
+        <div class="card hidden page" id="options-card">
+          <h1>Options</h1>
+          <div class="options">
+            <div class="row">
+              <span>Sound</span>
+              <button id="btn-sound" class="btn wood toggle" aria-pressed="true">On</button>
+            </div>
+            <div class="row">
+              <span>Hearts</span>
+              <label class="easy"
+                ><input type="checkbox" class="easy-toggle" /> 🌱 Easy mode (8 hearts)</label
+              >
+            </div>
           </div>
+          <button class="btn back">Back</button>
+        </div>
+        <div class="card hidden page" id="credits-card">
+          <h1>Credits</h1>
+          <dl class="credits">
+            <dt>Made by</dt>
+            <dd>farulivan</dd>
+            <dt>Built with</dt>
+            <dd>Phaser 4</dd>
+            <dt>Font</dt>
+            <dd>Fredoka, under the SIL Open Font License</dd>
+          </dl>
+          <p class="tip">Thanks for playing! 🌻</p>
+          <button class="btn back">Back</button>
         </div>
         <div class="card hidden" id="win-card">
           <div class="badge">🌻</div>
@@ -498,7 +457,10 @@
           <p class="sub">Sunny feels sunny again and the garden path is open. What a hero, Pip!</p>
           <div class="stars" id="win-stars"></div>
           <div class="stats" id="win-stats"></div>
-          <button id="btn-again" class="btn">Play again</button>
+          <div class="actions">
+            <button id="btn-again" class="btn">Play again</button>
+            <button class="btn wood to-menu">Main menu</button>
+          </div>
           <p class="hint keys-only">or press <kbd>Enter</kbd></p>
         </div>
         <div class="card hidden" id="lose-card">
@@ -516,6 +478,7 @@
           <div class="actions">
             <label class="easy"><input type="checkbox" class="easy-toggle" /> 🌱 Easy mode (8 hearts)</label>
             <button id="btn-retry" class="btn">Try again</button>
+            <button id="btn-lose-menu" class="btn wood to-menu" hidden>Main menu</button>
           </div>
           <p class="hint keys-only">or press <kbd>Enter</kbd></p>
         </div>
@@ -533,13 +496,13 @@
               </svg>
               Start over
             </button>
-            <button id="btn-title" class="btn wood">
+            <button class="btn wood to-menu">
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M3.2 11.6L12 4.2l8.8 7.4" />
                 <path d="M5.9 9.8v9.7h12.2V9.8" />
                 <path fill="currentColor" d="M10.4 19.5v-4.6h3.2v4.6Z" />
               </svg>
-              Title screen
+              Main menu
             </button>
           </div>
         </div>

@@ -1,7 +1,11 @@
-// The HTML layer over the game: title, win, lose and pause cards, plus the round sound and pause buttons.
+// The HTML layer over the game: "Press any key" on the title, the main menu and its pages, the win, lose and
+// pause cards, plus the round sound and pause buttons.
 import type { FightResult } from '../sim/events';
 
-export type Card = 'title' | 'win' | 'lose' | 'pause';
+export type Card = 'press' | 'menu' | Page | 'win' | 'lose' | 'pause';
+// The pages the main menu's signpost opens. Back returns to the signpost.
+export type Page = 'howto' | 'options' | 'credits';
+const PAGES: readonly Page[] = ['howto', 'options', 'credits'];
 // The stage a run came through on the way to the boss, for the win card: its name and how long it took.
 export interface StagePath {
   name: string;
@@ -9,12 +13,13 @@ export interface StagePath {
 }
 
 export interface OverlayHandlers {
-  start(): void; // a new game, from its first level
+  play(): void; // Play on the main menu: Pip sets off down the garden path
+  start(): void; // a new game, from its first level, straight away
   retry(): void; // the level that was lost, again; with no lives left, a new game
   restart(): void; // Start over: gives up this life for the level again
   resume(): void;
   pause(): void;
-  title(): void;
+  title(): void; // back to the main menu
   mute(): void;
   easy(on: boolean): void;
 }
@@ -50,10 +55,20 @@ export function nearest(boxes: readonly Box[], from: number, dx: number, dy: num
   return best;
 }
 
+// A tilted button (the signpost's boards) has a box taller than itself, so boards one above the other seem
+// to overlap. Going by the middle of each box leaves them apart.
+const trim = (b: Box): Box => {
+  const cut = (b.bottom - b.top) * 0.15;
+  return { left: b.left, right: b.right, top: b.top + cut, bottom: b.bottom - cut };
+};
+
 // Where a card's main button is among its controls: the one pressed when the player hasn't moved to another
-// (Play!, Try again, Play again or Keep playing). It is the first button; the Easy mode checkbox comes before
-// it on the title and lose cards.
-const main = (controls: readonly HTMLElement[]) => controls.findIndex((c) => c instanceof HTMLButtonElement);
+// (Play, Try again, Play again, Keep playing). It is the first button (the Easy mode checkbox comes before it
+// on the lose card), except on a menu page, where it is Back.
+const main = (controls: readonly HTMLElement[]) => {
+  const back = controls.findIndex((c) => c.classList.contains('back'));
+  return back >= 0 ? back : controls.findIndex((c) => c instanceof HTMLButtonElement);
+};
 
 const byId = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const el = (tag: string, className: string, text = '') => {
@@ -67,12 +82,17 @@ export class Overlay {
   private stage = byId('stage');
   private root = byId('overlay');
   private cards: Record<Card, HTMLElement> = {
-    title: byId('title-card'),
+    press: byId('press-card'),
+    menu: byId('menu-card'),
+    howto: byId('howto-card'),
+    options: byId('options-card'),
+    credits: byId('credits-card'),
     win: byId('win-card'),
     lose: byId('lose-card'),
     pause: byId('pause-card'),
   };
   private showing: Card | null = null;
+  private arriving: ReturnType<typeof setTimeout> | undefined;
   private easyToggles = [...document.querySelectorAll<HTMLInputElement>('.easy-toggle')];
 
   constructor(handlers: OverlayHandlers, easy: boolean) {
@@ -83,11 +103,17 @@ export class Overlay {
         handlers.easy(el.checked);
       });
     }
-    for (const id of ['btn-start', 'btn-again']) byId(id).addEventListener('click', handlers.start);
+    byId('btn-play').addEventListener('click', handlers.play);
+    byId('btn-again').addEventListener('click', handlers.start);
     byId('btn-retry').addEventListener('click', handlers.retry);
     byId('btn-restart').addEventListener('click', handlers.restart);
     byId('btn-resume').addEventListener('click', handlers.resume);
-    byId('btn-title').addEventListener('click', handlers.title);
+    for (const btn of this.root.querySelectorAll('.to-menu')) btn.addEventListener('click', handlers.title);
+    // the signpost's planks open the menu's pages, and each page's Back returns to the signpost
+    for (const plank of this.root.querySelectorAll<HTMLElement>('[data-page]'))
+      plank.addEventListener('click', () => this.show(plank.dataset.page as Page));
+    for (const btn of this.root.querySelectorAll('.back')) btn.addEventListener('click', () => this.back());
+    byId('btn-sound').addEventListener('click', handlers.mute);
     // blur(): otherwise Space or Enter would "click" the focused button again mid-level
     byId('btn-pause').addEventListener('click', (e) => {
       (e.currentTarget as HTMLElement).blur();
@@ -106,12 +132,40 @@ export class Overlay {
   get easy() {
     return this.easyToggles[0].checked;
   }
+  get card() {
+    return this.showing;
+  }
 
   show(card: Card | null) {
+    const was = this.showing,
+      nav = this.root.classList.contains('nav');
     this.showing = card;
     this.root.classList.remove('nav');
     this.root.classList.toggle('hidden', !card);
+    // the title and the signpost stand in the yard; every other card dims the game around it
+    this.root.classList.toggle('dim', !!card && card !== 'press' && card !== 'menu');
     for (const [name, el] of Object.entries(this.cards)) el.classList.toggle('hidden', name !== card);
+    // The click that passed "Press any key" must not also land on the signpost that appears under it.
+    if (card === 'menu' && was === 'press') {
+      clearTimeout(this.arriving);
+      this.root.classList.add('arriving');
+      this.arriving = setTimeout(() => this.root.classList.remove('arriving'), 400);
+    }
+    // Between the signpost and its pages, keyboard and gamepad players keep their place: a page opens on its
+    // first control, and Back returns to the board that opened the page.
+    if (nav && card && was && (card === 'menu' || PAGES.includes(card as Page))) {
+      const to =
+        card === 'menu' ? this.root.querySelector<HTMLElement>(`[data-page="${was}"]`) : this.controls()[0];
+      to?.focus({ preventScroll: true });
+      this.root.classList.add('nav');
+    }
+  }
+
+  // Esc, Backspace or B on a menu page: back to the signpost. Returns whether there was a page to leave.
+  back() {
+    if (!PAGES.includes(this.showing as Page)) return false;
+    this.show('menu');
+    return true;
   }
 
   // Keyboard and gamepad players move between the card's controls (its buttons, and its Easy mode checkbox)
@@ -121,7 +175,7 @@ export class Overlay {
   choose(dx = 0, dy = 0) {
     const controls = this.controls(),
       // a checkbox goes by its label, the pill the player sees
-      boxes = controls.map((c) => (c.closest('label') ?? c).getBoundingClientRect());
+      boxes = controls.map((c) => trim((c.closest('label') ?? c).getBoundingClientRect()));
     let i = controls.findIndex((c) => c === document.activeElement);
     if (i < 0) i = main(controls);
     else if (dx || dy) i = nearest(boxes, i, dx, dy);
@@ -190,6 +244,7 @@ export class Overlay {
     byId('lose-over').hidden = !over;
     byId('lose-who').textContent = where === 'stage' ? 'The garden path is' : 'Sunny is';
     byId('btn-retry').textContent = over ? 'Start again' : 'Try again';
+    byId('btn-lose-menu').hidden = !over; // the game is over: a way back to the menu too
     const progressLine = el(
       'span',
       '',
@@ -207,6 +262,9 @@ export class Overlay {
 
   setMuted(muted: boolean) {
     byId('btn-mute').classList.toggle('muted', muted); // the button holds both icons; CSS shows one
+    const sound = byId('btn-sound');
+    sound.textContent = muted ? 'Off' : 'On';
+    sound.setAttribute('aria-pressed', String(!muted));
   }
 
   // CSS uses this to show the touch controls and HUD buttons only while playing.

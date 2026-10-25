@@ -1,4 +1,5 @@
-// Runs once: waits for the font, bakes every texture, then starts the fight scene.
+// Runs once: waits for the font, bakes every texture, then starts the title, with the HUD over it (hidden
+// until a level is played).
 import { Scene, Sound, WEBGL, type Renderer } from 'phaser';
 import type { GameAudio } from '../../audio';
 import { bakeApart, finishBaking } from '../art/bake';
@@ -11,6 +12,7 @@ import { bakePickups } from '../views/PickupViews';
 import { bakePlayer } from '../views/PlayerView';
 import { bakeProjectiles } from '../views/ProjectileViews';
 import { bakeStage } from '../views/stage/art';
+import { bakeTitle } from '../views/title/art';
 import { bakeWorld } from '../views/WorldView';
 import { bakeHud } from './HudScene';
 
@@ -55,10 +57,12 @@ export class BootScene extends Scene {
         bakeStage(this);
         bakeEnemies(this);
       });
+      bakeTitle(this);
       bakeFx(this);
       bakeHud(this);
       finishBaking(this);
-      this.scene.start('fight');
+      this.scene.start('title');
+      this.scene.launch('hud');
     });
   }
 }
