@@ -821,6 +821,13 @@ body.gamepad .press .on-pad {
 .plank:active {
   transform: rotate(var(--tilt)) translateY(3px);
 }
+/* on a touch screen, every board tall enough for a thumb (44 px, as phone guidelines ask, at phone size) */
+body.touch .plank {
+  padding-block: 13px 15px;
+}
+body.touch .planks {
+  gap: 9px;
+}
 /* the board the player is on: outlined in gold, like every chosen button */
 .plank:focus-visible,
 #overlay.nav .plank:focus {
