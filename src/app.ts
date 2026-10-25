@@ -131,7 +131,7 @@ export class App {
   private toMenu(yard: Yard) {
     this.o.audio.init();
     yard.toMenu();
-    this.overlay.show('menu');
+    this.overlay.started();
   }
 
   private replaceLevel(level: Played) {

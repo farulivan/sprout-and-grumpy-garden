@@ -6,6 +6,7 @@ export type Card = 'press' | 'menu' | Page | 'win' | 'lose' | 'pause';
 // The pages the main menu's signpost opens. Back returns to the signpost.
 export type Page = 'howto' | 'options' | 'credits';
 const PAGES: readonly Page[] = ['howto', 'options', 'credits'];
+const START_FLASH = 360; // milliseconds "Press any key" flashes for once pressed (the .go animation in style.css)
 // The stage a run came through on the way to the boss, for the win card: its name and how long it took.
 export interface StagePath {
   name: string;
@@ -159,6 +160,16 @@ export class Overlay {
       to?.focus({ preventScroll: true });
       this.root.classList.add('nav');
     }
+  }
+
+  // "Press any key" pressed: it flashes twice, as an arcade's title does, then the signpost comes.
+  started() {
+    const press = this.cards.press;
+    press.classList.add('go');
+    setTimeout(() => {
+      press.classList.remove('go');
+      if (this.showing === 'press') this.show('menu');
+    }, START_FLASH);
   }
 
   // Esc, Backspace or B on a menu page: back to the signpost. Returns whether there was a page to leave.
