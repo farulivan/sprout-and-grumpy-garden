@@ -57,11 +57,31 @@ const RECIPES: Record<SfxName, (tone: Tone) => void> = {
     [523, 659, 784, 1047].forEach((f, i) =>
       tone(f, { type: 'triangle', dur: i === 3 ? 0.4 : 0.14, vol: 0.16, delay: i * 0.12 }),
     ),
+  // "Press any key" pressed: a bright run up, with a twinkle at the top
+  start: (tone) => {
+    [523, 659, 784, 1047].forEach((f, i) =>
+      tone(f, { type: 'triangle', dur: 0.16, vol: 0.15, delay: i * 0.06 }),
+    );
+    tone(2093, { end: 2637, type: 'sine', dur: 0.35, vol: 0.07, delay: 0.24 });
+  },
+  // the logo's second line landing: a springy thump
+  boing: (tone) => {
+    tone(150, { end: 520, type: 'triangle', dur: 0.16, vol: 0.18 });
+    tone(520, { end: 330, type: 'sine', dur: 0.22, vol: 0.1, delay: 0.12 });
+  },
+  // moving between the menu's boards, pressing one, and going back: soft wooden knocks
+  menuMove: (tone) => tone(700, { end: 640, type: 'triangle', dur: 0.05, vol: 0.08 }),
+  menuPick: (tone) => {
+    tone(523, { end: 880, type: 'sine', dur: 0.09, vol: 0.12 });
+    tone(1047, { type: 'triangle', dur: 0.08, vol: 0.06, delay: 0.05 });
+  },
+  menuBack: (tone) =>
+    [659, 494].forEach((f, i) => tone(f, { type: 'triangle', dur: 0.08, vol: 0.09, delay: i * 0.07 })),
 };
 
 // Looping background music: a pentatonic arpeggio with a bass note under it. Each level has its own tune.
 const NOTES = [261.6, 293.7, 329.6, 392.0, 440.0, 523.3, 587.3, 659.3]; // C pentatonic over two octaves
-export type Tune = 'boss' | 'stage';
+export type Tune = 'boss' | 'stage' | 'title';
 interface TuneDef {
   pattern: readonly number[]; // indexes into NOTES, one per beat
   beat: number; // seconds per beat
@@ -82,6 +102,16 @@ const TUNES: Record<Tune, TuneDef> = {
     bassEvery: 8,
     bass: [0, 3],
   },
+  // the title and its menu: a slow music box over Pip's yard, a phrase that rises and comes home
+  title: {
+    pattern: [4, 2, 0, 2, 4, 5, 4, 2, 3, 1, 0, 1, 3, 4, 3, 1, 4, 5, 7, 5, 4, 2, 4, 5, 3, 2, 1, 2, 0, 1, 2, 0],
+    beat: 0.34,
+    wave: 'sine',
+    hold: 2.4,
+    vol: 0.05,
+    bassEvery: 8,
+    bass: [0, 3, 4, 2],
+  },
   // a skipping walk down the garden path: quicker and plucked
   stage: {
     pattern: [0, 2, 4, 2, 5, 4, 2, 4, 3, 5, 7, 5, 6, 5, 3, 2],
@@ -96,15 +126,20 @@ const TUNES: Record<Tune, TuneDef> = {
 // Music is scheduled on the audio clock a little ahead of time, so it keeps a steady beat even when the
 // page's own timers run late.
 const LOOKAHEAD = 0.2; // seconds of music to keep scheduled
+const LATE = 300; // milliseconds after which a sound held back for the browser is dropped instead
 const TICK = 50; // how often to top it up, in milliseconds
 
 export class GameAudio {
   muted = false;
+  // How loud the music and the sound effects are, 0 to 1, each on a bus of its own under the master volume.
+  private volume = { music: 1, sfx: 1 };
   // While paused, nothing is scheduled (a suspended context would pile notes up and play them all at
   // once on resume).
   paused = false;
   private ac: AudioContext | null = null;
   private master: GainNode | null = null;
+  private buses: { music: GainNode; sfx: GainNode } | null = null;
+  private resuming: Promise<void> | null = null; // the browser is letting sound play: a moment, usually
   private musicTimer: ReturnType<typeof setInterval> | null = null;
   private tune: TuneDef = TUNES.boss;
   private beat = 0;
@@ -113,25 +148,48 @@ export class GameAudio {
   // Play through an AudioContext that something else owns (Phaser's), so its unlock handling,
   // pause-on-blur and master mute cover the synth too.
   attach(context: AudioContext, destination: AudioNode) {
-    this.ac = context;
-    this.master = context.createGain();
-    this.master.gain.value = 0.5;
-    this.master.connect(destination);
+    this.connect(context, destination);
   }
 
   // Browsers only allow sound after a key press, click or touch, so call this from one.
   init() {
     if (!this.ac) {
-      this.ac = new AudioContext();
-      this.master = this.ac.createGain();
-      this.master.gain.value = 0.5;
-      this.master.connect(this.ac.destination);
+      const ac = new AudioContext();
+      this.connect(ac, ac.destination);
     }
-    if (this.ac.state === 'suspended') void this.ac.resume();
+    if (this.ac?.state === 'suspended' && !this.resuming)
+      this.resuming = this.ac.resume().finally(() => (this.resuming = null));
+  }
+
+  private connect(context: AudioContext, destination: AudioNode) {
+    this.ac = context;
+    this.master = context.createGain();
+    this.master.gain.value = 0.5;
+    this.master.connect(destination);
+    const bus = (level: number) => {
+      const g = context.createGain();
+      g.gain.value = level;
+      g.connect(this.master as GainNode);
+      return g;
+    };
+    this.buses = { music: bus(this.volume.music), sfx: bus(this.volume.sfx) };
+  }
+
+  // How loud the music or the effects are, 0 to 1.
+  setVolume(which: 'music' | 'sfx', level: number) {
+    this.volume[which] = Math.min(1, Math.max(0, level));
+    if (this.buses) this.buses[which].gain.value = this.volume[which];
   }
 
   play(name: SfxName) {
-    RECIPES[name](this.tone);
+    // Asked for in the moment between the key press that lets sound play and the sound starting (the
+    // chime for "Press any key"): play it as soon as it can be, unless that takes long enough to be odd.
+    if (!this.canPlay && this.resuming) {
+      const asked = Date.now();
+      void this.resuming.then(() => Date.now() - asked < LATE && RECIPES[name](this.sfxTone));
+      return;
+    }
+    RECIPES[name](this.sfxTone);
   }
 
   // Starts a tune from its beginning, unless it is already playing. Another tune playing gives way to it.
@@ -159,14 +217,14 @@ export class GameAudio {
     const t = this.tune;
     while (this.nextBeat < now + LOOKAHEAD) {
       const delay = this.nextBeat - now;
-      this.tone(NOTES[t.pattern[this.beat % t.pattern.length]], {
+      this.musicTone(NOTES[t.pattern[this.beat % t.pattern.length]], {
         type: t.wave,
         dur: t.beat * t.hold,
         vol: t.vol,
         delay,
       });
       if (this.beat % t.bassEvery === 0)
-        this.tone(NOTES[t.bass[(this.beat / t.bassEvery) % t.bass.length]] / 2, {
+        this.musicTone(NOTES[t.bass[(this.beat / t.bassEvery) % t.bass.length]] / 2, {
           type: 'triangle',
           dur: t.beat * 6,
           vol: 0.05,
@@ -184,9 +242,16 @@ export class GameAudio {
     return !!this.ac && !!this.master && !this.muted && !this.paused && this.ac.state === 'running';
   }
 
-  private tone: Tone = (freq, { end = freq, type = 'square', dur = 0.12, vol = 0.2, delay = 0 } = {}) => {
+  private sfxTone: Tone = (freq, opts) => this.tone('sfx', freq, opts);
+  private musicTone: Tone = (freq, opts) => this.tone('music', freq, opts);
+
+  private tone(
+    bus: 'music' | 'sfx',
+    freq: number,
+    { end = freq, type = 'square', dur = 0.12, vol = 0.2, delay = 0 }: ToneOptions = {},
+  ) {
     const ac = this.ac;
-    if (!ac || !this.master || !this.canPlay) return;
+    if (!ac || !this.buses || !this.canPlay || this.volume[bus] <= 0) return;
     const t0 = ac.currentTime + delay,
       o = ac.createOscillator(),
       g = ac.createGain();
@@ -197,8 +262,8 @@ export class GameAudio {
     g.gain.exponentialRampToValueAtTime(vol, t0 + 0.012);
     g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
     o.connect(g);
-    g.connect(this.master);
+    g.connect(this.buses[bus]);
     o.start(t0);
     o.stop(t0 + dur + 0.03);
-  };
+  }
 }

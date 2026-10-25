@@ -10,10 +10,17 @@ import type { StageId } from './sim/stage/stages';
 interface StageRecord {
   best: number; // fastest clear, in seconds
 }
+// How loud the music and the sound effects are, 0 to 1 (Options).
+export interface Volumes {
+  music: number;
+  sfx: number;
+}
+export const DEFAULT_VOLUMES: Volumes = { music: 0.8, sfx: 1 };
 interface SaveData {
   v: 1;
   easy: boolean;
   muted: boolean;
+  volume: Volumes; // saves from before Options had none, and get the defaults
   best: Partial<Record<BossId, number>>; // fastest win per boss, in seconds
   stages: Partial<Record<StageId, StageRecord>>; // stages cleared
 }
@@ -36,12 +43,23 @@ export function createSave(store: Store | null, slot = '') {
   };
 
   function load(): SaveData {
-    const data: SaveData = { v: 1, easy: false, muted: false, best: {}, stages: {} };
+    const data: SaveData = {
+      v: 1,
+      easy: false,
+      muted: false,
+      volume: { ...DEFAULT_VOLUMES },
+      best: {},
+      stages: {},
+    };
     try {
       const saved = JSON.parse(read(key) ?? 'null') as Partial<SaveData> | null;
       if (saved && typeof saved === 'object') {
         data.easy = saved.easy === true;
         data.muted = saved.muted === true;
+        for (const which of ['music', 'sfx'] as const) {
+          const level = saved.volume?.[which];
+          if (typeof level === 'number' && Number.isFinite(level)) data.volume[which] = clamp01(level);
+        }
         for (const [boss, time] of Object.entries(saved.best ?? {}))
           if (typeof time === 'number' && Number.isFinite(time)) data.best[boss as BossId] = time;
         // saves from before there were stages have none
@@ -87,6 +105,13 @@ export function createSave(store: Store | null, slot = '') {
       data.muted = on;
       write();
     },
+    volume(which: keyof Volumes): number {
+      return data.volume[which];
+    },
+    setVolume(which: keyof Volumes, level: number) {
+      data.volume[which] = clamp01(level);
+      write();
+    },
     // Fastest win against this boss in seconds, or null if it has never been beaten.
     best(boss: BossId): number | null {
       return data.best[boss] ?? null;
@@ -113,6 +138,8 @@ export function createSave(store: Store | null, slot = '') {
     },
   };
 }
+
+const clamp01 = (n: number) => Math.min(1, Math.max(0, n));
 
 function browserStorage(): Store | null {
   try {

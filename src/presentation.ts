@@ -25,7 +25,13 @@ export type SfxName =
   | 'snap'
   | 'fall'
   | 'seed'
-  | 'clear';
+  | 'clear'
+  // the title and its menu
+  | 'start' // "Press any key" pressed
+  | 'boing' // the logo stamping down
+  | 'menuMove'
+  | 'menuPick'
+  | 'menuBack';
 
 export type ParticleShape =
   | 'circle'
@@ -82,7 +88,7 @@ const CUE_SOUNDS: Record<TitleCue, SfxName> = {
   sprout: 'seed',
   door: 'snap',
   logo: 'land',
-  stamp: 'clear',
+  stamp: 'boing',
 };
 // The petals Sunny sheds when he leaves a phase: yellow, then orange, then red.
 const PETAL_COLOR = ['#ffc62e', '#ff982c', '#f7622c'];
