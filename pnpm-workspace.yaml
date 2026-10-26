@@ -1,3 +1,9 @@
 allowBuilds:
   esbuild: false
   workerd: false
+
+# Refuse a new release of a package that was published with less proof of where it came from than the
+# releases before it: say, from someone's laptop with a stolen token, where earlier ones came from the
+# project's own CI with provenance. That is how most hijacked npm packages have shipped. pnpm checks it
+# whenever it picks a version: when a dependency is added or updated.
+trustPolicy: no-downgrade
