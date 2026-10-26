@@ -719,15 +719,25 @@ body.gamepad .press .on-pad {
   left: 63%;
   top: 25%;
   width: 260px;
-  height: 312px; /* down to the path: the post stands on the ground line */
+  height: 337px; /* from 25% (135 of the game's 540) down into the turf, just past the ground line (468) */
   padding: 0;
   background: none;
   border: 0;
   box-shadow: none;
   animation: none;
 }
+/* the foot of the post: its shadow on the path and a tuft of grass in front, so it stands in the ground */
 #menu-card::after {
-  display: none;
+  top: auto;
+  right: auto;
+  bottom: -9px; /* its blades rise from below the post's end, which they hide */
+  left: calc(50% - 42px);
+  z-index: 1;
+  width: 84px;
+  height: 30px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 84 30'%3E%3Cellipse cx='42' cy='25' rx='31' ry='5' fill='%233b2410' opacity='.32'/%3E%3Cg stroke='%232a8038' stroke-width='1.6' stroke-linejoin='round'%3E%3Cpath d='M23 27Q23 18 16 12Q28 16 31 27Z' fill='%234dae3d'/%3E%3Cpath d='M29 27Q30 14 27 5Q37 14 37 27Z' fill='%2374d04e'/%3E%3Cpath d='M37 27Q39 16 43 8Q44 19 46 27Z' fill='%23a6ec6c'/%3E%3Cpath d='M44 27Q47 15 55 8Q51 19 53 27Z' fill='%2374d04e'/%3E%3Cpath d='M51 27Q55 19 64 15Q58 22 59 27Z' fill='%234dae3d'/%3E%3C/g%3E%3C/svg%3E")
+    no-repeat center bottom / contain;
+  transform: none;
 }
 /* the post */
 #menu-card::before {
@@ -793,20 +803,10 @@ body.gamepad .press .on-pad {
   --tilt: 2deg;
   animation-delay: 0.18s;
 }
-/* Play: the biggest board, with a leaf painted on it */
+/* Play: the biggest board */
 .plank.go {
   width: 250px;
   font-size: 28px;
-  padding-left: 30px;
-}
-.plank.go::before {
-  content: '';
-  display: inline-block;
-  width: 26px;
-  height: 24px;
-  margin: 0 8px -2px 0;
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 28 26'%3E%3Cpath d='M3 23C3 10 12 3 25 3c0 13-8 20-22 20Z' fill='%238ee05f' stroke='%231c5f2a' stroke-width='2.5' stroke-linejoin='round'/%3E%3Cpath d='M5 21 18 9' stroke='%231c5f2a' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E")
-    no-repeat center / contain;
 }
 .plank:hover,
 .plank:focus-visible,
@@ -918,7 +918,7 @@ body.touch .planks {
 /* under the signpost, on the soil: how to get sound after Start on a gamepad */
 .sound-hint {
   position: absolute;
-  top: calc(100% + 44px);
+  top: calc(100% + 18px);
   left: 50%;
   margin: 0;
   padding: 3px 14px 4px;
