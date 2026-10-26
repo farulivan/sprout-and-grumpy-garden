@@ -37,3 +37,15 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm check
       - run: pnpm build
+
+  dependency-review:
+    # Fails a pull request that adds or upgrades a dependency with a known vulnerability of moderate
+    # severity or worse. It compares the lockfile on both sides through GitHub's API, so it needs no checkout.
+    name: Dependency review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: moderate
