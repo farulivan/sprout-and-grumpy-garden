@@ -499,7 +499,54 @@ M4 Mac at 1920x1080 is about 30 draw calls, 0.2 ms of script and 140 kB of short
 and the Garden Path about 35 draw calls. The title takes 20–26 draw calls through the opening and on the
 menu.
 
+## Checks and security
+
+**Every pull request** is checked by GitHub Actions (`.github/workflows/ci.yml`), and `main` takes it only
+once both checks pass:
+
+- **Check** installs exactly what `pnpm-lock.yaml` lists, then runs `pnpm check` and `pnpm build`. It runs
+  again on `main` after each merge.
+- **Dependency review** fails if the pull request adds or upgrades a package with a known vulnerability of
+  moderate severity or worse.
+
+Cloudflare's preview build (see "On Cloudflare") is a third check on the same pull request.
+
+**Dependencies** are kept current by Dependabot (`.github/dependabot.yml`). A fix for a known
+vulnerability arrives as a pull request as soon as the advisory is out. Routine updates come once a month,
+minor and patch ones together and each major one on its own, and only once a release is a week old: a
+hijacked release is usually found and pulled before then.
+
+**pnpm** has guards of its own for when it picks a version. It waits a day before using a new release, and
+refuses a dependency of a dependency that comes from git or a bare URL. It runs no install scripts:
+`allowBuilds` in `pnpm-workspace.yaml` turns down the two packages that ask (esbuild and workerd), and the
+build needs neither. And `trustPolicy` there refuses a release published with less proof of origin than
+the ones before it, which is how most hijacked npm packages have shipped.
+
+**On GitHub**, these are set in the repository's settings, not in any file:
+
+| Setting                         | Value                                                                                         |
+| ------------------------------- | --------------------------------------------------------------------------------------------- |
+| Merging                         | merge commits only, titled after the pull request; its branch is deleted once merged          |
+| Rule on `main`                  | changes only through a pull request whose checks pass; no force-push, no deletion             |
+| Rule on tags `v*`               | a version tag can be created, never moved or deleted                                          |
+| Actions                         | GitHub's own actions only, pinned to a commit; a pull request from a fork waits for approval  |
+| Dependabot                      | alerts, security updates and malware alerts                                                   |
+| Code scanning                   | CodeQL, default setup                                                                         |
+| Secret scanning                 | on, with push protection: a push that contains a key or a token is refused                    |
+| Private vulnerability reporting | on, as `SECURITY.md` explains                                                                 |
+
+The owner can still merge a pull request past a failing check, for an emergency such as an outage of
+GitHub Actions, but nobody can push to `main` directly.
+
 ## Ideas for later
 
 [`docs/future-improvements.md`](docs/future-improvements.md) lists what could come next, from small fixes to a
 second boss, with what each change would take. It also lists the ideas that were decided against, and why.
+
+## License
+
+Copyright © 2026 Farul Ivan. All rights reserved.
+
+The code is public so it can be read and its history followed, but it isn't open source. Beyond what
+GitHub's terms allow for every public repository (viewing it, and forking it on GitHub), no permission is
+given to copy, change or redistribute any part of it.
