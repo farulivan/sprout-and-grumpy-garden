@@ -1,0 +1,40 @@
+# Dependabot opens pull requests that update the dependencies. A fix for a known vulnerability comes as soon
+# as the advisory is published, whatever the settings below; these are the routine updates.
+version: 2
+
+updates:
+  # pnpm projects come under npm here: Dependabot reads pnpm-lock.yaml.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: monthly
+      time: '09:00'
+      timezone: Asia/Jakarta
+    # A release is offered only once it is a week old. A hijacked package version is usually found and
+    # pulled within days, so this keeps one from reaching a pull request.
+    cooldown:
+      default-days: 7
+    # Minor and patch updates come together in one pull request; each major update gets its own, since it
+    # may need changes to the game.
+    groups:
+      dependencies:
+        update-types: [minor, patch]
+    commit-message:
+      prefix: build
+      include: scope
+
+  # The actions in .github/workflows, which are pinned to commits: Dependabot moves the pin and its comment.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+      time: '09:00'
+      timezone: Asia/Jakarta
+    cooldown:
+      default-days: 7
+    groups:
+      actions:
+        patterns: ['*']
+    commit-message:
+      prefix: ci
+      include: scope
