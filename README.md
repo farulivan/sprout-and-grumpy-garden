@@ -11,6 +11,19 @@ losing all your hearts.
 Built with TypeScript, Vite and Phaser 4. There are still no art or sound files: every picture is drawn in
 code when the game starts, and every sound is synthesized with WebAudio.
 
+## How this was built
+
+Farul Ivan made this game with [Claude Code](https://claude.com/claude-code), Anthropic's AI coding agent,
+and the history says so: most commits carry a `Co-Authored-By: Claude` line.
+
+- **Farul** decided what the game is and how it should feel (the story, the stage and the boss, the
+  controls, the lives, how hard it is) and set the bar for how it looks, approved each plan before work
+  began, reviewed and merged every pull request, and set up the hosting and the domain.
+- **Claude** wrote most of the code, the tests and these docs, to those plans, in small commits.
+
+[A tour of the code](docs/code-tour.md) explains in plain words how the game works and why it is built
+this way.
+
 ## Run it
 
 ```bash
