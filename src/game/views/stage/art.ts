@@ -831,7 +831,13 @@ function drawFarSunny(c: Ctx) {
 }
 
 export function bakeStage(scene: Scene) {
-  bake(scene, 'stage-ground', TILE, GROUND_BOTTOM - GROUND_TOP, 0, -GROUND_TOP, drawGroundStrip);
+  // A tiling strip repeats up and down too: when the camera zooms (the title's opening, a hit's punch), its
+  // top edge can pick up a sliver of its bottom row, a dark line along the grass. The bottom rows are below
+  // the screen anyway, so they are left empty.
+  bake(scene, 'stage-ground', TILE, GROUND_BOTTOM - GROUND_TOP, 0, -GROUND_TOP, (c) => {
+    drawGroundStrip(c);
+    c.clearRect(0, GROUND_BOTTOM - 2, TILE, 2);
+  });
   bake(scene, 'stage-ground-end', 40, GROUND_BOTTOM - GROUND_TOP, 22, -GROUND_TOP, drawGroundEnd);
   bake(scene, 'stage-pit', 100, GROUND_BOTTOM - GROUND + 2, 0, -(GROUND - 2), (c) => drawPit(c, 100));
   bake(scene, 'stage-log', 80, 50, 4, 44, (c) => drawLog(c, 70, 30));

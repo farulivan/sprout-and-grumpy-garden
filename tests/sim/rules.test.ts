@@ -263,14 +263,6 @@ describe('fight', () => {
     expect(fight.boss.attacking).toBe(false);
   });
 
-  it('does nothing but sway on the title screen', () => {
-    const fight = new Fight({ seed: 1, title: true });
-    steps(fight, 5);
-    expect(fight.state).toBe('title');
-    expect(fight.boss.state).toBe('sleep');
-    expect(fight.projectiles.length + fight.hazards.length).toBe(0);
-  });
-
   it('replays identically from the same seed', () => {
     const run = () => {
       const fight = new Fight({ seed: 42 });

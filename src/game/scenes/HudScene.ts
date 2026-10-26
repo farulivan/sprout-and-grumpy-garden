@@ -2,12 +2,13 @@
 // the fight and stage scenes with its own camera, so screen shake does not move it. The parts are baked in
 // src/game/hud/art.ts.
 import { BlendModes, Scene, type GameObjects } from 'phaser';
-import type { App, Played } from '../../app';
+import { CHAPTER, type App, type Played } from '../../app';
 import { H, RES, TAU, W } from '../../config';
 import type { ToastTone } from '../../presentation';
 import { Fight } from '../../sim/fight';
 import type { Player } from '../../sim/player';
 import { SEEDS_PER_HEART, Stage } from '../../sim/stage/stage';
+import { Yard } from '../../sim/yard';
 import { clamp } from '../../sim/math';
 import { INV, part, show, unit } from '../art/bake';
 import { FONT } from '../art/draw';
@@ -93,6 +94,7 @@ export class HudScene extends Scene {
   private burst!: GameObjects.Image;
   private burstUnit = 1; // the rays are baked small: this is the scale that shows them at full size
   private ready!: GameObjects.Text;
+  private chapter!: GameObjects.Text;
   private go!: GameObjects.Text;
   private naps: GameObjects.Image[] = [];
 
@@ -210,6 +212,11 @@ export class HudScene extends Scene {
     this.ready = shadowed(text(72, '700', '#ffffff', '#2f8a3a', 12))
       .setOrigin(0.5)
       .setText('Ready?');
+    // over a stage's name as it begins, which chapter it is: in the orange of the old title card's ribbon
+    this.chapter = text(24, '700', '#ffffff', '#c4581a', 7)
+      .setOrigin(0.5)
+      .setText(CHAPTER.title)
+      .setVisible(false);
     this.go = shadowed(text(96, '700', '#fff7c2', '#e8641c', 14))
       .setOrigin(0.5)
       .setText('GO!');
@@ -226,6 +233,7 @@ export class HudScene extends Scene {
       this.toastPlate,
       ...Object.values(this.toasts),
       this.burst,
+      this.chapter,
       this.ready,
       this.go,
       ...this.naps,
@@ -246,8 +254,12 @@ export class HudScene extends Scene {
 
   // Not called while the game is paused.
   override update(_time: number, deltaMs: number) {
+    const level = this.app.level;
+    if (level instanceof Yard) {
+      this.all.setVisible(false); // Pip's yard behind the title and the menu has no HUD
+      return;
+    }
     const dt = deltaMs / 1000,
-      level = this.app.level,
       p = level.player,
       fight = level instanceof Fight ? level : null,
       stage = level instanceof Stage ? level : null;
@@ -263,7 +275,7 @@ export class HudScene extends Scene {
     // The result cards sit over the middle of the screen, and the boss's bar would poke out above them.
     const result = level.state === 'win' || level.state === 'lose';
     this.shownA = fresh ? 1 : clamp(this.shownA + (result ? -dt : dt) * 5, 0, 1);
-    this.all.setVisible(level.state !== 'title' && this.shownA > 0).setAlpha(this.shownA);
+    this.all.setVisible(this.shownA > 0).setAlpha(this.shownA);
     const live =
       level.state === 'play' || level.state === 'ending' || level.state === 'down' || level.state === 'clear';
 
@@ -304,6 +316,7 @@ export class HudScene extends Scene {
       t = fight ? fight.boss.introT : (stage?.t ?? 0),
       isGo = t >= 0.9;
     this.ready.setVisible(intro && !isGo);
+    this.chapter.setVisible(!!stage && intro && !isGo);
     this.go.setVisible(intro && isGo);
     this.burst.setVisible(intro && isGo);
     if (intro && !isGo) {
@@ -313,6 +326,11 @@ export class HudScene extends Scene {
         .setScale(easeOutBack(Math.min(1, u * 3.2)) * (1 + Math.sin(this.clock * 9) * 0.015))
         .setRotation(-0.04 + Math.sin(this.clock * 5) * 0.012)
         .setAlpha(clamp(u * 6, 0, 1));
+      this.chapter
+        .setPosition(W / 2, H / 2 - 112)
+        .setScale(easeOutBack(clamp(u * 3.2 - 0.25, 0, 1)))
+        .setRotation(-0.03)
+        .setAlpha(clamp(u * 6 - 1, 0, 1));
     } else if (intro) {
       const u = (t - 0.9) / 0.8,
         slam = 1 + 0.7 * Math.pow(Math.max(0, 1 - u * 5), 2); // lands big, settles fast

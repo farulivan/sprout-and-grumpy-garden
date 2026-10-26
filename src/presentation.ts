@@ -4,6 +4,7 @@
 import { GROUND, UP, W } from './config';
 import type { SimEvent } from './sim/events';
 import { SEEDS_PER_HEART } from './sim/stage/stage';
+import type { TitleCue } from './sim/yard';
 
 export type SfxName =
   | 'shoot'
@@ -24,7 +25,13 @@ export type SfxName =
   | 'snap'
   | 'fall'
   | 'seed'
-  | 'clear';
+  | 'clear'
+  // the title and its menu
+  | 'start' // "Press any key" pressed
+  | 'boing' // the logo stamping down
+  | 'menuMove'
+  | 'menuPick'
+  | 'menuBack';
 
 export type ParticleShape =
   | 'circle'
@@ -75,6 +82,14 @@ export interface Presenter {
   toast(text: string, seconds?: number, tone?: ToastTone): void;
 }
 
+// What each moment of the opening sounds like.
+const CUE_SOUNDS: Record<TitleCue, SfxName> = {
+  seed: 'land',
+  sprout: 'seed',
+  door: 'snap',
+  logo: 'land',
+  stamp: 'boing',
+};
 // The petals Sunny sheds when he leaves a phase: yellow, then orange, then red.
 const PETAL_COLOR = ['#ffc62e', '#ff982c', '#f7622c'];
 const CONFETTI = ['#ffd23f', '#ff8fb1', '#8fd8ff', '#b48cff', '#7ccf63', '#ffffff'];
@@ -503,6 +518,11 @@ export function present(e: SimEvent, p: Presenter, opts: { touch: boolean }) {
       break;
     case 'stageExit':
       break; // the app moves on to the boss
+    // The opening's moments are only heard when the browser already lets the game play sound: until the
+    // first key press it is silent. The title scene does their acting.
+    case 'cue':
+      p.sfx(CUE_SOUNDS[e.cue]);
+      break;
     case 'win':
     case 'lose':
       break; // the app shows the result card

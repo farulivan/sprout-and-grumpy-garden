@@ -131,3 +131,22 @@ it('leaves out what an earlier version kept and this one no longer does', () => 
   expect(written).not.toHaveProperty('reached');
   expect(written.stages).toEqual({ gardenPath: { best: 60 } });
 });
+
+it('remembers how loud the music and the effects are, kept between silent and full', () => {
+  const store = memoryStore();
+  const first = createSave(store);
+  expect([first.volume('music'), first.volume('sfx')]).toEqual([0.8, 1]); // the defaults
+  first.setVolume('music', 0.4);
+  first.setVolume('sfx', 3);
+  const second = createSave(store);
+  expect([second.volume('music'), second.volume('sfx')]).toEqual([0.4, 1]);
+});
+
+it('gives a save from before Options the default volumes, and ignores nonsense in one', () => {
+  const old = createSave(memoryStore({ 'sprout.save': JSON.stringify({ v: 1, easy: true, best: {} }) }));
+  expect([old.easy, old.volume('music'), old.volume('sfx')]).toEqual([true, 0.8, 1]);
+  const odd = createSave(
+    memoryStore({ 'sprout.save': JSON.stringify({ v: 1, volume: { music: 'loud', sfx: -2 } }) }),
+  );
+  expect([odd.volume('music'), odd.volume('sfx')]).toEqual([0.8, 0]);
+});

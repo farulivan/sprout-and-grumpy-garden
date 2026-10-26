@@ -12,6 +12,7 @@ const CODES: Record<string, string> = {
   x: 'KeyX',
   X: 'KeyX',
   d: 'KeyD',
+  Backspace: 'Backspace',
 };
 let c: Controls;
 const down = (key: string) => c.keyDown({ key, code: CODES[key] });
@@ -54,4 +55,11 @@ it('goes the way pressed last when ← and → are both held, and back when that
   down('ArrowLeft');
   up('ArrowRight');
   expect(c.frame()).toMatchObject({ left: true, right: false });
+});
+
+it('goes back with Backspace, once per press', () => {
+  down('Backspace');
+  expect(c.pressed('back')).toBe(true);
+  c.endFrame();
+  expect(c.pressed('back')).toBe(false);
 });

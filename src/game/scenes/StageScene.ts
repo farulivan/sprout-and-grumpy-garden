@@ -1,6 +1,7 @@
 // Draws a stage. The App advances the simulation; every frame this scene makes the views match it and points
-// the camera where the stage's own camera is (with the shake and punch the effects add).
-import { Scene } from 'phaser';
+// the camera where the stage's own camera is (with the shake and punch the effects add). Each run opens with
+// an iris on Pip, as the title's closed on him when he set off.
+import { Scene, type GameObjects } from 'phaser';
 import type { App } from '../../app';
 import { W } from '../../config';
 import { lerp } from '../../sim/math';
@@ -8,6 +9,7 @@ import { Stage } from '../../sim/stage/stage';
 import { fitCamera } from '../createGame';
 import { HitboxOverlay } from '../debug';
 import { Fx } from '../fx';
+import { Iris, IRIS_OPEN } from '../views/Iris';
 import type { GamePresenter } from '../presenter';
 import { EnemyViews } from '../views/EnemyViews';
 import { StagePickupViews } from '../views/PickupViews';
@@ -28,10 +30,14 @@ const DEPTH = {
   particles: 8,
   front: 9,
   flash: 10,
+  iris: 11,
   hitboxes: 100,
 };
 // The warm light of Sunny's meadow, which the garden fades into at the gate
 const MEADOW_LIGHT = [255, 248, 225] as const;
+const NIGHT = 0x123f2c; // the iris: the dark green around the game
+const IRIS_DARK = 0.12; // a moment of dark before it opens...
+const IRIS_OPENS = 0.75; // ...and how long it takes
 
 export class StageScene extends Scene {
   hitboxes!: HitboxOverlay;
@@ -41,6 +47,10 @@ export class StageScene extends Scene {
   private pickups!: StagePickupViews;
   private projectiles!: ProjectileViews;
   private fx!: Fx;
+  private iris!: Iris;
+  private irisLayer!: GameObjects.Container; // fixed to the screen
+  private irisT = 0;
+  private gentle = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
   private seen: Stage | null = null;
   private fading = false;
 
@@ -62,6 +72,8 @@ export class StageScene extends Scene {
     this.projectiles = new ProjectileViews(this, DEPTH.projectiles);
     this.hitboxes = new HitboxOverlay(this, DEPTH.hitboxes);
     this.hitboxes.visible = new URLSearchParams(location.search).has('hitboxes');
+    this.irisLayer = this.add.container(0, 0).setDepth(DEPTH.iris);
+    this.iris = new Iris(this, 0, this.irisLayer);
     this.takeOver();
     this.events.on('wake', () => this.takeOver());
   }
@@ -84,9 +96,11 @@ export class StageScene extends Scene {
       this.world.reset();
       this.fading = false;
       this.cameras.main.resetFX();
+      this.irisT = 0;
     }
     const camX = lerp(stage.pcamX, stage.camX, alpha);
     this.world.sync(stage, camX, dt);
+    this.openIris(stage, camX, dt);
     this.enemies.sync(stage.enemies, alpha, dt);
     this.pickups.sync(stage.pickups, dt);
     this.player.sync(stage, alpha, dt);
@@ -98,5 +112,16 @@ export class StageScene extends Scene {
       this.fading = true;
       this.cameras.main.fadeOut(420, ...MEADOW_LIGHT);
     }
+  }
+
+  // The run opens with an iris on Pip (a fade, for those who ask for less motion).
+  private openIris(stage: Stage, camX: number, dt: number) {
+    this.irisT += dt;
+    const u = Math.min(1, Math.max(0, (this.irisT - IRIS_DARK) / IRIS_OPENS)),
+      p = stage.player;
+    this.irisLayer.setX(camX);
+    if (u >= 1) this.iris.set(0, 0, IRIS_OPEN, NIGHT);
+    else if (this.gentle) this.iris.set(0, 0, 0, NIGHT, 1 - u);
+    else this.iris.set(p.x - camX, p.y - 28, IRIS_OPEN * u ** 1.6, NIGHT);
   }
 }

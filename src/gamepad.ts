@@ -1,15 +1,26 @@
 // Reads a gamepad with the standard layout (Xbox, PlayStation, Switch Pro and most others) into the
 // game's actions: stick or d-pad to move, up to aim, A to jump, X or a right shoulder button to shoot,
-// Start to pause. On the pause card, the stick or d-pad moves between the buttons and A presses one.
+// Start to pause. On the pause card, the stick or d-pad moves between the buttons and A presses one; on the
+// menu, B goes back.
 export interface PadLike {
   readonly buttons: readonly { readonly pressed: boolean }[];
   readonly axes: readonly number[];
 }
-export type PadAction = 'left' | 'right' | 'up' | 'down' | 'jump' | 'shoot' | 'start';
+export type PadAction = 'left' | 'right' | 'up' | 'down' | 'jump' | 'shoot' | 'start' | 'back';
 export type PadState = Record<PadAction, boolean>;
-export const PAD_ACTIONS: readonly PadAction[] = ['left', 'right', 'up', 'down', 'jump', 'shoot', 'start'];
+export const PAD_ACTIONS: readonly PadAction[] = [
+  'left',
+  'right',
+  'up',
+  'down',
+  'jump',
+  'shoot',
+  'start',
+  'back',
+];
 
 const A = 0,
+  B = 1,
   X = 2,
   RIGHT_BUMPER = 5,
   RIGHT_TRIGGER = 7,
@@ -32,5 +43,6 @@ export function readPad(pad: PadLike | null | undefined): PadState {
     jump: pressed(A),
     shoot: pressed(X) || pressed(RIGHT_TRIGGER) || pressed(RIGHT_BUMPER),
     start: pressed(START),
+    back: pressed(B),
   };
 }

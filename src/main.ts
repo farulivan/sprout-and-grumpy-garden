@@ -12,7 +12,9 @@ import { BootScene } from './game/scenes/BootScene';
 import { FightScene } from './game/scenes/FightScene';
 import { HudScene } from './game/scenes/HudScene';
 import { StageScene } from './game/scenes/StageScene';
+import { TitleScene } from './game/scenes/TitleScene';
 import { Stage } from './sim/stage/stage';
+import { Yard } from './sim/yard';
 import { initLayout } from './ui/layout';
 import { finishLoading } from './ui/loading';
 import { initTouch } from './ui/touch';
@@ -27,6 +29,7 @@ const app = new App({
   controls,
   audio,
   presenter,
+  skipIntro: params.has('skipintro'),
   onLevel: (level) => {
     presenter.reset();
     showSceneFor(level);
@@ -41,13 +44,17 @@ const app = new App({
   onMute: (muted) => (game.sound.mute = muted),
 });
 
-// A boss fight and a stage are drawn by scenes of their own: only the one being played runs. A paused scene
-// can't be put to sleep, so it is resumed first; and run() would restart a scene that is already running,
-// so it is only asked to start, wake or resume one that isn't.
+// Pip's yard, a boss fight and a stage are drawn by scenes of their own: only the one being played runs. A
+// paused scene can't be put to sleep, so it is resumed first; and run() would restart a scene that is
+// already running, so it is only asked to start, wake or resume one that isn't.
+const LEVEL_SCENES = ['title', 'fight', 'stage'];
 function showSceneFor(level: Played) {
-  const [on, off] = level instanceof Stage ? ['stage', 'fight'] : ['fight', 'stage'];
-  if (game.scene.isPaused(off)) game.scene.resume(off);
-  if (game.scene.isActive(off)) game.scene.sleep(off);
+  const on = level instanceof Yard ? 'title' : level instanceof Stage ? 'stage' : 'fight';
+  for (const off of LEVEL_SCENES) {
+    if (off === on) continue;
+    if (game.scene.isPaused(off)) game.scene.resume(off);
+    if (game.scene.isActive(off)) game.scene.sleep(off);
+  }
   if (!game.scene.isActive(on)) game.scene.run(on);
 }
 
@@ -57,17 +64,19 @@ const stage = document.getElementById('stage') as HTMLElement;
 initLayout(stage);
 const fightScene = new FightScene(app, presenter);
 const stageScene = new StageScene(app, presenter);
+// Drawn in this order, so the HUD is over every level.
 const game = createGame('game-root', [
   new BootScene(audio),
+  new TitleScene(app, presenter),
   fightScene,
   stageScene,
   new HudScene(app, presenter),
 ]);
 // The App runs before the scenes each frame: it advances the simulation, then the scenes draw it.
 game.events.on(Core.Events.STEP, (_time: number, deltaMs: number) => app.tick(deltaMs / 1000));
-// The loading screen stays up until the garden has been drawn once.
+// The loading screen stays up until the title has been drawn once.
 const loaded = () => {
-  if (!game.scene.isActive('fight')) return;
+  if (!game.scene.isActive('title')) return;
   game.events.off(Core.Events.POST_RENDER, loaded);
   finishLoading(stage);
 };
@@ -92,6 +101,8 @@ if (params.has('debug')) {
         return app.level;
       },
       startGame: () => app.start(),
+      toMenu: () => app.toTitle(),
+      skipIntro: () => app.level instanceof Yard && app.level.skip(),
       startStage: () => app.startStage(),
       startBoss: (hearts?: number) => app.startBoss(hearts),
       setPaused: (paused: boolean) => app.setPaused(paused),

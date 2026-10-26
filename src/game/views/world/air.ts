@@ -139,6 +139,11 @@ export class Air {
   private dim = 0;
   private rand = seeded(7);
 
+  // The weather has turned at once (Weather.snap): the butterflies are already where it would have sent them.
+  settle(weather: Weather) {
+    for (const b of this.butterflies) b.away = weather.look.life > 0.5 ? 0 : 1;
+  }
+
   // `layer` is behind the fight; depth.front is in front of it.
   constructor(scene: Scene, layer: GameObjects.Container, depth: { front: number }) {
     this.shafts = SHAFTS.map(([x, lean, width]) =>

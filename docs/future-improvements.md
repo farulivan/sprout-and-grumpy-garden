@@ -56,11 +56,12 @@ shows that the game builds, and nothing in the repo tests it in a browser.
 
 Measured: the fight music is one 4.5 s loop of 16 notes. It plays about 20 times in a fight and sounds the
 same in all three phases. The Garden Path has a quicker tune of its own, but it is a 3.5 s loop too. The
-title screen is silent. The sound heard most is the shot, a square-wave blip about six times a second.
+sound heard most is the shot, a square-wave blip about six times a second. (The title and its menu now have
+a slow music-box tune of their own, and Options has music and effects volumes.)
 
 **Fix:** keep it all generated in code (`src/audio.ts`), but give each phase its own theme that gets faster
-and fuller as Sunny gets angrier, add a gentle tune for the title screen, and soften the shot. Recorded music
-is the bigger step (see "Bigger ideas").
+and fuller as Sunny gets angrier, and soften the shot. Recorded music is the bigger step (see "Bigger
+ideas").
 
 ## Phones
 
@@ -85,14 +86,17 @@ the cards' buttons bigger on touch screens (or give them bigger hit areas).
 ### #17 One chapter profile, before a second chapter
 
 Sunny is written into many places: the messages in `src/presentation.ts`, the lose texts in
-`src/ui/overlay.ts` ("Sunny is still grumpy…", "of the way to Sunny"), the cards in `index.html` (with "Chapter 1 · The Grumpy Sunflower"), the portrait on the boss bar and the
+`src/ui/overlay.ts` ("Sunny is still grumpy…", "of the way to Sunny"), How to play in `index.html`, the
+portrait on the boss bar and the
 stage's path bar (`bar-icon-*` in `src/game/hud/art.ts`), the sunflower on the stage's horizon, and the
-colours of his shed petals. `CHAPTER` in `src/app.ts` pairs him with the Garden Path. `Boss.mood` in
-`src/sim/boss.ts` is set but never read.
+colours of his shed petals. `CHAPTER` in `src/app.ts` pairs him with the Garden Path and holds the
+chapter's title ("Chapter 1 · The Grumpy Sunflower"), which the HUD shows as the stage begins: the start of
+that profile. The title screen no longer names him (it is Pip's yard). `Boss.mood` in `src/sim/boss.ts` is
+set but never read.
 
 **Fix:** one profile for each chapter (its stage, and its boss's name, story line, messages, lose texts,
 colours and portrait) that the cards, the HUD and the presentation all read. Then a second chapter and a
-level-select map; "Add a stage", "Add a small enemy" and "Add a boss" in the README list the steps. Use
+level-select map, which Play on the main menu would open; "Add a stage", "Add a small enemy" and "Add a boss" in the README list the steps. Use
 `Boss.mood` or remove it.
 
 ## Bigger ideas
@@ -177,6 +181,9 @@ normal fight.
   again. They used to count only on the win card.
 - Lives (PR #14): three a game, as in Super Mario Bros. Losing a level, or Start over, costs one; with none
   left the game starts again from the first stage. Retrying Sunny at his gate used to be free and endless.
+- The opening and the main menu (PR #17): the studio's sting, a cold open over Pip's
+  yard at dawn, "Press any key" and a signpost menu (Play, How to play, Options, Credits), with irises into
+  each stage and the chapter's title as it begins. The title used to sit over a sleeping Sunny fight.
 - Touch controls (PR #15): a big Shoot button held to fire, a smaller Jump up and to its right, and ◀ ▶ as
   two buttons, all drawn as icons. A thumb can slide between them, and between Shoot and Jump it presses
   both. No auto-fire and no aim button any more.

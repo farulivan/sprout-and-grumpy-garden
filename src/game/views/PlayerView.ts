@@ -192,6 +192,11 @@ export class PlayerView {
     this.skin = [...this.feet, ...this.leaves, backHand, bodyPart, blaster, this.face];
   }
 
+  // Pip out of sight, as when he is still indoors behind the title.
+  setVisible(visible: boolean) {
+    for (const o of [this.root, this.shadow, this.halo]) o.setVisible(visible);
+  }
+
   sync(level: Level, alpha: number, dt: number) {
     const p = level.player,
       t = (this.t += dt);

@@ -73,7 +73,7 @@ canvas {
   background: #a8dcff;
 }
 
-/* ---------- the loading screen, until the garden has been drawn (src/ui/loading.ts) ---------- */
+/* ---------- the loading screen, until the title has been drawn (src/ui/loading.ts) ---------- */
 #loading {
   position: absolute;
   inset: 0;
@@ -83,7 +83,8 @@ canvas {
   font-size: calc(var(--h) * 16 / 540);
   color: #fff;
   text-align: center;
-  background: #7fcbff;
+  /* the paper the studio's sting is printed on, so the opening carries straight on from here */
+  background: #fff8e1;
   transition:
     opacity 0.4s ease,
     visibility 0s 0.4s;
@@ -92,24 +93,16 @@ canvas {
   opacity: 0;
   visibility: hidden;
 }
-/* The cards wait for the garden, so the title card pops in over it rather than over an empty frame. */
+/* The cards wait for the title, so nothing pops in over an empty frame. */
 #stage:not(.loaded) #overlay {
   display: none;
 }
-.loading-garden {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-}
-.loading-garden .drift {
-  animation: drift 14s ease-in-out infinite alternate;
-}
-/* Pip hops on the turf: Pip's feet (y = 0 in its picture, 8 units above the bottom) on the ground line. */
+/* Pip hops in the middle of the paper, where the studio's name will be: Pip's feet (y = 0 in its picture,
+   8 units above the bottom) on an invisible floor. */
 .loading-pip {
   position: absolute;
   left: 50%;
-  bottom: calc(13.33% - 0.67em);
+  bottom: calc(46% - 0.67em);
   height: 10.5em;
   overflow: visible;
   transform: translateX(-50%);
@@ -140,7 +133,7 @@ canvas {
 }
 #loading p {
   position: absolute;
-  top: 31%;
+  top: 58%;
   left: 0;
   right: 0;
   margin: 0;
@@ -179,7 +172,7 @@ canvas {
 #loading .slow,
 #loading .nojs {
   position: absolute;
-  top: calc(31% + 3.9em);
+  top: calc(58% + 3.9em);
   left: 50%;
   margin: 0;
   padding: 0.3em 0.35em 0.3em 1em;
@@ -213,7 +206,7 @@ canvas {
   padding-right: 1em;
 }
 
-/* ---------- the cards over the game: title, win, lose, pause ---------- */
+/* ---------- the cards over the game: the title's prompt, the menu and its pages, win, lose, pause ---------- */
 .screen {
   position: absolute;
   inset: 0;
@@ -222,8 +215,15 @@ canvas {
   justify-content: center;
   border-radius: 20px;
   isolation: isolate; /* keeps the cards' leaf sprigs (z-index: -1) above the game canvas */
-  /* darkens the edges and leaves the middle clear, so the garden still shows around the card */
+}
+/* behind a card (not the title's prompt or the signpost, which stand in the yard): darkens the edges and
+   leaves the middle clear, so the garden still shows around the card */
+.screen.dim {
   background: radial-gradient(ellipse at 50% 45%, rgba(8, 40, 26, 0.08), rgba(8, 40, 26, 0.5));
+}
+/* the click that passed "Press any key" must not land on the signpost appearing under it (src/ui/overlay.ts) */
+.screen.arriving .card {
+  pointer-events: none;
 }
 .screen.hidden,
 .card.hidden {
@@ -268,19 +268,6 @@ canvas {
   right: -6px;
   transform: rotate(22deg) scaleX(-1);
 }
-.logo {
-  margin: -6px auto -4px;
-  max-width: 344px;
-  line-height: 0;
-  filter: drop-shadow(0 6px 5px rgba(60, 40, 10, 0.25));
-  animation: bob 3.2s ease-in-out infinite;
-}
-.logo svg {
-  display: block;
-  width: 100%;
-  height: auto;
-  overflow: visible;
-}
 .badge {
   width: 68px;
   height: 68px;
@@ -317,42 +304,6 @@ h1 {
 #lose-card h1 {
   --edge: #5a70bd;
   --drop: #37488c;
-}
-/* Which boss this is: the game is named after the garden, each fight after its boss. A ribbon: the band
-   with the words, and two forked tails tucked behind its ends. The line around the band is exactly as wide
-   as it and is a layer of its own (z-index 0), so the tails can go under the band and still over the card. */
-.chapter {
-  position: relative;
-  z-index: 0;
-  display: flex;
-  width: fit-content;
-  margin: 0 auto 9px;
-}
-.chapter span {
-  padding: 3px 16px 4px;
-  font-size: 14px;
-  font-weight: 600;
-  color: #fff;
-  text-shadow: 0 1px 0 #b3521a;
-  background: linear-gradient(#ffa24e, #ee7628);
-  border-radius: 5px;
-  box-shadow: 0 3px 0 #b3521a;
-}
-.chapter::before,
-.chapter::after {
-  content: '';
-  position: absolute;
-  z-index: -1;
-  top: 5px;
-  border: 13px solid #d5641f;
-}
-.chapter::before {
-  left: -17px;
-  border-left-color: transparent;
-}
-.chapter::after {
-  right: -17px;
-  border-right-color: transparent;
 }
 .sub {
   margin: 0 0 10px;
@@ -509,11 +460,6 @@ kbd {
     transform 0.1s,
     box-shadow 0.1s,
     filter 0.15s;
-}
-.btn.big {
-  font-size: 28px;
-  padding: 10px 52px 13px;
-  animation: breathe 1.5s ease-in-out infinite;
 }
 .btn:hover {
   transform: translateY(-2px) scale(1.04);
@@ -704,6 +650,303 @@ kbd {
 /* Keyboard hints ("or press Enter") are not shown on tablets and phones (body.touch, src/ui/touch.ts). */
 body.touch .keys-only {
   display: none;
+}
+
+/* ---------- the title: "Press any key", on the soil under the path ---------- */
+#press-card {
+  position: absolute;
+  top: 88.5%;
+  max-width: none;
+  padding: 0;
+  background: none;
+  border: 0;
+  box-shadow: none;
+  animation: none;
+}
+#press-card::before,
+#press-card::after {
+  display: none;
+}
+.press {
+  margin: 0;
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: #fff8de;
+  --edge: var(--wood-dark);
+  text-shadow:
+    2.6px 0 0 var(--edge),
+    2.2px 1.3px 0 var(--edge),
+    1.3px 2.2px 0 var(--edge),
+    0 2.6px 0 var(--edge),
+    -1.3px 2.2px 0 var(--edge),
+    -2.2px 1.3px 0 var(--edge),
+    -2.6px 0 0 var(--edge),
+    -2.2px -1.3px 0 var(--edge),
+    -1.3px -2.2px 0 var(--edge),
+    0 -2.6px 0 var(--edge),
+    1.3px -2.2px 0 var(--edge),
+    2.2px -1.3px 0 var(--edge),
+    0 5px 0 rgba(40, 22, 8, 0.55);
+  animation: press 1.6s ease-in-out infinite;
+}
+/* pressed: two quick flashes, then the signpost (Overlay.started) */
+#press-card.go .press {
+  animation: press-go 0.36s linear;
+}
+.press .on-touch,
+.press .on-pad {
+  display: none;
+}
+body.touch .press .on-keys,
+body.gamepad .press .on-keys,
+body.gamepad .press .on-touch {
+  display: none;
+}
+body.touch .press .on-touch,
+body.gamepad .press .on-pad {
+  display: inline;
+}
+.press kbd.start {
+  font-size: 22px;
+  line-height: 30px;
+  vertical-align: 3px;
+}
+
+/* ---------- the main menu: a signpost by the path, one board for each place to go ---------- */
+#menu-card {
+  position: absolute;
+  left: 63%;
+  top: 25%;
+  width: 260px;
+  height: 337px; /* from 25% (135 of the game's 540) down into the turf, just past the ground line (468) */
+  padding: 0;
+  background: none;
+  border: 0;
+  box-shadow: none;
+  animation: none;
+}
+/* the foot of the post: its shadow on the path and a tuft of grass in front, so it stands in the ground */
+#menu-card::after {
+  top: auto;
+  right: auto;
+  bottom: -9px; /* its blades rise from below the post's end, which they hide */
+  left: calc(50% - 42px);
+  z-index: 1;
+  width: 84px;
+  height: 30px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 84 30'%3E%3Cellipse cx='42' cy='25' rx='31' ry='5' fill='%233b2410' opacity='.32'/%3E%3Cg stroke='%232a8038' stroke-width='1.6' stroke-linejoin='round'%3E%3Cpath d='M23 27Q23 18 16 12Q28 16 31 27Z' fill='%234dae3d'/%3E%3Cpath d='M29 27Q30 14 27 5Q37 14 37 27Z' fill='%2374d04e'/%3E%3Cpath d='M37 27Q39 16 43 8Q44 19 46 27Z' fill='%23a6ec6c'/%3E%3Cpath d='M44 27Q47 15 55 8Q51 19 53 27Z' fill='%2374d04e'/%3E%3Cpath d='M51 27Q55 19 64 15Q58 22 59 27Z' fill='%234dae3d'/%3E%3C/g%3E%3C/svg%3E")
+    no-repeat center bottom / contain;
+  transform: none;
+}
+/* the post */
+#menu-card::before {
+  top: -14px;
+  left: calc(50% - 11px);
+  width: 22px;
+  height: calc(100% + 14px);
+  background: linear-gradient(90deg, #8a5a30, #b57d48 40%, #8a5a30);
+  border: 3px solid var(--wood-dark);
+  border-radius: 8px 8px 3px 3px;
+  transform: none;
+  animation: post-in 0.35s ease-out both;
+}
+.planks {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.plank {
+  --tilt: -2deg;
+  position: relative;
+  width: 228px;
+  padding: 8px 20px 10px;
+  font-family: inherit;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  color: #fff6dc;
+  text-shadow:
+    0 2px 0 var(--wood-dark),
+    0 0 6px rgba(63, 40, 18, 0.5);
+  /* a nail at each end, and wood grain: a few soft stripes over the board's colour */
+  background:
+    radial-gradient(circle at 13px 50%, #f3dcb2 0 1.5px, #4a2a14 2px 4px, transparent 4.5px),
+    radial-gradient(circle at calc(100% - 13px) 50%, #f3dcb2 0 1.5px, #4a2a14 2px 4px, transparent 4.5px),
+    repeating-linear-gradient(
+      178deg,
+      rgba(255, 255, 255, 0) 0 7px,
+      rgba(255, 236, 200, 0.12) 7px 9px,
+      rgba(70, 40, 15, 0.1) 9px 12px
+    ),
+    linear-gradient(#c4894f, #a56d3a 60%, #8a5a30);
+  border: 3px solid var(--wood-dark);
+  border-radius: 9px;
+  box-shadow:
+    inset 0 2px 0 rgba(255, 230, 190, 0.45),
+    0 5px 0 rgba(40, 22, 8, 0.45);
+  cursor: pointer;
+  transform: rotate(var(--tilt));
+  animation: plank-in 0.5s cubic-bezier(0.2, 1.3, 0.4, 1) both;
+  transition: filter 0.15s;
+}
+.plank:nth-child(2) {
+  --tilt: 1.5deg;
+  animation-delay: 0.06s;
+}
+.plank:nth-child(3) {
+  --tilt: -1deg;
+  animation-delay: 0.12s;
+}
+.plank:nth-child(4) {
+  --tilt: 2deg;
+  animation-delay: 0.18s;
+}
+/* Play: the biggest board */
+.plank.go {
+  width: 250px;
+  font-size: 28px;
+}
+.plank:hover,
+.plank:focus-visible,
+#overlay.nav .plank:focus {
+  filter: brightness(1.12);
+  /* a wiggle added after the swing-in, which goes on as it was rather than playing again */
+  animation-name: plank-in, wiggle;
+  animation-duration: 0.5s;
+  animation-timing-function: cubic-bezier(0.2, 1.3, 0.4, 1), ease-in-out;
+  animation-fill-mode: both, none;
+}
+.plank:active {
+  transform: rotate(var(--tilt)) translateY(3px);
+}
+/* on a touch screen, every board tall enough for a thumb (44 px, as phone guidelines ask, at phone size) */
+body.touch .plank {
+  padding-block: 13px 15px;
+}
+body.touch .planks {
+  gap: 9px;
+}
+/* the board the player is on: outlined in gold, like every chosen button */
+.plank:focus-visible,
+#overlay.nav .plank:focus {
+  outline: 4px solid #ffd23f;
+  outline-offset: 2px;
+}
+
+/* ---------- the menu's pages: How to play, Options, Credits ---------- */
+.page .btn.back {
+  margin-top: 6px;
+  font-size: 20px;
+  padding: 7px 30px 9px;
+}
+.options {
+  margin: 0 0 14px;
+  text-align: left;
+}
+.options .row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 9px 4px;
+  border-bottom: 2px dashed #ecd9a8;
+}
+.options .row:last-child {
+  border-bottom: 0;
+}
+.options .row > span {
+  font-size: 18px;
+  font-weight: 600;
+  color: #6b5137;
+}
+.options .toggle {
+  min-width: 82px;
+  justify-content: center;
+}
+.options .toggle[aria-pressed='false'] {
+  color: #9a8a76;
+}
+/* a volume: a groove that fills with green up to a round wooden knob */
+.volume {
+  --fill: 100%;
+  appearance: none;
+  -webkit-appearance: none;
+  width: 190px;
+  height: 26px;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.volume::-webkit-slider-runnable-track {
+  height: 12px;
+  background: linear-gradient(90deg, #6fcd4c var(--fill), #efe2c2 var(--fill));
+  border: 2.5px solid var(--wood);
+  border-radius: 999px;
+}
+.volume::-moz-range-track {
+  height: 7px;
+  background: linear-gradient(90deg, #6fcd4c var(--fill), #efe2c2 var(--fill));
+  border: 2.5px solid var(--wood);
+  border-radius: 999px;
+}
+.volume::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 24px;
+  height: 24px;
+  margin-top: -8.5px;
+  background: radial-gradient(circle at 35% 30%, #fffdf4, #f6e3bb 60%, #e2c48e);
+  border: 3px solid var(--wood);
+  border-radius: 50%;
+  box-shadow: 0 2px 0 var(--wood-dark);
+}
+.volume::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  background: radial-gradient(circle at 35% 30%, #fffdf4, #f6e3bb 60%, #e2c48e);
+  border: 3px solid var(--wood);
+  border-radius: 50%;
+  box-shadow: 0 2px 0 var(--wood-dark);
+}
+.volume:focus-visible,
+#overlay.nav .volume:focus {
+  outline: 4px solid #ffd23f;
+  outline-offset: 3px;
+  border-radius: 999px;
+}
+/* under the signpost, on the soil: how to get sound after Start on a gamepad */
+.sound-hint {
+  position: absolute;
+  top: calc(100% + 18px);
+  left: 50%;
+  margin: 0;
+  padding: 3px 14px 4px;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--ink);
+  background: var(--cream);
+  border: 2px solid var(--wood);
+  border-radius: 999px;
+  transform: translateX(-50%);
+}
+.credits {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 16px;
+  margin: 0 0 12px;
+  text-align: left;
+  font-size: 16px;
+}
+.credits dt {
+  font-weight: 600;
+  color: #9a7a52;
+}
+.credits dd {
+  margin: 0;
+  font-weight: 600;
+  color: #5a4636;
 }
 
 /* ---------- round HUD buttons (sound + pause), visible only during the fight ---------- */
@@ -903,14 +1146,43 @@ body.touch #stage[data-state='play'] #touch {
     opacity: 1;
   }
 }
-@keyframes bob {
+@keyframes press {
   50% {
-    transform: translateY(-4px) rotate(0.6deg);
+    opacity: 0.55;
+    transform: scale(0.97);
   }
 }
-@keyframes breathe {
-  50% {
-    transform: scale(1.05);
+@keyframes press-go {
+  0%,
+  49%,
+  100% {
+    color: #fff;
+    transform: scale(1.08);
+  }
+  25%,
+  75% {
+    opacity: 0.15;
+    transform: scale(1.08);
+  }
+}
+@keyframes plank-in {
+  from {
+    transform: translateX(160px) rotate(10deg);
+    opacity: 0;
+  }
+}
+@keyframes post-in {
+  from {
+    transform: translateY(40px);
+    opacity: 0;
+  }
+}
+@keyframes wiggle {
+  30% {
+    transform: rotate(calc(var(--tilt) - 3deg)) scale(1.03);
+  }
+  65% {
+    transform: rotate(calc(var(--tilt) + 2deg)) scale(1.03);
   }
 }
 @keyframes star-pop {
@@ -989,11 +1261,6 @@ body.touch #stage[data-state='play'] #touch {
     transform: rotate(-8deg);
   }
 }
-@keyframes drift {
-  to {
-    transform: translateX(-28px);
-  }
-}
 @keyframes blink {
   0%,
   92%,
@@ -1025,12 +1292,11 @@ body.touch #stage[data-state='play'] #touch {
 /* People who ask their device for less motion get still menus and a still loading screen; the game itself
    is unchanged. */
 @media (prefers-reduced-motion: reduce) {
-  .logo,
-  .btn.big,
   .card,
+  .press,
+  .plank,
   .star.on,
   .meter i,
-  .loading-garden .drift,
   .loading-pip .hop,
   .loading-pip .floor,
   .loading-pip .leaf,

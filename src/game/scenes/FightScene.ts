@@ -58,14 +58,15 @@ export class FightScene extends Scene {
     this.projectiles = new ProjectileViews(this, DEPTH.projectiles);
     this.hitboxes = new HitboxOverlay(this, DEPTH.hitboxes);
     this.hitboxes.visible = new URLSearchParams(location.search).has('hitboxes');
-    this.presenter.fx = this.fx;
-    this.scene.launch('hud');
-    // back from a stage: this scene's effects take over again, starting clean, and the arena fades in
-    this.events.on('wake', () => {
+    // Through a stage's gate: this scene's effects take over, starting clean, and the arena fades in from
+    // the warm light of the meadow. The first fight creates the scene; later ones wake it.
+    const enter = () => {
       this.fx.clear();
       this.presenter.fx = this.fx;
       this.cameras.main.fadeIn(500, 255, 248, 225);
-    });
+    };
+    enter();
+    this.events.on('wake', enter);
   }
 
   // Not called while the game is paused (the App pauses this scene), so everything freezes together.
@@ -84,7 +85,7 @@ export class FightScene extends Scene {
     this.hitboxes.sync(fight);
 
     // Particles slow down with the fight during the win slow-motion; the camera always settles in real time.
-    const still = fight.state === 'title' || fight.state === 'win' || fight.state === 'lose';
+    const still = fight.state === 'win' || fight.state === 'lose';
     this.fx.update(still ? dt : dt * fight.timeScale, dt);
   }
 

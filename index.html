@@ -10,7 +10,7 @@
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🌻%3C/text%3E%3C/svg%3E"
     />
     <link rel="stylesheet" href="/src/style.css" />
-    <!-- The loading screen and the title card are written in Fredoka, and the game waits for it before it
+    <!-- The loading screen, the logo and the cards are written in Fredoka, and the game waits for it before it
          draws anything: fetch it with the page, not once the script has arrived and asked for it. -->
     <link
       rel="preload"
@@ -39,146 +39,9 @@
     <div id="stage">
       <div id="game-root"></div>
       <!-- Shown from the first paint, while the script is still on its way, and removed by
-           src/ui/loading.ts once the garden has been drawn. Plain HTML and CSS: it waits for nothing. -->
+           src/ui/loading.ts once the title has been drawn. Plain HTML and CSS: it waits for nothing. Its paper
+           is the studio sting's (src/game/views/title/Sting.ts), so the game's opening carries on from it. -->
       <div id="loading" role="status">
-        <!-- The garden at its simplest, on the same lines as the real one (src/game/views/world/), so the
-             real garden grows in over it -->
-        <svg
-          class="loading-garden"
-          viewBox="0 0 960 540"
-          preserveAspectRatio="xMidYMid slice"
-          aria-hidden="true"
-        >
-          <defs>
-            <linearGradient id="lg-sky" gradientUnits="userSpaceOnUse" x2="0" y2="468">
-              <stop offset="0" stop-color="#3ea5f2" />
-              <stop offset="0.42" stop-color="#7fcbff" />
-              <stop offset="0.72" stop-color="#c2e9ff" />
-              <stop offset="0.88" stop-color="#e9f8f0" />
-              <stop offset="1" stop-color="#f7fbdf" />
-            </linearGradient>
-            <radialGradient id="lg-glow">
-              <stop offset="0" stop-color="#fffbdc" stop-opacity="0.95" />
-              <stop offset="0.2" stop-color="#fff2b0" stop-opacity="0.62" />
-              <stop offset="0.5" stop-color="#ffe48c" stop-opacity="0.2" />
-              <stop offset="1" stop-color="#ffdc82" stop-opacity="0" />
-            </radialGradient>
-            <radialGradient id="lg-sun" fx="0.35" fy="0.32">
-              <stop offset="0" stop-color="#fffce2" />
-              <stop offset="0.5" stop-color="#ffee93" />
-              <stop offset="1" stop-color="#ffcb52" />
-            </radialGradient>
-            <linearGradient id="lg-mountains" gradientUnits="userSpaceOnUse" y1="245" x2="0" y2="400">
-              <stop offset="0" stop-color="#a5c5ea" />
-              <stop offset="0.5" stop-color="#cfe4f3" />
-              <stop offset="1" stop-color="#e6f3f4" />
-            </linearGradient>
-            <linearGradient id="lg-far" gradientUnits="userSpaceOnUse" y1="326" x2="0" y2="440">
-              <stop offset="0" stop-color="#9bd0b1" />
-              <stop offset="0.5" stop-color="#b7dfc0" />
-              <stop offset="1" stop-color="#d2ecd0" />
-            </linearGradient>
-            <linearGradient id="lg-meadow" gradientUnits="userSpaceOnUse" y1="374" x2="0" y2="468">
-              <stop offset="0" stop-color="#b6ea8e" />
-              <stop offset="0.5" stop-color="#98da75" />
-              <stop offset="1" stop-color="#84cd67" />
-            </linearGradient>
-            <linearGradient id="lg-turf" gradientUnits="userSpaceOnUse" y1="462" x2="0" y2="490">
-              <stop offset="0" stop-color="#a6ec6c" />
-              <stop offset="0.5" stop-color="#74d04e" />
-              <stop offset="1" stop-color="#4dae3d" />
-            </linearGradient>
-            <linearGradient id="lg-soil" gradientUnits="userSpaceOnUse" y1="468" x2="0" y2="540">
-              <stop offset="0" stop-color="#b5733f" />
-              <stop offset="0.5" stop-color="#8f5632" />
-              <stop offset="1" stop-color="#663b23" />
-            </linearGradient>
-            <g id="lg-cloud">
-              <circle cx="-58" cy="-14" r="20" />
-              <circle cx="-28" cy="-27" r="28" />
-              <circle cx="8" cy="-33" r="32" />
-              <circle cx="42" cy="-22" r="24" />
-              <circle cx="66" cy="-10" r="16" />
-              <rect x="-78" y="-18" width="160" height="18" rx="9" />
-            </g>
-          </defs>
-          <rect width="960" height="540" fill="url(#lg-sky)" />
-          <circle cx="132" cy="92" r="190" fill="url(#lg-glow)" />
-          <circle cx="132" cy="92" r="43" fill="url(#lg-sun)" stroke="#f6a933" stroke-width="3.5" />
-          <path
-            d="M94.5 86.1A38 38 0 0 1 143.7 55.9"
-            fill="none"
-            stroke="#fff"
-            stroke-opacity="0.55"
-            stroke-width="2"
-          />
-          <g fill="#2b1b17">
-            <ellipse cx="118.4" cy="92.4" rx="5.6" ry="6.5" />
-            <ellipse cx="145.6" cy="92.4" rx="5.6" ry="6.5" />
-          </g>
-          <g fill="#fff">
-            <circle cx="116.8" cy="90.1" r="2.5" />
-            <circle cx="144.1" cy="90.1" r="2.5" />
-          </g>
-          <g fill="#ff6987" opacity="0.42">
-            <ellipse cx="111.8" cy="102.2" rx="6.5" ry="3.9" />
-            <ellipse cx="152.2" cy="102.2" rx="6.5" ry="3.9" />
-          </g>
-          <path
-            d="M138.4 103.7A7 7 0 0 1 125.6 103.7"
-            fill="none"
-            stroke="#2b1b17"
-            stroke-width="3.2"
-            stroke-linecap="round"
-          />
-          <g class="drift">
-            <g transform="translate(900 232) scale(0.5)" opacity="0.75">
-              <use href="#lg-cloud" fill="#c3d0ee" />
-              <use href="#lg-cloud" fill="#fff" transform="translate(-2.5 -4) scale(0.93)" />
-            </g>
-            <g transform="translate(180 152) scale(0.6)">
-              <use href="#lg-cloud" fill="#c3d0ee" />
-              <use href="#lg-cloud" fill="#fff" transform="translate(-2.5 -4) scale(0.93)" />
-            </g>
-            <g transform="translate(430 112) scale(0.82)">
-              <use href="#lg-cloud" fill="#c3d0ee" />
-              <use href="#lg-cloud" fill="#fff" transform="translate(-2.5 -4) scale(0.93)" />
-            </g>
-            <g transform="translate(780 74) scale(1)">
-              <use href="#lg-cloud" fill="#c3d0ee" />
-              <use href="#lg-cloud" fill="#fff" transform="translate(-2.5 -4) scale(0.93)" />
-            </g>
-          </g>
-          <path
-            d="M-8 271.1l12 -3.1l12 -2.5l12 -1.6l12 -0.6l12 0.6l12 1.6l12 2.6l12 2.9l12 -2.4l12 -2.1l12 -1.9l12 -1.9l12 -2l12 -2.1l12 -2.1l12 -2l12 -1.7l12 -1.1l12 -0.3l12 0.7l12 1.9l12 3.2l12 4.5l12 5.6l12 6.5l12 7.2l12 7.4l12 6.9l12 0.8l12 0.4l12 -0.1l12 -0.4l12 -0.6l12 -0.5l12 -0.2l12 0.4l12 -2.9l12 -4.3l12 -3.1l12 -1.9l12 -0.7l12 0.2l12 0.9l12 1.3l12 1.4l12 1.3l12 1l12 -0.1l12 -6.3l12 -6.5l12 -6.5l12 -6.2l12 -5.5l12 -4.6l12 -3.4l12 -2l12 -0.7l12 0.6l12 1.8l12 2.7l12 3.3l12 3.7l12 3.8l12 3.7l12 3.5l12 3.3l12 3.1l12 2.4l12 -3l12 -2.6l12 -1.8l12 -0.9l12 0.3l12 1.4l12 2.5l12 3.5l12 4.2l12 4.7l12 4.9l12 4.9l12 4.8l4 1.5V472H-8Z"
-            fill="url(#lg-mountains)"
-            stroke="#fff"
-            stroke-opacity="0.45"
-            stroke-width="3"
-          />
-          <path
-            d="M-8 337.2l16 -3.5l16 -3.1l16 -2.6l16 -2l16 -1.3l16 -0.7l16 0l16 0.7l16 1.4l16 2l16 2.5l16 3l16 3.3l16 3.5l16 3.7l16 3.7l16 3.6l16 3.4l16 3.1l16 2.7l16 2.3l16 1.9l16 1.4l16 1l16 0.6l16 0.2l16 -0.1l16 -0.3l16 -0.4l16 -0.4l16 -0.3l16 -0.1l16 0.1l16 0.4l16 0.7l16 1.1l16 1.5l16 1.9l16 2.2l16 2.5l16 2.7l16 2.8l16 2.9l16 2.8l16 2.6l16 2.3l16 1.9l16 1.4l16 0.8l16 0.2l16 -0.5l16 -1.1l16 -1.8l16 -2.4l16 -3l16 -3.5l16 -3.9l16 -4.2l16 -4.4l16 -4.5l16 -4.4V472H-8Z"
-            fill="url(#lg-far)"
-          />
-          <path
-            d="M-8 395.2l16 2.4l16 3.4l16 4.2l16 4.8l16 5l16 5l16 4.5l16 3.8l16 2.8l16 1.6l16 0.3l16 -0.8l16 -1.8l16 -2.6l16 -3l16 -3.1l16 -2.9l16 -2.4l16 -1.7l16 -1l16 -0.2l16 0.4l16 0.8l16 1l16 0.8l16 0.3l16 -0.4l16 -1.3l16 -2.3l16 -3.3l16 -4.2l16 -4.8l16 -5.1l16 -5.1l16 -4.7l16 -4l16 -3l16 -1.8l16 -0.6l16 0.6l16 1.6l16 2.4l16 2.8l16 2.9l16 2.7l16 2.2l16 1.6l16 0.8l16 0.1l16 -0.6l16 -1l16 -1.1l16 -0.9l16 -0.5l16 0.3l16 1.2l16 2.3l16 3.3l16 4.2l16 4.8l16 5.2V472H-8Z"
-            fill="url(#lg-meadow)"
-            stroke="#e2fab0"
-            stroke-opacity="0.85"
-            stroke-width="6"
-          />
-          <rect y="466" width="960" height="74" fill="url(#lg-soil)" />
-          <path
-            d="M-8 462.4l12 2l12 -0.3l12 -0.7l12 1l12 0.8l12 -1.7l12 -2.1l12 0.2l12 0.8l12 -0.9l12 -0.8l12 1.7l12 2.1l12 -0.2l12 -1l12 0.7l12 0.8l12 -1.6l12 -2.2l12 0.2l12 1.1l12 -0.5l12 -0.7l12 1.6l12 2.2l12 -0.1l12 -1.2l12 0.4l12 0.7l12 -1.5l12 -2.2l12 0.1l12 1.4l12 -0.2l12 -0.7l12 1.4l12 2.2l12 -0.1l12 -1.5l12 0l12 0.7l12 -1.3l12 -2.2l12 0.1l12 1.6l12 0.1l12 -0.7l12 1.2l12 2.2l12 0l12 -1.7l12 -0.3l12 0.7l12 -1.1l12 -2.1l12 0l12 1.8l12 0.4l12 -0.7l12 1l12 2.1l12 0l12 -1.9l12 -0.6l12 0.7l12 -0.8l12 -2l12 0l12 2l12 0.7l12 -0.7l12 0.7l12 1.9l12 0l12 -2l12 -0.9l12 0.7l12 -0.5l12 -1.9l12 0l12 2.1l4 0.6L968 478Q956.6 498.8 945.2 478Q929.8 495.2 914.4 478Q901.4 490.4 888.4 478Q878.6 496.4 868.8 478Q852.6 492.8 836.4 478Q822.6 491.6 808.8 478Q798.2 497.6 787.6 478Q773 494 758.4 478Q746.2 489.2 734 478Q722.6 498.8 711.2 478Q695.8 495.2 680.4 478Q667.4 490.4 654.4 478Q644.6 496.4 634.8 478Q618.6 492.8 602.4 478Q588.6 491.6 574.8 478Q564.2 497.6 553.6 478Q539 494 524.4 478Q512.2 489.2 500 478Q488.6 498.8 477.2 478Q461.8 495.2 446.4 478Q433.4 490.4 420.4 478Q410.6 496.4 400.8 478Q384.6 492.8 368.4 478Q354.6 491.6 340.8 478Q330.2 497.6 319.6 478Q305 494 290.4 478Q278.2 489.2 266 478Q254.6 498.8 243.2 478Q227.8 495.2 212.4 478Q199.4 490.4 186.4 478Q176.6 496.4 166.8 478Q150.6 492.8 134.4 478Q120.6 491.6 106.8 478Q96.2 497.6 85.6 478Q71 494 56.4 478Q44.2 489.2 32 478Q20.6 498.8 9.2 478Q0.6 495.2 -8 478Z"
-            fill="url(#lg-turf)"
-          />
-          <path
-            d="M968 478Q956.6 498.8 945.2 478Q929.8 495.2 914.4 478Q901.4 490.4 888.4 478Q878.6 496.4 868.8 478Q852.6 492.8 836.4 478Q822.6 491.6 808.8 478Q798.2 497.6 787.6 478Q773 494 758.4 478Q746.2 489.2 734 478Q722.6 498.8 711.2 478Q695.8 495.2 680.4 478Q667.4 490.4 654.4 478Q644.6 496.4 634.8 478Q618.6 492.8 602.4 478Q588.6 491.6 574.8 478Q564.2 497.6 553.6 478Q539 494 524.4 478Q512.2 489.2 500 478Q488.6 498.8 477.2 478Q461.8 495.2 446.4 478Q433.4 490.4 420.4 478Q410.6 496.4 400.8 478Q384.6 492.8 368.4 478Q354.6 491.6 340.8 478Q330.2 497.6 319.6 478Q305 494 290.4 478Q278.2 489.2 266 478Q254.6 498.8 243.2 478Q227.8 495.2 212.4 478Q199.4 490.4 186.4 478Q176.6 496.4 166.8 478Q150.6 492.8 134.4 478Q120.6 491.6 106.8 478Q96.2 497.6 85.6 478Q71 494 56.4 478Q44.2 489.2 32 478Q20.6 498.8 9.2 478Q0.6 495.2 -8 478"
-            fill="none"
-            stroke="#2a8038"
-            stroke-width="2.6"
-          />
-        </svg>
         <svg class="loading-pip" viewBox="-40 -118 80 126" aria-hidden="true">
           <defs>
             <!-- Pip as the game draws it (src/game/views/PlayerView.ts), facing us -->
@@ -298,7 +161,7 @@
           </svg>
         </button>
       </div>
-      <!-- The touch buttons' icons, drawn once for the buttons and the title card's hints. Their colours come
+      <!-- The touch buttons' icons, drawn once for the buttons and the hints on How to play. Their colours come
            from the svg using them: fill and color are the icon's colour, stroke its outline (.ico in style.css). -->
       <svg class="sprite" aria-hidden="true">
         <symbol id="i-left" viewBox="0 0 48 48">
@@ -357,91 +220,27 @@
         </div>
       </div>
       <div id="overlay" class="screen">
-        <div class="card" id="title-card">
-          <h1 class="logo" aria-label="Sprout and the Grumpy Garden">
-            <svg viewBox="0 0 460 168" role="img" aria-hidden="true">
-              <defs>
-                <linearGradient id="logo-green" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0" stop-color="#f1ffb0" />
-                  <stop offset="0.55" stop-color="#a9ec62" />
-                  <stop offset="1" stop-color="#63c245" />
-                </linearGradient>
-                <linearGradient id="logo-gold" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0" stop-color="#fff7a8" />
-                  <stop offset="0.5" stop-color="#ffd23f" />
-                  <stop offset="1" stop-color="#ff9a2e" />
-                </linearGradient>
-              </defs>
-              <g transform="rotate(-3 230 84)">
-                <!-- a sprout growing out of the first line -->
-                <g transform="translate(86 26)">
-                  <path
-                    d="M0 22 Q-2 10 1 0"
-                    fill="none"
-                    stroke="#1c5f2a"
-                    stroke-width="7"
-                    stroke-linecap="round"
-                  />
-                  <path
-                    d="M0 22 Q-2 10 1 0"
-                    fill="none"
-                    stroke="#7fd65a"
-                    stroke-width="3"
-                    stroke-linecap="round"
-                  />
-                  <path
-                    d="M1 2 C-8 -14 -26 -12 -30 -2 C-20 6 -6 8 1 2Z"
-                    fill="#8ee05f"
-                    stroke="#1c5f2a"
-                    stroke-width="3.5"
-                    stroke-linejoin="round"
-                  />
-                  <path
-                    d="M1 2 C8 -16 28 -16 33 -5 C24 6 8 8 1 2Z"
-                    fill="#b6f07c"
-                    stroke="#1c5f2a"
-                    stroke-width="3.5"
-                    stroke-linejoin="round"
-                  />
-                </g>
-                <g
-                  font-family="Fredoka, sans-serif"
-                  font-weight="700"
-                  text-anchor="middle"
-                  stroke-linejoin="round"
-                  paint-order="stroke"
-                >
-                  <text x="230" y="76" font-size="50" fill="#134a20" stroke="#134a20" stroke-width="12">
-                    Sprout &amp; the
-                  </text>
-                  <text
-                    x="230"
-                    y="70"
-                    font-size="50"
-                    fill="url(#logo-green)"
-                    stroke="#1c5f2a"
-                    stroke-width="10"
-                  >
-                    Sprout &amp; the
-                  </text>
-                  <text x="230" y="146" font-size="68" fill="#4a2206" stroke="#4a2206" stroke-width="14">
-                    Grumpy Garden
-                  </text>
-                  <text
-                    x="230"
-                    y="139"
-                    font-size="68"
-                    fill="url(#logo-gold)"
-                    stroke="#6b3408"
-                    stroke-width="12"
-                  >
-                    Grumpy Garden
-                  </text>
-                </g>
-              </g>
-            </svg>
-          </h1>
-          <p class="chapter"><span>Chapter 1 · The Grumpy Sunflower</span></p>
+        <!-- The title waits: "Press any key", in the words of whatever the player is using -->
+        <div class="card hidden prompt" id="press-card">
+          <p class="press">
+            <span class="on-keys">Press any key</span><span class="on-touch">Tap to start</span
+            ><span class="on-pad">Press <kbd class="pad start">Start</kbd></span>
+          </p>
+        </div>
+        <!-- The main menu: a signpost by the path, one plank for each place to go -->
+        <div class="card hidden sign" id="menu-card">
+          <nav class="planks" aria-label="Main menu">
+            <button id="btn-play" class="plank go">Play</button>
+            <button class="plank" data-page="howto">How to play</button>
+            <button class="plank" data-page="options">Options</button>
+            <button class="plank" data-page="credits">Credits</button>
+          </nav>
+          <!-- A gamepad's buttons don't count, for the browser, as asking for sound: until a key, a click or
+               a tap, the game stays silent, and this says so -->
+          <p class="sound-hint" id="sound-hint" hidden>🔈 Sound starts with any key or tap</p>
+        </div>
+        <div class="card hidden page" id="howto-card">
+          <h1>How to play</h1>
           <p class="sub">
             Sunny the Sunflower woke up grumpy, and his mood has spread all down the garden path! Help little
             Pip cheer up every plant on the way, and then Sunny himself.
@@ -487,10 +286,61 @@
             </li>
           </ul>
           <p class="tip">⭐ Face shots do double damage!</p>
-          <div class="actions">
-            <label class="easy"><input type="checkbox" class="easy-toggle" /> 🌱 Easy mode (8 hearts)</label>
-            <button id="btn-start" class="btn big">Play!</button>
+          <button class="btn back">Back</button>
+        </div>
+        <div class="card hidden page" id="options-card">
+          <h1>Options</h1>
+          <div class="options">
+            <div class="row">
+              <span>Sound</span>
+              <button id="btn-sound" class="btn wood toggle" aria-pressed="true">On</button>
+            </div>
+            <!-- five steps each; ◀ ▶ move a chosen one (src/ui/overlay.ts) -->
+            <div class="row">
+              <span id="vol-music-label">Music</span>
+              <input
+                type="range"
+                class="volume"
+                data-volume="music"
+                min="0"
+                max="5"
+                step="1"
+                aria-labelledby="vol-music-label"
+              />
+            </div>
+            <div class="row">
+              <span id="vol-sfx-label">Effects</span>
+              <input
+                type="range"
+                class="volume"
+                data-volume="sfx"
+                min="0"
+                max="5"
+                step="1"
+                aria-labelledby="vol-sfx-label"
+              />
+            </div>
+            <div class="row">
+              <span>Hearts</span>
+              <label class="easy"
+                ><input type="checkbox" class="easy-toggle" /> 🌱 Easy mode (8 hearts)</label
+              >
+            </div>
           </div>
+          <button class="btn back">Back</button>
+        </div>
+        <div class="card hidden page" id="credits-card">
+          <h1>Credits</h1>
+          <dl class="credits">
+            <dt>Made by</dt>
+            <dd>farulivan</dd>
+            <dt>Built with</dt>
+            <dd>Phaser 4</dd>
+            <dt>Font</dt>
+            <dd>Fredoka, under the SIL Open Font License</dd>
+          </dl>
+          <p class="tip">Thanks for playing! 🌻</p>
+          <button class="btn back">Back</button>
         </div>
         <div class="card hidden" id="win-card">
           <div class="badge">🌻</div>
@@ -498,7 +348,10 @@
           <p class="sub">Sunny feels sunny again and the garden path is open. What a hero, Pip!</p>
           <div class="stars" id="win-stars"></div>
           <div class="stats" id="win-stats"></div>
-          <button id="btn-again" class="btn">Play again</button>
+          <div class="actions">
+            <button id="btn-again" class="btn">Play again</button>
+            <button class="btn wood to-menu">Main menu</button>
+          </div>
           <p class="hint keys-only">or press <kbd>Enter</kbd></p>
         </div>
         <div class="card hidden" id="lose-card">
@@ -516,6 +369,7 @@
           <div class="actions">
             <label class="easy"><input type="checkbox" class="easy-toggle" /> 🌱 Easy mode (8 hearts)</label>
             <button id="btn-retry" class="btn">Try again</button>
+            <button id="btn-lose-menu" class="btn wood to-menu" hidden>Main menu</button>
           </div>
           <p class="hint keys-only">or press <kbd>Enter</kbd></p>
         </div>
@@ -533,13 +387,13 @@
               </svg>
               Start over
             </button>
-            <button id="btn-title" class="btn wood">
+            <button class="btn wood to-menu">
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M3.2 11.6L12 4.2l8.8 7.4" />
                 <path d="M5.9 9.8v9.7h12.2V9.8" />
                 <path fill="currentColor" d="M10.4 19.5v-4.6h3.2v4.6Z" />
               </svg>
-              Title screen
+              Main menu
             </button>
           </div>
         </div>

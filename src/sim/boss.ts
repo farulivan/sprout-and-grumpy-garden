@@ -20,7 +20,7 @@ export abstract class Boss {
   hp: number;
   phase = 1;
   alive = true;
-  state: BossState = 'sleep'; // sleep (title) -> intro -> fight -> defeated | paused
+  state: BossState = 'sleep'; // sleep -> intro (as the fight starts) -> fight -> defeated | paused
   t = 0;
   introT = 0;
   inv = 0; // seconds of invulnerability left
