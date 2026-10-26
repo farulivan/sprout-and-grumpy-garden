@@ -1,0 +1,7 @@
+// What `pnpm lint` checks. Only oxlint's "correctness" rules, code that is outright wrong or does nothing,
+// and as errors, so CI fails on one. The stricter "suspicious" set found 27 things in October 2026, none of
+// them a bug, so it is left off. A stray `.only` in a test needs no rule: Vitest refuses it under CI.
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "categories": { "correctness": "error" }
+}
