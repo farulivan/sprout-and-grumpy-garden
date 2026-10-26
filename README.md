@@ -31,7 +31,7 @@ pnpm install
 pnpm dev        # play at http://localhost:5173
 pnpm build      # static site in dist/; upload that folder to any static host
 pnpm preview    # serve dist/ locally to check the build
-pnpm check      # type-check, tests and formatting; run it before committing
+pnpm check      # type-check, lint, tests and formatting; run it before committing
 ```
 
 Needs Node 22 (22.12 or newer) or Node 24, and [pnpm](https://pnpm.io). The pnpm version is pinned in
@@ -462,8 +462,11 @@ instead of baking; the views keep working.
 
 ## Tests
 
-`pnpm check` type-checks the app, type-checks `src/sim/` a second time without browser types, runs the
-tests and checks formatting.
+`pnpm check` type-checks the app, type-checks `src/sim/` a second time without browser types, lints,
+runs the tests and checks formatting. The lint (`pnpm lint`) is [oxlint](https://oxc.rs) with only its
+"correctness" rules, for code that is outright wrong or does nothing; `.oxlintrc.json` says why the
+stricter sets are left off. Unlike ESLint's TypeScript support, it doesn't need the compiler's JavaScript
+API, which TypeScript 7 no longer has (it ships only an unstable new one).
 
 The simulation tests compare this version with the original vanilla-JS game, using
 `tests/fixtures/legacy-baseline.json`. That file was recorded from the original by a script; both were removed
