@@ -1,5 +1,9 @@
 // A round hole in a solid colour that opens on a scene or closes on it, as old cartoons begin and end: the
 // ring baked below for the hole's edge, and four plain bands of the same colour around it.
+//
+// The bands are Phaser's own white texture stretched, not the atlas's 'white' part. A part that small,
+// stretched this far, blends its edge pixels with the empty gutter around it on the atlas page, and the
+// bands' edges went see-through: a pale line flickered beside the ring as it closed on Pip.
 import type { GameObjects, Scene } from 'phaser';
 import { H, W } from '../../config';
 import { bake, part, unit } from '../art/bake';
@@ -33,7 +37,7 @@ export class Iris {
   // layer: a container to draw in (one fixed to the screen, say); otherwise the scene itself, at depth.
   constructor(scene: Scene, depth: number, layer?: GameObjects.Container) {
     this.ring = part(scene, 'iris').setDepth(depth);
-    this.bands = [0, 1, 2, 3].map(() => part(scene, 'white').setDepth(depth));
+    this.bands = [0, 1, 2, 3].map(() => scene.add.image(0, 0, '__WHITE').setOrigin(0, 0).setDepth(depth));
     layer?.add([...this.bands, this.ring]);
   }
 
@@ -51,10 +55,11 @@ export class Iris {
       .setPosition(x, y)
       .setScale(unit('iris') * k)
       .setTint(color);
+    // the side bands reach a pixel into the top and bottom ones, so no hairline opens where they meet
     const [top, bottom, left, right] = this.bands;
     top.setPosition(-PAD, -PAD).setDisplaySize(W + PAD * 2, y - h + PAD);
     bottom.setPosition(-PAD, y + h).setDisplaySize(W + PAD * 2, H + PAD - (y + h));
-    left.setPosition(-PAD, y - h).setDisplaySize(x - h + PAD, h * 2);
-    right.setPosition(x + h, y - h).setDisplaySize(W + PAD - (x + h), h * 2);
+    left.setPosition(-PAD, y - h - 1).setDisplaySize(x - h + PAD, h * 2 + 2);
+    right.setPosition(x + h, y - h - 1).setDisplaySize(W + PAD - (x + h), h * 2 + 2);
   }
 }
