@@ -1,20 +1,40 @@
 # Future improvements
 
-What could come next for Sprout & the Grumpy Garden after the review of v2 in October 2026: what each change
-would fix, roughly how, and where in the code. It also lists what was decided against, and why, so those
-ideas don't come back without a new reason.
+What could come next for Sprout & the Grumpy Garden after the reviews of October and November 2026: what
+each change would fix, roughly how, and where in the code. It also lists what was decided against, and why,
+so those ideas don't come back without a new reason.
 
-Items keep the numbers they had in that review, so the gaps are items that are done or dropped; both are
+Items keep the numbers they had in those reviews, so the gaps are items that are done or dropped; both are
 listed at the end. Figures marked as measured come from bot fights against the simulation, or from the game
 running in headless Chrome (see "About the numbers").
 
 ## Suggested order
 
-1. The quick fixes (#18, #20) and checks on pull requests (#15). They are small and safe, and neither
+1. One chapter profile (#17), then a second chapter: a harder stage and a new boss. This is the work now in
+   hand.
+2. The quick fixes (#18, #20, #25) and a browser smoke test (#15). They are small and safe, and none of them
    changes how the game plays.
-2. Sound (#13), the biggest gap left against the look of the game.
-3. The phone layout (#14), which the stage makes more pressing.
-4. One chapter profile (#17), then a second chapter (a harder stage and a new boss) and a level map.
+3. Sound (#13), the biggest gap left against the look of the game.
+4. The phone layout (#14), which the stage makes more pressing.
+5. Progress that lasts (#22), then the link preview and player data (#24).
+6. A stricter Garden Path (#21) and a signature move (#23).
+
+## Scorecard, November 2026
+
+A judgment of `main` at `b9857da`, from bot runs and screenshots of the production build. No person has
+playtested these figures, and the audio grade comes from reading the code, not from listening.
+
+| Area               | Grade | Why                                                                     |
+| ------------------ | ----- | ----------------------------------------------------------------------- |
+| Art and animation  | A-    | Sunny's three moods and the changing weather are the game's best feature |
+| Opening and menus  | A-    | The yard and the signpost menu feel like a finished game                |
+| Code health        | A     | All 109 tests pass, and the download is about 420 kB                    |
+| Boss design        | C+    | Clear warnings and good escalation, but one spot undermines the fight (#27) |
+| Stage design       | D+    | It can be cleared without using what it teaches (#21)                   |
+| Progression        | D     | Almost nothing the player earns is kept (#22)                           |
+| Audio              | D+    | Short loops, and the boss music never changes (#13)                     |
+| Phone              | C     | The buttons cover the action (#14)                                      |
+| Reach and data     | D     | No link preview, and no data on how far players get (#24)               |
 
 ## Quick fixes
 
@@ -34,21 +54,25 @@ the pause card and half hidden by its leaves and badge, because the HUD scene is
 **Fix:** hide the message (the toast's text and plate in `src/game/scenes/HudScene.ts`) while the game is
 paused.
 
+### #25 The golden-seed slots sit on the sun
+
+On a stage, the three empty seed slots under the hearts are drawn over the sun's forehead, where they look
+like bunny ears.
+
+**Fix:** move the sun on a stage, or put the slots on a small plate of their own, as the toasts have
+(`src/game/scenes/HudScene.ts`).
+
 ## Checks
 
-### #15 Nothing checks pull requests
+### #15 Nothing tests the game in a browser
 
-`pnpm check` (types, tests, formatting) only runs on someone's own machine. Cloudflare's preview build only
-shows that the game builds, and nothing in the repo tests it in a browser.
+GitHub Actions now runs `pnpm check` and `pnpm build` on every pull request, but nothing in the repo plays the
+game in a browser.
 
-**Fix:**
-
-- A GitHub Actions workflow that runs `pnpm install --frozen-lockfile`, `pnpm check` and `pnpm build` on
-  every pull request.
-- Then a smoke test in a real browser (Playwright, say) that opens the game with `?debug` and goes through
-  every screen with real key presses, taps and a gamepad: start, pause, Keep playing, Start over, Title
-  screen, a win and a loss, Easy mode, the stage's gate, golden seeds, and lives down to Game over. PRs #6, #7
-  and #9–#14 were checked with scripts like that, kept outside the repo.
+**Fix:** a smoke test in a real browser (Playwright, say) that opens the game with `?debug` and goes through
+every screen with real key presses, taps and a gamepad: start, pause, Keep playing, Start over, Title screen,
+a win and a loss, Easy mode, the stage's gate, golden seeds, and lives down to Game over. PRs #6, #7 and
+#9–#14 were checked with scripts like that, kept outside the repo.
 
 ## Sound
 
@@ -98,6 +122,52 @@ set but never read.
 colours and portrait) that the cards, the HUD and the presentation all read. Then a second chapter and a
 level-select map, which Play on the main menu would open; "Add a stage", "Add a small enemy" and "Add a boss" in the README list the steps. Use
 `Boss.mood` or remove it.
+
+## Game design
+
+### #21 The Garden Path doesn't test its lessons
+
+Each stretch of the stage is meant to teach something Sunny will test, but none of it has to be used. Measured:
+a bot that holds right and shoot, and jumps only at logs, thorns and the pit, clears the stage in 24 s with no
+hits. It never aims and never reacts to a "!". A bot that jumps blindly every half second clears it in 24.5 s
+with one hit. The plan for the stage was 75–100 s.
+
+As the first stage it can stay easy. This matters because Game over sends the player back through it, so the
+walk has to stay worth doing.
+
+**Fix:** keep the length, but place enemies and pits so that the player has to aim up and read the "!" to get
+through unhurt. Add a route worth finding for a player who is replaying it.
+
+### #22 Almost nothing the player earns is kept
+
+- Stars show on the win card but are never saved (`src/save.ts` keeps only the best time).
+- The stage's best time is saved but never shown (`stageBest`).
+- The boss's best time shows only on the win card.
+- Golden seeds pay out only when Pip is hurt, so the cleanest play gets "Hearts already full".
+- The yard looks the same after a win as before the first game, and the win card offers only Play again or
+  the menu.
+
+**Fix:** save the stars, show them and the best times on the menu, and let the yard change after a win (a
+cheered-up Sunny in it, say). None of this makes the game easier.
+
+### #23 There is no signature move
+
+Pip moves, jumps, shoots and aims. Cuphead has its parry, and Mega Man takes each boss's power. Here,
+"cheering up" is only a health bar and the flowers left behind are decoration. A move of its own is what
+players would describe to a friend.
+
+**Fix:** one that needs no new key, to keep to one key per action. Make it part of a chapter's design, because
+a chapter's stage is where a new move can be taught.
+
+## Reach
+
+### #24 Shared links have no preview, and nothing shows how far players get
+
+The page has no description or Open Graph tags, so a shared link shows only the title. Cloudflare's Web
+Analytics counts page views, but it can't say how many players reach Sunny or beat him.
+
+**Fix:** add a description and a preview image to `index.html`. Counting how far players get is a separate
+choice, because the game has so far stored nothing about its players outside their own browser.
 
 ## Bigger ideas
 
@@ -151,6 +221,31 @@ JavaScript game, so it needs rewriting for the current one.
 The checkpoint (#10), sound, phones, the checks and a second boss don't need this: none of them changes the
 normal fight.
 
+### #26 "Kid-friendly" or "cute but tough"
+
+The README calls the game kid-friendly, but the decisions below keep it hard, and later chapters are meant to
+be harder. "Cute but tough" is Cuphead's formula and matches those decisions. The README's first lines should
+say whichever is meant. This isn't decided yet.
+
+### #27 Sunny's high leaf is a safe spot
+
+From the arena's high leaf, straight shots hit Sunny's face for double damage, so the aim key isn't needed, and
+vines and roots can't reach it. A real climb takes 2.4 s. Measured on Normal, over 1,000 fights each:
+
+| Plan                                                        | Wins |
+| ----------------------------------------------------------- | ---- |
+| Stand on the leaf, hold shoot, press nothing else           | 23%  |
+| The same, with a hop at a random moment after each "!"      | 33%  |
+| The same, with a hop in a learned rhythm (0.5–0.7 s after)  | 66%  |
+| Timed hops on the ground, aiming up from the best spot      | 0%   |
+
+The dodging bot in "About the numbers" wins 33% at its 0.6 s reaction time. On Easy, only holding shoot from
+the leaf wins about 98%.
+
+**Why it isn't planned:** Sunny is the first boss, so it's fine for him to be easy. Touch players also need the
+leaf, because it is their only way to his face. Later bosses shouldn't have a spot like it, and a bot can check
+that.
+
 ## Decided against
 
 - **Aim help (#1).** Measured: aimed shots only reach Sunny's face from about x 500–600 of the 960-wide
@@ -187,6 +282,7 @@ normal fight.
 - Touch controls (PR #15): a big Shoot button held to fire, a smaller Jump up and to its right, and ◀ ▶ as
   two buttons, all drawn as icons. A thumb can slide between them, and between Shoot and Jump it presses
   both. No auto-fire and no aim button any more.
+- Part of #15: GitHub Actions runs `pnpm check` and `pnpm build` on every pull request (PR #18).
 
 ## About the numbers
 
@@ -197,3 +293,8 @@ only near the spot where shots reach Sunny's face. On the Garden Path it also we
 (enemies, peas, thorns and pits), and a "!" it had seen for less than its reaction time didn't count. It
 isn't in the repo; the README's "Tests" section shows how to play a fight in a test. The phone and button measurements came from the game running in headless
 Chrome.
+
+The figures in #21 and #27 come from simpler bots that follow one fixed rule and never look ahead, such as
+"hold right and shoot, and jump at logs, thorns and pits". They show what a plan can get away with, not how a
+person plays. Their hop timing matters a lot: a fixed delay after each "!" swings the win rate from 5% to 100%,
+so #27 uses random delays.
