@@ -52,6 +52,10 @@ export abstract class Enemy {
   get hittable() {
     return true;
   }
+  // Whether touching Pip uses it up, gone whether or not that hurt him.
+  get spentOnTouch() {
+    return false;
+  }
   // Where a flower grows once it is cheered up, or null if none does.
   bloomY(): number | null {
     return this.y;

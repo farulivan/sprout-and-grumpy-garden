@@ -214,13 +214,13 @@ way, growing as Pip gets closer, and the bar at the top shows how far along the 
   the stage from its start, or Sunny at his gate with full hearts, so the gate is a checkpoint. With the last
   life gone it's Game over, and Start again begins a new game from the first stage. Easy mode has the same
   lives.
-- **Small enemies:** each one teaches something Sunny will test. None comes from behind, there are at most
-  three on screen, and every attack is announced by the same orange "!" as Sunny's.
+- **Small enemies:** each one teaches something Sunny will test. Only a Puffball follows him from behind, and
+  slowly. There are at most three on screen, and every attack is announced by the same orange "!" as Sunny's.
 
 | Enemy | What it does | Seeds to cheer it up |
 | --- | --- | --- |
 | Grumbud, a flower bud on root feet | waddles along the ground or a leaf pad and turns back at its edges | 2 |
-| Puffball, a dandelion clock | drifts over and hangs just above Pip's head, in front of him: aim up | 1 |
+| Puffball, a dandelion clock | drifts after Pip and sinks to his height, too slowly to catch him while he keeps moving. If it reaches him it costs a heart and bursts, gone either way. Aim up to stop it while it is high, or shoot straight as it comes down | 1 |
 | Pea Pod | swells under a "!" for 0.9 s, then spits a pea at chest height: hop over it | 3 |
 | Snapper, a snapdragon in a mound | seeds bounce off the mound; it rumbles under a "!" for 0.8 s, then snaps up for 0.7 s | 2, while it is up |
 

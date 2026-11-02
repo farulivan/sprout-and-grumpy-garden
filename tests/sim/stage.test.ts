@@ -162,16 +162,43 @@ describe('enemies', () => {
     expect(turned).toBe(true);
   });
 
-  it('Puffball hangs just in front of Pip, clear of him while he stands, out of reach of straight shots', () => {
-    const stage = stageWith({ enemies: [{ kind: 'puffball', x: 320, y: 300 }] });
-    run(stage, 8);
-    const puff = stage.enemies[0];
+  it('Puffball flies at a Pip who stands still, costs him a heart, and is gone', () => {
+    const stage = stageWith({ enemies: [{ kind: 'puffball', x: 620, y: 300 }] });
+    stage.player.x = stage.player.px = 300;
+    const events = run(stage, 12, NO_INPUT, (e) => e.type === 'playerHurt');
+    expect(has(events, 'playerHurt')).toBe(true);
+    expect(has(events, 'enemyBurst')).toBe(true);
+    expect(has(events, 'enemyCheered')).toBe(false); // it wasn't cheered up
+    expect(stage.player.hp).toBe(4);
+    expect(stage.enemies.length).toBe(0);
+    expect(has(run(stage, 4), 'playerHurt')).toBe(false); // one hit, and no more
+  });
+
+  it('Puffball is used up by touching a Pip who is still flashing, without hurting him', () => {
+    const stage = stageWith({ enemies: [{ kind: 'puffball', x: 620, y: 300 }] });
+    stage.player.x = stage.player.px = 300;
+    stage.player.inv = 99;
+    const events = run(stage, 12, NO_INPUT, (e) => e.type === 'enemyBurst');
+    expect(has(events, 'enemyBurst')).toBe(true);
+    expect(has(events, 'playerHurt')).toBe(false);
     expect(stage.player.hp).toBe(5);
-    expect(puff.x - stage.player.x).toBeGreaterThan(30); // ahead of him, where a seed aimed up goes
-    const events = run(stage, 1.5, SHOOT);
-    expect(has(events, 'enemyHit') || has(events, 'enemyCheered')).toBe(false);
-    const aimed = run(stage, 1.5, { ...SHOOT, up: true });
-    expect(has(aimed, 'enemyCheered')).toBe(true);
+    expect(stage.enemies.length).toBe(0);
+  });
+
+  it("Puffball can't catch a Pip who keeps walking, and leaves no flower", () => {
+    const stage = stageWith({ enemies: [{ kind: 'puffball', x: 300, y: 300 }] });
+    stage.player.x = stage.player.px = 400;
+    const events = run(stage, 6, RIGHT);
+    expect(has(events, 'playerHurt')).toBe(false);
+    expect(stage.enemies[0].bloomY()).toBeNull();
+  });
+
+  it('Puffball can be stopped by a straight seed as it comes down, without aiming', () => {
+    const stage = stageWith({ enemies: [{ kind: 'puffball', x: 700, y: 300 }] });
+    stage.player.x = stage.player.px = 300;
+    const events = run(stage, 12, SHOOT, (e) => e.type === 'enemyCheered' || e.type === 'playerHurt');
+    expect(has(events, 'enemyCheered')).toBe(true);
+    expect(stage.player.hp).toBe(5);
   });
 
   it('Puffball is cheered up by one seed aimed up as it comes', () => {
@@ -701,6 +728,18 @@ describe('glades', () => {
     expect(stage.player.hp).toBe(hp);
     expect(late.hp).toBe(2);
     expect(has(run(stage, 1.5), 'playerHurt')).toBe(true); // it has arrived
+  });
+
+  it('counts a Puffball that burst on Pip as gone, so it can still open', () => {
+    const stage = stageWith({
+      glades: [{ x0: 200, x1: 1160 }],
+      enemies: [{ kind: 'puffball', x: 800, y: 300, glade: 0 }],
+    });
+    stage.player.x = stage.player.px = 460;
+    const events = run(stage, 12, NO_INPUT, (e) => e.type === 'gladeOpen');
+    expect(has(events, 'enemyBurst')).toBe(true);
+    expect(has(events, 'gladeOpen')).toBe(true);
+    expect(stage.closed).toBe(false);
   });
 
   it("can't trap Pip: anything that wandered off is brought back inside the walls", () => {

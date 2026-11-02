@@ -332,7 +332,12 @@ export class Stage implements PlayerWorld, EnemyWorld, Level {
     }
     for (const e of this.enemies) {
       const box = e.awake && e.entering <= 0 ? e.hurtbox() : null;
-      if (box && p.alive && circleHit(box, hb)) p.hurt(e.x);
+      if (!box || !p.alive || !circleHit(box, hb)) continue;
+      p.hurt(e.x);
+      if (e.spentOnTouch) {
+        e.dead = true;
+        this.emit({ type: 'enemyBurst', x: e.x, y: e.y });
+      }
     }
     for (const t of this.thorns) if (p.alive && rectCircleHit(t, hb)) p.hurt(t.x + t.w / 2);
     for (const d of this.pickups) if (!d.dead && circleHit(d, hb)) this.take(d);

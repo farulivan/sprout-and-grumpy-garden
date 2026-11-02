@@ -445,6 +445,20 @@ export function present(e: SimEvent, p: Presenter, opts: PresentOptions) {
         glow: true,
       });
       break;
+    case 'enemyBurst':
+      // a Puffball on Pip: not cheered up, so no cheer, and its seeds scatter
+      p.sfx('petal');
+      p.burst(e.x, e.y, {
+        n: 14,
+        colors: ['#ffffff', '#e9e3ff', '#bdb0ea'],
+        speed: 170,
+        size: 6,
+        life: 0.7,
+        gravity: 60,
+        shape: 'soft',
+        drag: 0.6,
+      });
+      break;
     case 'enemyWarn':
       p.sfx('telegraph');
       break;

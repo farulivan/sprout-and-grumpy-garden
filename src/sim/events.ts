@@ -44,6 +44,7 @@ export type SimEvent =
   | { type: 'enemyHit'; x: number; y: number }
   | { type: 'enemyCheered'; kind: EnemyKind; x: number; y: number; baseY: number } // it pops into a flower
   | { type: 'enemyBlock'; x: number; y: number } // a seed bounced off something hiding
+  | { type: 'enemyBurst'; x: number; y: number } // it touched Pip, which used it up
   | { type: 'enemyWarn'; x: number; y: number } // the "!" before a small enemy attacks
   | { type: 'pea'; x: number; y: number }
   | { type: 'snap'; x: number; y: number }
