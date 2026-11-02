@@ -36,6 +36,7 @@ const CAP_FADE = 0.5; // seconds his cap takes to turn a new colour
 const LANDED = 0.25; // seconds he looks winded after coming down
 const RAGE = 1.3; // seconds of tantrum at each new phase
 const CROUCH = 0.18; // over the last of a Big Hop's warning, he crouches
+const SPORES = 3; // seconds golden spores rise from him, once he is cheered up
 const WHIRL_FPS = 30;
 const WHIRL_SCALE = 0.85; // keeps its top close to the simulation's whirl, and low enough for a held jump to clear
 const WHIRL_LEAN = 0.1; // he leans into the way he is going
@@ -98,6 +99,8 @@ export class MoView implements BossView {
   private dustT = 0;
   private sparkT = 0;
   private sparkSide = 1;
+  private sporeT = 0; // cheered up, golden spores rise from him for a while
+  private spores = 0;
 
   constructor(
     scene: Scene,
@@ -356,6 +359,27 @@ export class MoView implements BossView {
     capX(this.capGlow)
       .setAlpha(pulse)
       .setScale(this.units.glow * swell, this.units.glow * swell * (1 - sq * 0.25));
+
+    // ---- once he is cheered up, golden spores rise from him ----
+    if (b.alive) this.spores = SPORES;
+    else if (this.spores > 0) {
+      this.spores -= dt;
+      this.sporeT -= dt;
+      if (this.sporeT <= 0) {
+        this.sporeT = 0.3;
+        this.fx.burst(x, feet - capH, {
+          n: 4,
+          shape: 'star',
+          colors: ['#fff0a0', '#ffc53f', '#fffcdc'],
+          speed: 90,
+          size: 7,
+          life: 1.2,
+          gravity: -70,
+          glow: true,
+          radius: 70,
+        });
+      }
+    }
 
     // ---- light and shadow on the ground under him ----
     const height = GROUND - feet + hop,

@@ -1,6 +1,6 @@
 // Mo's hollow, for now the Mushroom Wood's own parts standing still and sliding a little as Pip moves, with the two
 // shelf fungi the fight stands on. It takes the weather's tints as his mood turns.
-import type { GameObjects, Scene } from 'phaser';
+import { BlendModes, type GameObjects, type Scene } from 'phaser';
 import { GROUND, H, W } from '../../../config';
 import { MO_PLATFORMS } from '../../../sim/bosses/mo';
 import { part, unit } from '../../art/bake';
@@ -13,6 +13,8 @@ export class HollowLand implements ArenaLand {
   private far: GameObjects.Image;
   private mid: GameObjects.Image;
   private near: GameObjects.Image;
+  private mist: GameObjects.Image;
+  private lights: GameObjects.Image;
   private brush: GameObjects.Image[];
   private canopy: GameObjects.Image[];
 
@@ -20,9 +22,14 @@ export class HollowLand implements ArenaLand {
     this.far = part(scene, 'wood-far');
     this.mid = part(scene, 'wood-mid');
     this.near = part(scene, 'wood-near');
+    this.mist = part(scene, 'hollow-mist', -60, GROUND - 6).setScale((W + 120) / 64, 1);
+    this.lights = part(scene, 'hollow-lights')
+      .setBlendMode(BlendModes.ADD)
+      .setScale(unit('hollow-lights'))
+      .setVisible(false);
     this.canopy = [0, 1].map((i) => part(scene, 'wood-canopy', -40 + i * CANOPY_P, 0));
     this.brush = [0, 1].map((i) => part(scene, 'wood-brush', -40 + i * BRUSH_P, 0));
-    layer.add([this.far, this.mid, this.near, ...this.canopy, ...this.brush]);
+    layer.add([this.far, this.mid, this.near, this.mist, this.lights, ...this.canopy, ...this.brush]);
   }
 
   sync(_t: number, weather: Weather, pan: number) {
@@ -30,6 +37,13 @@ export class HollowLand implements ArenaLand {
     this.far.setX(-600 + pan * 12).setTint(hillTint);
     this.mid.setX(-300 + pan * 18).setTint(hillTint);
     this.near.setX(-40 + pan * 26).setTint(landTint);
+    this.mist.setTint(landTint);
+    // once he is cheered up, the whole wood lights up
+    const glow = weather.weight.glow;
+    this.lights
+      .setVisible(glow > 0.01)
+      .setX(-40 + pan * 26)
+      .setAlpha(glow * 0.7);
     this.canopy.forEach((c, i) => c.setX(-40 + i * CANOPY_P + pan * 30).setTint(landTint));
     this.brush.forEach((b, i) => b.setX(-40 + i * BRUSH_P + pan * 34).setTint(landTint));
   }
@@ -48,11 +62,13 @@ export class HollowGround implements ArenaGround {
       .setOrigin(0, 0)
       .setTileScale(unit('wood-ground'))
       .setDepth(depth.ground);
+    // behind Mo, so that they never cut across him when he stands near one. Pip is still drawn over them.
+    const shelfDepth = depth.ground + 0.4;
     const stalks = MO_PLATFORMS.map((p) =>
-      part(scene, `wood-stalk-${GROUND - p.y - 8}`, p.x + p.w / 2, p.y + 8).setDepth(depth.platforms),
+      part(scene, `wood-stalk-${GROUND - p.y - 8}`, p.x + p.w / 2, p.y + 8).setDepth(shelfDepth),
     );
     this.shelves = MO_PLATFORMS.map((p) => ({
-      image: part(scene, `wood-pad-${p.w}`).setDepth(depth.platforms),
+      image: part(scene, `wood-pad-${p.w}`).setDepth(shelfDepth),
       x: p.x + p.w / 2,
       y: p.y,
     }));
