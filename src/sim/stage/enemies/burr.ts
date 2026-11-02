@@ -1,6 +1,6 @@
 // A prickly seed head. When Pip comes in sight it curls up under a "!", rolls at him, and stops dizzy at the
 // first wall, edge or log, or when it runs out of roll. Seeds bounce off until then; while it is dizzy they
-// land. It always hurts to touch. It teaches jumping what can't be shot, as Mo's shockwaves will need. Once Pip
+// land. It always hurts to touch. It teaches jumping what can't be shot, as Mo's acid smoke will need. Once Pip
 // is past it stays behind him, unless he is shut in a glade with it.
 import { solidAt, supportAt } from '../terrain';
 import { Enemy, type EnemyWorld } from './enemy';

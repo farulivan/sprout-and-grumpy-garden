@@ -7,13 +7,13 @@ export const VINE_WARN = 0.7;
 export const ROOT_WARN = 0.75;
 export const POLLEN_WARN = 0.9;
 export const POLLEN_CLOUD = 0.5;
-export const WAVE_WARN = 0.1;
-export const GLOOM_FOLLOW = 1.5,
-  GLOOM_WARN = 0.8,
-  GLOOM_RAIN = 1.1;
+export const SMOKE_WARN = 0.1;
+export const RING_SEEK = 1.5,
+  RING_WARN = 0.8,
+  RING_ERUPT = 1.1;
 
 export interface Hazard {
-  readonly kind: 'vine' | 'root' | 'pollen' | 'shockwave' | 'gloom';
+  readonly kind: 'vine' | 'root' | 'pollen' | 'smoke' | 'ring';
   x: number;
   y: number;
   px: number;
@@ -148,16 +148,16 @@ export class PollenDrop implements Hazard {
   }
 }
 
-// A wave running along the ground each way from where Mo lands. Jump it. It rears up for a moment first.
-export class Shockwave implements Hazard {
-  readonly kind = 'shockwave';
+// Acid smoke rolling along the ground each way from where Mo lands. Jump it. It swells for a moment first.
+export class AcidSmoke implements Hazard {
+  readonly kind = 'smoke';
   readonly w = 36;
   readonly h = 26;
   readonly y = GROUND - this.h;
   readonly py = this.y;
   px: number;
   t = 0;
-  warn = WAVE_WARN;
+  warn = SMOKE_WARN;
   dead = false;
   constructor(
     public x: number,
@@ -186,16 +186,16 @@ export class Shockwave implements Hazard {
   }
 }
 
-// A small rain cloud that follows Pip, stops, gathers itself, then rains straight down, even through a shelf.
-// Keep moving: this is what stops there being any safe spot.
-export class GloomCloud implements Hazard {
-  readonly kind = 'gloom';
+// A root creeps through the soil after Pip, stops, toadstools pop up in a ring, and the ring erupts straight up,
+// even through a shelf. Keep moving: this is what stops there being any safe spot.
+export class FairyRing implements Hazard {
+  readonly kind = 'ring';
   readonly y = 96;
   readonly py = this.y;
   readonly w = 58;
   px: number;
   t = 0;
-  state: 'follow' | 'warn' | 'rain' = 'follow';
+  state: 'seek' | 'warn' | 'erupt' = 'seek';
   private timer: number;
   dead = false;
   constructor(
@@ -205,29 +205,29 @@ export class GloomCloud implements Hazard {
     delay = 0,
   ) {
     this.px = x;
-    this.timer = GLOOM_FOLLOW + delay;
+    this.timer = RING_SEEK + delay;
   }
 
   update(dt: number) {
     this.t += dt;
     this.timer -= dt;
-    if (this.state === 'follow') {
+    if (this.state === 'seek') {
       const d = this.target.x - this.x,
         step = this.speed * dt;
       this.x += Math.abs(d) <= step ? d : Math.sign(d) * step;
       if (this.timer <= 0) {
         this.state = 'warn';
-        this.timer = GLOOM_WARN;
+        this.timer = RING_WARN;
       }
     } else if (this.timer <= 0) {
       if (this.state === 'warn') {
-        this.state = 'rain';
-        this.timer = GLOOM_RAIN;
+        this.state = 'erupt';
+        this.timer = RING_ERUPT;
       } else this.dead = true;
     }
   }
   shape(): Rect | null {
-    if (this.state !== 'rain') return null;
+    if (this.state !== 'erupt') return null;
     return { x: this.x - this.w / 2, y: this.y + 14, w: this.w, h: GROUND - this.y - 14 };
   }
   hits(c: Circle) {

@@ -8,7 +8,7 @@ import { Fight } from '../../src/sim/fight';
 import { NO_INPUT, type InputFrame } from '../../src/sim/input';
 import { Projectile } from '../../src/sim/projectile';
 
-const ATTACKS = ['bigHop', 'gloomCloud', 'sporePuffs', 'sproutCaplings', 'capSpin'];
+const ATTACKS = ['bigHop', 'fairyRing', 'sporePuffs', 'sproutCaplings', 'capSpin'];
 
 function fightMo(seed = 3) {
   const fight = new Fight({ seed, boss: 'mo' }),
@@ -143,7 +143,7 @@ describe("Mo's attacks", () => {
       }
     });
 
-  it('uses only Big Hop and Gloom Cloud at first, and adds the rest with each phase', () => {
+  it('uses only Big Hop and Fairy Ring at first, and adds the rest with each phase', () => {
     const seen = (phase: number) => {
       const names = new Set<string>();
       for (let seed = 1; seed <= 8; seed++) {
@@ -158,8 +158,8 @@ describe("Mo's attacks", () => {
       }
       return [...names].sort();
     };
-    expect(seen(1)).toEqual(['bigHop', 'gloomCloud']);
-    expect(seen(2)).toEqual(['bigHop', 'gloomCloud', 'sporePuffs', 'sproutCaplings']);
+    expect(seen(1)).toEqual(['bigHop', 'fairyRing']);
+    expect(seen(2)).toEqual(['bigHop', 'fairyRing', 'sporePuffs', 'sproutCaplings']);
     expect(seen(3)).toEqual([...ATTACKS].sort());
   });
 
@@ -207,13 +207,13 @@ describe("Mo's attacks", () => {
     expect(fight.player.x).toBeGreaterThan(mo.x);
   });
 
-  it('rains through a shelf: Gloom Cloud reaches Pip on one', () => {
+  it('erupts through a shelf: the Fairy Ring reaches Pip on one', () => {
     const shelf = MO_PLATFORMS[0],
       { fight, mo } = fightMo();
     fight.player.x = fight.player.px = shelf.x + shelf.w / 2;
     fight.player.y = fight.player.py = shelf.y;
     fight.player.onGround = true;
-    mo.startAttack('gloomCloud');
+    mo.startAttack('fairyRing');
     expect(has(run(fight, 5), 'playerHurt')).toBe(true);
     expect(fight.player.y).toBeLessThanOrEqual(GROUND);
   });

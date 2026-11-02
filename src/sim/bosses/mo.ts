@@ -9,21 +9,21 @@ import { GROUND, W } from '../../config';
 import { Boss, type Attack } from '../boss';
 import type { Springy } from '../bouncer';
 import type { Fight } from '../fight';
-import { GLOOM_FOLLOW, GLOOM_RAIN, GLOOM_WARN, GloomCloud, Shockwave } from '../hazards';
+import { AcidSmoke, FairyRing, RING_ERUPT, RING_SEEK, RING_WARN } from '../hazards';
 import { circleHit, clamp, rectCircleHit, type Circle, type Rect } from '../math';
 import { Capling } from '../stage/enemies/capling';
 import { SporeBubble } from '../stage/enemies/spore';
 
-const ATTACKS = ['bigHop', 'gloomCloud', 'sporePuffs', 'sproutCaplings', 'capSpin'] as const;
+const ATTACKS = ['bigHop', 'fairyRing', 'sporePuffs', 'sproutCaplings', 'capSpin'] as const;
 type MoAttack = (typeof ATTACKS)[number];
 
 const POOLS: Record<number, readonly MoAttack[]> = {
-  1: ['bigHop', 'gloomCloud'],
-  2: ['bigHop', 'gloomCloud', 'sporePuffs', 'sproutCaplings'],
-  3: ['bigHop', 'gloomCloud', 'sporePuffs', 'sproutCaplings', 'capSpin'],
+  1: ['bigHop', 'fairyRing'],
+  2: ['bigHop', 'fairyRing', 'sporePuffs', 'sproutCaplings'],
+  3: ['bigHop', 'fairyRing', 'sporePuffs', 'sproutCaplings', 'capSpin'],
 };
 
-// The arena: the full width, and two low shelf fungi at the sides, all within Gloom Cloud's reach.
+// The arena: the full width, and two low shelf fungi at the sides, all within the Fairy Ring's reach.
 export const MO_PLATFORMS: readonly Rect[] = [
   { x: 36, y: 388, w: 110, h: 22 },
   { x: W - 146, y: 388, w: 110, h: 22 },
@@ -51,11 +51,11 @@ const HOP_T = 0.8, // seconds in the air
   HOP_NEAR = 130, // he comes down at least this far from where Pip is as he sets off...
   HOP_FAR = 220, // ...and no farther than this
   REAR_RATE = 9;
-const WAVE_SPEED = 365,
+const SMOKE_SPEED = 365,
   SPIN_SPEED = 430,
   SPIN_WALL = 60, // how near a wall he spins to: no hiding beside one
   DIZZY = 2.6, // seconds he sits dizzy after a Cap Spin, face open
-  WAVE_AT = 62, // how far from his middle each shockwave starts
+  SMOKE_AT = 62, // how far from his middle each smoke front starts
   SPORE_FROM = 40; // how far above his cap the spores come from
 
 // An oval hit by a circle.
@@ -187,9 +187,9 @@ export class Mo extends Boss {
     this.landX = null;
     if (!this.alive || this.state !== 'fight') return;
     f.emit({ type: 'thud', x: this.x, y: GROUND });
-    const speed = WAVE_SPEED * this.speedMul;
+    const speed = SMOKE_SPEED * this.speedMul;
     for (const dir of [-1, 1] as const)
-      f.hazards.push(new Shockwave(this.x + dir * WAVE_AT, dir, speed, f.minX - 40, f.maxX + 40));
+      f.hazards.push(new AcidSmoke(this.x + dir * SMOKE_AT, dir, speed, f.minX - 40, f.maxX + 40));
   }
 
   // He stops whatever he is doing: a new phase, the end of the fight.
@@ -252,7 +252,7 @@ export class Mo extends Boss {
 
   // ---------------- attacks ----------------
 
-  // A hop or more, each coming down on a ringed spot near Pip with a shockwave each way.
+  // A hop or more, each coming down on a ringed spot near Pip with acid smoke rolling out each way.
   *bigHop(): Attack {
     for (let i = 0; i < this.phase; i++) {
       const to = this.landingSpot(),
@@ -269,23 +269,24 @@ export class Mo extends Boss {
     this.endAttack();
   }
 
-  // A small rain cloud follows Pip, stops, then rains straight down, even through a shelf. He sulks under it.
-  *gloomCloud(): Attack {
+  // A root creeps through the soil after Pip, stops, and a ring of toadstools erupts straight up, even through a
+  // shelf. He sulks while it does.
+  *fairyRing(): Attack {
     this.rearUp(0.5);
     yield 0.5;
     const p = this.fight.player,
       n = this.phase === 3 ? 2 : 1;
-    // it gathers off to one side of Pip, wherever he is, so nowhere is out of its reach
+    // it starts off to one side of Pip, wherever he is, so nowhere is out of its reach
     for (let i = 0; i < n; i++) {
       const side = this.fight.rng.next() < 0.5 ? -1 : 1;
       this.fight.hazards.push(
-        new GloomCloud(p, p.x + side * this.fight.rng.range(90, 170), i === 0 ? 170 : 110, i * 0.5),
+        new FairyRing(p, p.x + side * this.fight.rng.range(90, 170), i === 0 ? 170 : 110, i * 0.5),
       );
     }
     this.puff = 0.8;
     yield 0.7;
     this.open = false;
-    yield (GLOOM_FOLLOW + GLOOM_WARN + GLOOM_RAIN) * 0.45;
+    yield (RING_SEEK + RING_WARN + RING_ERUPT) * 0.45;
     this.endAttack();
   }
 

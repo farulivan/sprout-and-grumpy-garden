@@ -4,8 +4,8 @@
 // Their parts are baked in hazards/art.ts; this file moves them.
 import { BlendModes, type GameObjects, type Scene } from 'phaser';
 import { GROUND, TAU, UP, W } from '../../config';
-import { GLOOM_WARN, POLLEN_CLOUD, POLLEN_WARN, ROOT_WARN, VINE_WARN, type Hazard } from '../../sim/hazards';
-import type { GloomCloud, PollenDrop, RootSpike, Shockwave, VineSweep } from '../../sim/hazards';
+import { POLLEN_CLOUD, POLLEN_WARN, RING_WARN, ROOT_WARN, VINE_WARN, type Hazard } from '../../sim/hazards';
+import type { AcidSmoke, FairyRing, PollenDrop, RootSpike, VineSweep } from '../../sim/hazards';
 import { clamp, lerp } from '../../sim/math';
 import { DUST, type Burst } from '../../presentation';
 import { INV, part, Ribbon } from '../art/bake';
@@ -302,8 +302,8 @@ class PollenView implements HazardView {
   }
 }
 
-// A shockwave running along the ground from where Mo landed. A placeholder.
-class ShockwaveView implements HazardView {
+// Smoke running along the ground from where Mo landed. A placeholder.
+class SmokeView implements HazardView {
   private body: GameObjects.Image;
 
   constructor(scene: Scene, depth: number) {
@@ -313,7 +313,7 @@ class ShockwaveView implements HazardView {
     this.body.setVisible(visible);
   }
   sync(h: Hazard, alpha: number) {
-    const wave = h as Shockwave,
+    const wave = h as AcidSmoke,
       grow = Math.min(1, wave.t / 0.12);
     this.body
       .setPosition(lerp(wave.px, wave.x, alpha), GROUND + 2)
@@ -321,8 +321,8 @@ class ShockwaveView implements HazardView {
   }
 }
 
-// A small rain cloud that follows Pip, stops under a "!", and rains straight down. A placeholder.
-class GloomView implements HazardView {
+// Still the old cloud and rain, until the Fairy Ring's art arrives. A placeholder.
+class RingView implements HazardView {
   private cloud: GameObjects.Image;
   private rain: GameObjects.Image;
   private mark: GameObjects.Image;
@@ -341,15 +341,15 @@ class GloomView implements HazardView {
     }
   }
   sync(h: Hazard, alpha: number, dt: number) {
-    const g = h as GloomCloud,
+    const g = h as FairyRing,
       x = lerp(g.px, g.x, alpha),
       gathering = g.state === 'warn';
     this.warnT = gathering ? this.warnT + dt : 0;
     this.cloud
       .setPosition(x + (gathering ? Math.sin(g.t * 40) * 2 : 0), g.y)
-      .setScale(INV * (gathering ? 1 + (this.warnT / GLOOM_WARN) * 0.15 : 1));
+      .setScale(INV * (gathering ? 1 + (this.warnT / RING_WARN) * 0.15 : 1));
     this.rain
-      .setVisible(g.state === 'rain')
+      .setVisible(g.state === 'erupt')
       .setPosition(x, g.y + 14)
       .setScale(INV * 2, ((GROUND - g.y - 14) / 372) * INV * 2);
     if (gathering) showMark(this.mark, x, g.y - 42, this.warnT);
@@ -371,9 +371,9 @@ export class HazardViews {
             ? new RootView(scene, depth, markDepth, fx)
             : h.kind === 'pollen'
               ? new PollenView(scene, depth, fx)
-              : h.kind === 'shockwave'
-                ? new ShockwaveView(scene, depth)
-                : new GloomView(scene, depth, markDepth),
+              : h.kind === 'smoke'
+                ? new SmokeView(scene, depth)
+                : new RingView(scene, depth, markDepth),
     );
   }
   sync(hazards: readonly Hazard[], alpha: number, dt: number) {
