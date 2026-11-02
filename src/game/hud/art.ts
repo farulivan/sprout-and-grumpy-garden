@@ -37,6 +37,16 @@ function drawMoPortrait(c: CanvasRenderingContext2D, cap: CapColors, mood: MoFac
   c.restore();
 }
 
+// His portraits are baked as the game starts, not with the rest of him, because the HUD can show one before his
+// chapter's art is ready. They come after the atlas is packed, so each has a texture of its own: on the shared page they
+// would move everything else on it, and Chapter 1 should not change for a boss it never shows.
+export function bakeMoPortraits(scene: Scene) {
+  (['cross', 'cross', 'furious'] as const).forEach((mood, i) =>
+    bake(scene, `bar-icon-mo-${i}`, 64, 64, 32, 32, (c) => drawMoPortrait(c, MO_PALETTE.caps[i], mood)),
+  );
+  bake(scene, 'bar-icon-mo-joy', 64, 64, 32, 32, (c) => drawMoPortrait(c, MO_PALETTE.caps[3], 'joy'));
+}
+
 export function bakeHud(scene: Scene) {
   const heartShape = (c: CanvasRenderingContext2D) => heart(c, 0, 0, 12.5);
   bake(scene, 'heart-full', 44, 42, 22, 20, (c) => {
@@ -124,12 +134,6 @@ export function bakeHud(scene: Scene) {
       line(c, '#38200f', 2.6);
       drawFace(c, 0, 0.5, 0.52, mood);
     });
-
-  // His here, not with the rest of him: the HUD can show one before his chapter's art is baked
-  (['cross', 'cross', 'furious'] as const).forEach((mood, i) =>
-    bake(scene, `bar-icon-mo-${i}`, 64, 64, 32, 32, (c) => drawMoPortrait(c, MO_PALETTE.caps[i], mood)),
-  );
-  bake(scene, 'bar-icon-mo-joy', 64, 64, 32, 32, (c) => drawMoPortrait(c, MO_PALETTE.caps[3], 'joy'));
 
   // Pip's head, for the stage's path bar: how far along the path to the boss he is
   bake(scene, 'hud-pip', 44, 48, 22, 28, (c) => {

@@ -9,7 +9,6 @@ import { rand } from './motion';
 import {
   blob,
   circle,
-  ellipse,
   glow,
   heart,
   leaf,
@@ -35,7 +34,8 @@ const READY = { plain: 128, glow: 48, rings: 4, bigRings: 2 };
 let BIG_RING_UNIT = 1; // set when the big ring is baked
 
 // Shapes are grey where they should take the tint a little darker, white where they should stay bright.
-const SHAPES: Record<ParticleShape, [w: number, h: number, draw: (c: Ctx) => void]> = {
+// ('spot' is a shape too, but only Mo sheds it, so it is baked with him: see mo/art.ts.)
+const SHAPES: Record<Exclude<ParticleShape, 'spot'>, [w: number, h: number, draw: (c: Ctx) => void]> = {
   circle: [
     18,
     18,
@@ -65,15 +65,6 @@ const SHAPES: Record<ParticleShape, [w: number, h: number, draw: (c: Ctx) => voi
     (c) => {
       leaf(c, -13, 0, 26, 10, 0, 0.55, 0.6);
       c.fillStyle = radial(c, 2, 0, 16, ['#ffffff', '#d9d9d9'], -4, -3);
-      c.fill();
-    },
-  ],
-  spot: [
-    26,
-    20,
-    (c) => {
-      ellipse(c, 0, 0, 11, 8);
-      c.fillStyle = radial(c, 0, 0, 11, ['#ffffff', '#dcdcdc'], -3, -3);
       c.fill();
     },
   ],

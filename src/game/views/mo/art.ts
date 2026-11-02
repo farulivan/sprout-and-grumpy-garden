@@ -456,6 +456,12 @@ export function bakeMoParts(scene: Scene) {
   }
   bake(scene, 'mo-pool', 240, 40, 120, 20, (c) => glow(c, 0, 0, 118, '#ffffff', 1, 19), SOFT);
   bake(scene, 'mo-shadow', 200, 30, 100, 15, (c) => glow(c, 0, 0, 98, INK, 0.75, 14), SOFT);
+  // the spots he sheds as his mood changes: baked in white and tinted, like every particle (see fx.ts)
+  bake(scene, 'fx-spot', 26, 20, 13, 10, (c) => {
+    ellipse(c, 0, 0, 11, 8);
+    c.fillStyle = radial(c, 0, 0, 11, ['#ffffff', '#dcdcdc'], -3, -3);
+    c.fill();
+  });
   bake(scene, 'spore-pod', 40, 40, 20, 20, drawPod);
   bake(scene, 'spore-halo', 64, 64, 32, 32, (c) => glow(c, 0, 0, 31, MO_PALETTE.acid.lit, 0.55), SOFT);
 }
