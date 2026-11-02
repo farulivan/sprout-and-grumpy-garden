@@ -27,6 +27,7 @@ export type SimEvent =
   | { type: 'playerHurt'; x: number; y: number }
   | { type: 'bossHit'; x: number; y: number; weak: boolean } // weak = the double-damage spot
   | { type: 'bossBlock'; x: number; y: number } // a seed hit him while he can't be hurt, and bounced off
+  | { type: 'whirl'; x: number; wall: boolean } // a Cap Spin starts, or turns at a wall
   | { type: 'ringSeek' } // a Fairy Ring's root sets off through the soil
   | { type: 'ringWarn' } // ...its toadstools come up
   | { type: 'ringErupt'; x: number } // ...and it erupts
@@ -48,7 +49,7 @@ export type SimEvent =
   | { type: 'enemyHit'; x: number; y: number }
   | { type: 'enemyCheered'; kind: EnemyKind; x: number; y: number; baseY: number } // it pops into a flower
   | { type: 'enemyBlock'; x: number; y: number } // a seed bounced off something hiding
-  | { type: 'enemyBurst'; x: number; y: number } // it touched Pip, which used it up
+  | { type: 'enemyBurst'; x: number; y: number; kind?: EnemyKind } // it touched Pip, which used it up
   | { type: 'enemyWarn'; x: number; y: number } // the "!" before a small enemy attacks
   | { type: 'pea'; x: number; y: number }
   | { type: 'snap'; x: number; y: number }

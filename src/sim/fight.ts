@@ -239,7 +239,7 @@ export class Fight implements PlayerWorld, Level {
       p.hurt(e.x);
       if (e.spentOnTouch) {
         e.dead = true;
-        this.emit({ type: 'enemyBurst', x: e.x, y: e.y });
+        this.emit({ type: 'enemyBurst', x: e.x, y: e.y, kind: e.kind });
       }
     }
     for (const d of this.pickups) {

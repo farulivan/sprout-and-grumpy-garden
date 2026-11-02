@@ -42,7 +42,6 @@ import {
 import { MO_PLATFORMS } from '../../../sim/bosses/mo';
 import { bakeWoodEnemies } from './enemyArt';
 import { bakeMo } from '../mo/bake';
-import { bakeMoAttacks } from './moArt';
 
 export const FOREST_P = 1920; // the far and middle trees repeat every this many pixels
 export const NEAR_P = 1024; // ...the near ones
@@ -861,7 +860,6 @@ function drawDressing(c: Ctx, kind: number) {
 export function bakeWood(scene: Scene) {
   bakeWoodEnemies(scene);
   bakeMo(scene);
-  bakeMoAttacks(scene);
   // the sky's own: the moon, with its glow on the same part so that the two cost one draw
   bake(
     scene,

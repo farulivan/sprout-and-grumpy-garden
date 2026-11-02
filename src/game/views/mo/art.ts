@@ -5,7 +5,7 @@ import type { Scene } from 'phaser';
 import { TAU } from '../../../config';
 import { bake, SOFT } from '../../art/bake';
 import { rgba } from '../../art/color';
-import { ellipse, glow, inside, line, linear, radial, seeded, type Ctx } from '../../art/draw';
+import { blob, circle, ellipse, glow, inside, line, linear, radial, seeded, type Ctx } from '../../art/draw';
 
 export const MO_PALETTE = {
   ink: '#1c1238', // the same as the wood's outlines
@@ -52,6 +52,8 @@ export const MO_PALETTE = {
   gills: ['#3a2150', '#6e4668', '#94687a'],
   // the acid of all his poison: the one thing in the fight this colour
   gas: { back: '#1c6a4a', mid: '#3f9a3c', body: '#8fd832', hot: '#e6fb86', rim: '#14502e' },
+  // ...and the same, on what is alive: the ring's toadstools and the spore pods
+  acid: { out: '#145a30', deep: '#2b9440', mid: '#6cc638', lit: '#b6e84c', hi: '#ecfca0' },
 } as const;
 
 const INK = MO_PALETTE.ink;
@@ -408,6 +410,36 @@ function drawWhirlArc(c: Ctx, frame: number) {
   line(c, '#f0d8ff', 3.4, 0.75);
 }
 
+// A spore pod: it can be shot, so it looks like something alive, small and grumpy. (0, 0) is its middle.
+function drawPod(c: Ctx) {
+  const { out, deep, mid, lit, hi } = MO_PALETTE.acid;
+  blob(c, 0, 0, 15, seeded(7), 14, 0.14);
+  c.fillStyle = radial(c, 0, 0, 18, [hi, lit, mid, deep], -5, -6);
+  c.fill();
+  line(c, out, 2.6);
+  for (const [x, y, r] of [
+    [-7, 7, 2.2],
+    [8, 5, 1.8],
+    [8, -8, 1.6],
+  ] as const) {
+    circle(c, x, y, r);
+    c.fillStyle = deep;
+    c.fill();
+  }
+  for (const side of [-1, 1]) {
+    ellipse(c, side * 5, -2, 2, 2.6);
+    c.fillStyle = INK;
+    c.fill();
+    c.beginPath();
+    c.moveTo(side * 9, -7);
+    c.lineTo(side * 2, -5);
+    line(c, INK, 1.8);
+  }
+  c.beginPath();
+  c.arc(0, 8, 3.4, 1.15 * Math.PI, 1.85 * Math.PI);
+  line(c, INK, 1.8);
+}
+
 export function bakeMoParts(scene: Scene) {
   MO_PALETTE.caps.forEach((p, i) => {
     bake(scene, `mo-cap-${i}`, 224, 124, 112, 72, (c) => drawCap(c, p));
@@ -424,4 +456,6 @@ export function bakeMoParts(scene: Scene) {
   }
   bake(scene, 'mo-pool', 240, 40, 120, 20, (c) => glow(c, 0, 0, 118, '#ffffff', 1, 19), SOFT);
   bake(scene, 'mo-shadow', 200, 30, 100, 15, (c) => glow(c, 0, 0, 98, INK, 0.75, 14), SOFT);
+  bake(scene, 'spore-pod', 40, 40, 20, 20, drawPod);
+  bake(scene, 'spore-halo', 64, 64, 32, 32, (c) => glow(c, 0, 0, 31, MO_PALETTE.acid.lit, 0.55), SOFT);
 }

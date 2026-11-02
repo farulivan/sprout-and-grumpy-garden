@@ -70,7 +70,7 @@ export class StageScene extends Scene {
     const stage = this.app.level as Stage; // this scene is only ever run for a stage
     this.fx = new Fx(this, DEPTH.particles, DEPTH.flash);
     this.world = this.views.stageWorld(this, stage, DEPTH);
-    this.enemies = new EnemyViews(this, DEPTH.enemies, DEPTH.marks);
+    this.enemies = new EnemyViews(this, DEPTH.enemies, DEPTH.marks, this.fx);
     this.bouncers = new BouncerViews(this, DEPTH.enemies);
     this.pickups = new StagePickupViews(this, DEPTH.pickups, this.fx);
     this.player = new PlayerView(this, DEPTH.player, this.fx);

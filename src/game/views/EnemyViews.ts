@@ -3,9 +3,10 @@
 // rumbles in its mound, snaps up chomping and ducks back down. Every hit flashes white. Their parts are baked
 // in enemies/art.ts; the "!" is the same badge the boss's hazards use. The Mushroom Wood's four (a Capling, a
 // Burr, a Dropcap and a Toadlet) and the bounce pad have theirs in wood/enemyArt.ts.
-import { TintModes, type GameObjects, type Scene } from 'phaser';
-import { GROUND } from '../../config';
-import { lerp } from '../../sim/math';
+import { BlendModes, TintModes, type GameObjects, type Scene } from 'phaser';
+import { GROUND, UP } from '../../config';
+import type { Burst } from '../../presentation';
+import { clamp, lerp } from '../../sim/math';
 import type { Bouncer } from '../../sim/bouncer';
 import { BURR_WARN, type Burr } from '../../sim/stage/enemies/burr';
 import { DROP_WARN, type Dropcap } from '../../sim/stage/enemies/dropcap';
@@ -13,15 +14,39 @@ import type { Enemy } from '../../sim/stage/enemies/enemy';
 import { PEA_WARN, type PeaPod } from '../../sim/stage/enemies/peaPod';
 import { SNAP_DOWN, SNAP_UP, SNAP_WARN, type Snapper } from '../../sim/stage/enemies/snapper';
 import type { Toadlet } from '../../sim/stage/enemies/toadlet';
-import { INV, part, show } from '../art/bake';
+import { INV, part, show, unit } from '../art/bake';
 import { easeOutBack } from '../motion';
+import type { FxTarget } from '../presenter';
 import { faceKey } from './faces';
 import { showMark } from './marks';
+import type { AcidTrail } from './mo/smoke';
 import { ViewPool, type PooledView } from './pool';
 
 export { bakeEnemies } from './enemies/art';
 
 const NOBODY: readonly Enemy[] = [];
+// what comes up with something arriving: soil, and a few specks of his poison
+const ARRIVAL_SOIL: Burst = {
+  n: 8,
+  shape: 'clod',
+  colors: ['#3d2f5c', '#5a4a70', '#2b2342'],
+  speed: 230,
+  size: 4,
+  life: 0.6,
+  gravity: 800,
+  dir: UP,
+  spread: 1.8,
+};
+const ARRIVAL_SPECKS: Burst = {
+  n: 5,
+  shape: 'soft',
+  color: '#b6e84c',
+  speed: 110,
+  size: 3.4,
+  life: 0.5,
+  gravity: -40,
+  glow: true,
+};
 const SNAP_HEAD = 1.25; // the Snapper's head is drawn a size up, so its jaws read from across the screen
 
 interface EnemyView extends PooledView {
@@ -429,21 +454,91 @@ class ToadletView implements EnemyView {
   }
 }
 
-// One of Mo's bubbles of spores, wobbling as it drifts. A placeholder.
+// One of Mo's spore pods, grumpy and glowing, wobbling and leaning along its drift, leaving a little of his haze.
 class SporeView implements EnemyView {
+  private halo: GameObjects.Image;
   private body: GameObjects.Image;
+  private hazeT = 0;
 
-  constructor(scene: Scene, depth: number) {
-    this.body = part(scene, 'spore-bubble').setDepth(depth);
+  constructor(
+    scene: Scene,
+    depth: number,
+    private trail?: AcidTrail,
+  ) {
+    this.halo = part(scene, 'spore-halo')
+      .setBlendMode(BlendModes.ADD)
+      .setDepth(depth - 0.01);
+    this.body = part(scene, 'spore-pod').setDepth(depth);
   }
   setVisible(visible: boolean) {
+    this.halo.setVisible(visible);
     this.body.setVisible(visible);
   }
-  sync(e: Enemy, alpha: number) {
-    const wobble = Math.sin(e.t * 5) * 0.06;
+  sync(e: Enemy, alpha: number, dt: number) {
+    const x = lerp(e.px, e.x, alpha),
+      y = lerp(e.py, e.y, alpha),
+      wobble = Math.sin(e.t * 5) * 0.06;
     this.body
-      .setPosition(lerp(e.px, e.x, alpha), lerp(e.py, e.y, alpha))
-      .setScale(INV * (1 + wobble), INV * (1 - wobble));
+      .setPosition(x, y)
+      .setScale(INV * (1 + wobble), INV * (1 - wobble))
+      .setRotation(clamp((e.x - e.px) * 0.25, -0.3, 0.3));
+    this.halo
+      .setPosition(x, y)
+      .setScale(unit('spore-halo') * (1 + Math.sin(e.t * 3.4) * 0.1))
+      .setAlpha(0.8 + Math.sin(e.t * 3.4) * 0.2);
+    this.hazeT -= dt;
+    if (this.hazeT <= 0) {
+      this.hazeT = 0.25;
+      this.trail?.drop(x, y, 0.42);
+    }
+  }
+}
+
+// Something coming up where the "!" stands: on the ground, an orange ring and a trembling mound of soil too.
+class ArrivalView implements PooledView {
+  private mark: GameObjects.Image;
+  private spot: GameObjects.Image;
+  private mound: GameObjects.Image;
+  private shown = false;
+  private x = 0;
+  private y = 0;
+  private grounded = false;
+
+  constructor(
+    scene: Scene,
+    depth: number,
+    markDepth: number,
+    private fx?: FxTarget,
+  ) {
+    this.mark = part(scene, 'warn-mark').setDepth(markDepth);
+    this.spot = part(scene, 'toadlet-spot').setDepth(depth - 0.02);
+    this.mound = part(scene, 'dirt-mound').setDepth(depth - 0.01);
+  }
+  setVisible(visible: boolean) {
+    this.mark.setVisible(visible);
+    this.spot.setVisible(visible);
+    this.mound.setVisible(visible);
+    // it has come up
+    if (!visible && this.shown && this.grounded) {
+      this.fx?.burst(this.x, this.y, ARRIVAL_SOIL);
+      this.fx?.burst(this.x, this.y - 10, ARRIVAL_SPECKS);
+    }
+    this.shown = visible;
+  }
+  sync(e: Enemy) {
+    const k = 1 - e.entering;
+    this.x = e.x;
+    this.y = e.y;
+    this.grounded = e.y >= GROUND - 1;
+    showMark(this.mark, e.x, Math.min(e.y, GROUND - 40) - (this.grounded ? 22 : 0), k);
+    this.spot
+      .setVisible(this.grounded)
+      .setPosition(e.x, e.y + 1)
+      .setScale(INV * 1.3);
+    this.mound
+      .setVisible(this.grounded)
+      .setPosition(e.x + Math.sin(e.t * 34) * 1.4, e.y + 3)
+      .setScale(INV * (0.3 + k * 0.2), INV * (0.25 + k * 0.3));
   }
 }
 
@@ -487,12 +582,12 @@ export class BouncerViews {
 export class EnemyViews {
   private pool: ViewPool<Enemy, EnemyView>;
   // a later wave's plants aren't there yet: an orange "!" stands where each one will come up
-  private arrivals: ViewPool<Enemy, GameObjects.Image>;
+  private arrivals: ViewPool<Enemy, ArrivalView>;
 
-  constructor(scene: Scene, depth: number, markDepth: number) {
+  constructor(scene: Scene, depth: number, markDepth: number, fx?: FxTarget, trail?: AcidTrail) {
     this.arrivals = new ViewPool(
       () => 'arrival',
-      () => part(scene, 'warn-mark').setDepth(markDepth),
+      () => new ArrivalView(scene, depth, markDepth, fx),
     );
     this.pool = new ViewPool(
       (e) => e.kind,
@@ -515,7 +610,7 @@ export class EnemyViews {
           case 'toadlet':
             return new ToadletView(scene, depth);
           case 'spore':
-            return new SporeView(scene, depth);
+            return new SporeView(scene, depth, trail);
         }
       },
     );
@@ -526,8 +621,6 @@ export class EnemyViews {
     this.pool.sync(arriving ? enemies.filter((e) => e.entering <= 0) : enemies, (e, view) =>
       view.sync(e, alpha, dt),
     );
-    this.arrivals.sync(arriving ? enemies.filter((e) => e.entering > 0) : NOBODY, (e, mark) =>
-      showMark(mark, e.x, Math.min(e.y, GROUND - 40), 1 - e.entering),
-    );
+    this.arrivals.sync(arriving ? enemies.filter((e) => e.entering > 0) : NOBODY, (e, view) => view.sync(e));
   }
 }

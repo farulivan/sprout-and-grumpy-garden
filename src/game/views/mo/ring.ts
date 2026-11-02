@@ -16,7 +16,7 @@ import type { AcidTrail } from './smoke';
 
 const INK = MO_PALETTE.ink;
 const GAS = MO_PALETTE.gas;
-const ACID = { deep: '#2b9440', mid: '#6cc638', lit: '#b6e84c', hi: '#ecfca0' };
+const ACID = MO_PALETTE.acid;
 const TOP = 118; // how high the column's art goes; it meets the top of what hurts (y 110) under its plume
 const JET_H = 300; // the column's art repeats every this many pixels as it scrolls up
 const JET_W = 72;

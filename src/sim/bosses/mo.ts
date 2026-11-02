@@ -349,9 +349,11 @@ export class Mo extends Boss {
     this.open = false;
     this.spinning = true;
     this.spinSpeed = SPIN_SPEED * this.speedMul;
+    f.emit({ type: 'whirl', x: this.x, wall: false });
     for (const to of [first, second]) {
       this.spinTo = to;
       yield Math.abs(to - this.x) / this.spinSpeed + 0.12;
+      f.emit({ type: 'whirl', x: this.x, wall: true });
     }
     this.spinning = false;
     this.x = clamp(this.x, MO_LEFT, MO_RIGHT);

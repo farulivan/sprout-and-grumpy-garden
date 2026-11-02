@@ -65,7 +65,7 @@ export class FightScene extends Scene {
     this.trail = this.views.trail?.(this, DEPTH.boss - 0.12, DEPTH.ground + 0.02); // smoke goes behind him: he stays the boldest thing there
     this.hazards = new HazardViews(this, DEPTH.hazards, DEPTH.marks, this.fx, this.trail);
     this.pickups = new PickupViews(this, DEPTH.pickups, this.fx);
-    this.enemies = new EnemyViews(this, DEPTH.enemies, DEPTH.marks);
+    this.enemies = new EnemyViews(this, DEPTH.enemies, DEPTH.marks, this.fx, this.trail);
     this.bouncers = new BouncerViews(this, DEPTH.enemies);
     this.player = new PlayerView(this, DEPTH.player, this.fx);
     this.projectiles = new ProjectileViews(this, DEPTH.projectiles);
@@ -90,7 +90,7 @@ export class FightScene extends Scene {
     if (!(fight instanceof Fight)) return; // a stage is being played: its own scene draws it
 
     this.world.sync(dt, fight, alpha);
-    this.boss ??= BOSS_VIEWS[fight.boss.id].create(this, DEPTH.boss, this.fx);
+    this.boss ??= BOSS_VIEWS[fight.boss.id].create(this, DEPTH.boss, this.fx, this.trail);
     this.boss.sync(fight, alpha, dt);
     this.hazards.sync(fight.hazards, alpha, dt);
     this.trail?.update(dt * fight.timeScale);

@@ -3,6 +3,7 @@ import type { Scene } from 'phaser';
 import type { BossId } from '../../sim/bosses';
 import type { Fight } from '../../sim/fight';
 import type { FxTarget } from '../presenter';
+import type { AcidTrail } from './mo/smoke';
 import { MoView } from './MoView';
 import { bakeSunny, SunnyView } from './SunnyView';
 
@@ -14,8 +15,11 @@ export interface BossView {
 export const BOSS_VIEWS: Record<
   BossId,
   // bake: as the game starts. A boss with none has his parts baked with his chapter's (see chapterViews.ts).
-  { bake?(scene: Scene): void; create(scene: Scene, depth: number, fx: FxTarget): BossView }
+  {
+    bake?(scene: Scene): void;
+    create(scene: Scene, depth: number, fx: FxTarget, trail?: AcidTrail): BossView;
+  }
 > = {
   sunny: { bake: bakeSunny, create: (scene, depth, fx) => new SunnyView(scene, depth, fx) },
-  mo: { create: (scene, depth, fx) => new MoView(scene, depth, fx) },
+  mo: { create: (scene, depth, fx, trail) => new MoView(scene, depth, fx, trail!) },
 };

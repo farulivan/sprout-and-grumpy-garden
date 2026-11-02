@@ -8,6 +8,7 @@ import { Fight } from '../../src/sim/fight';
 import { AcidSmoke } from '../../src/sim/hazards';
 import { NO_INPUT, type InputFrame } from '../../src/sim/input';
 import { Projectile } from '../../src/sim/projectile';
+import { SporeBubble } from '../../src/sim/stage/enemies/spore';
 
 const ATTACKS = ['bigHop', 'fairyRing', 'sporePuffs', 'sproutCaplings', 'capSpin'];
 
@@ -232,6 +233,16 @@ describe("Mo's attacks", () => {
     expect(box.x + box.w / 2).toBeCloseTo(smoke.x);
   });
 
+  it('says when a Cap Spin starts and when it turns at each wall', () => {
+    const { fight, mo } = fightMo();
+    fight.player.x = fight.player.px = 300;
+    fight.player.inv = 999;
+    mo.phase = 3;
+    mo.startAttack('capSpin');
+    const whirls = run(fight, 6).filter((e) => e.type === 'whirl');
+    expect(whirls.map((e) => e.wall)).toEqual([false, true, true]);
+  });
+
   it('says when the Fairy Ring sets off, warns and erupts, and hurts from the frame it says it erupts', () => {
     const { fight, mo } = fightMo();
     fight.player.x = fight.player.px = 300;
@@ -283,7 +294,18 @@ describe("Mo's attacks", () => {
     expect(fight.enemies.filter((e) => e.kind === 'capling').length).toBe(0);
   });
 
-  it('pops spore bubbles on a seed or on Pip', () => {
+  it('lets a spore pod burst by itself if nothing pops it', () => {
+    const { fight, mo } = fightMo();
+    fight.player.x = fight.player.px = 100;
+    fight.player.inv = 999;
+    mo.state = 'paused';
+    fight.addEnemy(new SporeBubble(900, 100, 1));
+    const bursts = run(fight, 8).filter((e) => e.type === 'enemyBurst');
+    expect(bursts.map((e) => e.kind)).toEqual(['spore']);
+    expect(fight.enemies).toEqual([]);
+  });
+
+  it('pops spore pods on a seed or on Pip', () => {
     const { fight, mo } = fightMo();
     fight.player.x = fight.player.px = 300;
     mo.startAttack('sporePuffs');

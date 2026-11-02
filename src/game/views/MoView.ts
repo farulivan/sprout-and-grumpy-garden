@@ -3,7 +3,7 @@
 // here is acting. He is a sulking kid in a hood at rest and an outburst when he attacks, and most of who he is comes
 // from how different the two look. Everything big has an anticipation, an action and a settle.
 import { BlendModes, TintModes, type GameObjects, type Scene } from 'phaser';
-import { GROUND, STEP, UP } from '../../config';
+import { GROUND, STEP, TAU, UP } from '../../config';
 import { DUST } from '../../presentation';
 import { CAP_HIGH, CAP_LOW, MID, type Mo } from '../../sim/bosses/mo';
 import type { Fight } from '../../sim/fight';
@@ -13,7 +13,7 @@ import { rand } from '../motion';
 import type { FxTarget } from '../presenter';
 import type { BossView } from './bossViews';
 import { showMark } from './marks';
-import { MO_PALETTE } from './mo/art';
+import { MO_PALETTE, WHIRL_FRAMES } from './mo/art';
 import {
   EYE_X,
   EYE_Y,
@@ -25,6 +25,7 @@ import {
   pupilSize,
   type MoFace,
 } from './mo/face';
+import type { AcidTrail } from './mo/smoke';
 
 const MARKS = 6.5; // the depth of warnings: in front of Pip, so they can't hide behind him
 const STALK_POINTS = 10;
@@ -35,6 +36,10 @@ const CAP_FADE = 0.5; // seconds his cap takes to turn a new colour
 const LANDED = 0.25; // seconds he looks winded after coming down
 const RAGE = 1.3; // seconds of tantrum at each new phase
 const CROUCH = 0.18; // over the last of a Big Hop's warning, he crouches
+const WHIRL_FPS = 30;
+const WHIRL_SCALE = 0.85; // keeps its top close to the simulation's whirl, and low enough for a held jump to clear
+const WHIRL_LEAN = 0.1; // he leans into the way he is going
+const WHIRL_HAZE = 30; // he leaves a puff of haze every this many pixels
 // What his arms are doing, as an angle for one side; the other side mirrors it.
 const ARMS = { droop: 1.05, up: -1, out: -0.25, flail: -1.35 } as const;
 type Arms = keyof typeof ARMS;
@@ -54,10 +59,14 @@ export class MoView implements BossView {
   private capWas: GameObjects.Image; // the colour he is turning from, under the new one
   private cap: GameObjects.Image;
   private capGlow: GameObjects.Image;
+  private whirl: GameObjects.Image;
+  private arcs: GameObjects.Image[];
+  private stars: GameObjects.Image[];
+  private body: GameObjects.Container; // all but the whirl he turns into
   private ring: GameObjects.Image;
   private ringMark: GameObjects.Image;
   private mark: GameObjects.Image;
-  private units: { glow: number; pool: number; shadow: number };
+  private units: { glow: number; pool: number; shadow: number; arc: number };
 
   private seen: Mo | null = null;
   private clock = 0; // keeps going when the fight is in slow motion
@@ -83,13 +92,25 @@ export class MoView implements BossView {
   private prevPhase = 1;
   private sighT = 4 + Math.random() * 2;
   private sigh = 0;
+  private lastX = 0; // where the simulation last had him
+  private slide = 0; // he has come off a wall: how far he has yet to stagger
+  private hazeX = 0; // where he last left a puff of haze
+  private dustT = 0;
+  private sparkT = 0;
+  private sparkSide = 1;
 
   constructor(
     scene: Scene,
     depth: number,
     private fx: FxTarget,
+    private trail: AcidTrail,
   ) {
-    this.units = { glow: unit('mo-cap-glow-0'), pool: unit('mo-pool'), shadow: unit('mo-shadow') };
+    this.units = {
+      glow: unit('mo-cap-glow-0'),
+      pool: unit('mo-pool'),
+      shadow: unit('mo-shadow'),
+      arc: unit('mo-whirl-arc-0'),
+    };
     this.shadow = part(scene, 'mo-shadow').setDepth(depth - 0.04);
     this.ring = part(scene, 'toadlet-spot')
       .setDepth(depth - 0.03)
@@ -108,21 +129,32 @@ export class MoView implements BossView {
     this.capWas = part(scene, 'mo-cap-0').setVisible(false);
     this.cap = part(scene, 'mo-cap-0');
     this.capGlow = part(scene, 'mo-cap-glow-0').setBlendMode(BlendModes.ADD);
-    this.rig = scene.add
-      .container(0, 0, [
-        this.gills,
-        this.stalk.rope,
-        this.foot,
-        this.skirt,
-        ...this.arms,
-        this.eyes,
-        ...this.pupils,
-        this.face,
-        this.capWas,
-        this.cap,
-        this.capGlow,
-      ])
-      .setDepth(depth);
+    this.whirl = part(scene, 'mo-whirl-0')
+      .setScale(INV * WHIRL_SCALE)
+      .setVisible(false);
+    this.arcs = [0, 1, 2].map(() =>
+      part(scene, 'mo-whirl-arc-0').setBlendMode(BlendModes.ADD).setVisible(false),
+    );
+    this.stars = [0, 1, 2].map(() =>
+      part(scene, 'burr-star')
+        .setScale(INV * 1.5)
+        .setDepth(depth + 0.01)
+        .setVisible(false),
+    );
+    this.body = scene.add.container(0, 0, [
+      this.gills,
+      this.stalk.rope,
+      this.foot,
+      this.skirt,
+      ...this.arms,
+      this.eyes,
+      ...this.pupils,
+      this.face,
+      this.capWas,
+      this.cap,
+      this.capGlow,
+    ]);
+    this.rig = scene.add.container(0, 0, [this.body, this.whirl, ...this.arcs]).setDepth(depth);
     this.mark = part(scene, 'warn-mark').setDepth(MARKS).setVisible(false);
     this.ringMark = part(scene, 'warn-mark').setDepth(MARKS).setVisible(false);
   }
@@ -132,14 +164,19 @@ export class MoView implements BossView {
       p = fight.player;
     if (b !== this.seen) this.reset(b); // a new fight
     this.clock += dt;
-    const x = lerp(b.px, b.x, alpha),
+    // Coming off a wall after a spin, the simulation puts him back in his range at once: he staggers there instead.
+    const jumped = Math.abs(b.x - this.lastX) > 40;
+    if (jumped) this.slide += this.lastX - b.x;
+    this.lastX = b.x;
+    this.slide *= Math.exp(-dt * 9);
+    const x = (jumped ? b.x : lerp(b.px, b.x, alpha)) + this.slide,
       feet = lerp(b.py, b.y, alpha) + MID,
       t = b.t,
       clock = this.clock,
       phase = Math.min(b.phase, 3) - 1,
       roaring = b.state === 'intro' && b.introT >= 0.9,
       asleep = b.state === 'sleep' || (b.state === 'intro' && !roaring),
-      vx = (b.x - b.px) / STEP,
+      vx = jumped ? 0 : (b.x - b.px) / STEP,
       vy = (b.y - b.py) / STEP;
 
     // ---- reactions the simulation doesn't model ----
@@ -221,6 +258,10 @@ export class MoView implements BossView {
         Math.sin(this.sigh * Math.PI) * 4,
       faceH = capH - lerp(46, 63, rear);
 
+    if (b.spinning) this.spin(x, dt, vx);
+    else if (this.whirl.visible) this.stopSpin();
+    this.syncDizzy(b, x, feet, capH, faceH, t, dt);
+
     // ---- all of him ----
     const tremble =
         this.rage * 3 + (roaring ? 3 : 0) + (b.alive && b.state === 'fight' && phase === 2 ? 0.6 : 0),
@@ -228,7 +269,11 @@ export class MoView implements BossView {
     this.rig
       .setPosition(x + rand(-tremble, tremble), feet - hop + rand(-tremble, tremble))
       .setScale(1 + sq * 0.42, 1)
-      .setRotation((b.dizzy > 0 ? 0.05 + Math.sin(t * 3.4) * 0.012 : 0) + this.lean * 0.004);
+      .setRotation(
+        b.spinning
+          ? Math.sign(vx) * WHIRL_LEAN
+          : (b.dizzy > 0 ? 0.05 + Math.sin(t * 3.4) * 0.012 : 0) + this.lean * 0.004,
+      );
 
     // the top of him: his cap takes the whole of a hit and his stalk's top half of it
     const lean = this.lean + this.kick,
@@ -352,9 +397,72 @@ export class MoView implements BossView {
     this.prevFlash = this.landedT = this.sigh = this.warnT = 0;
     this.prevPhase = b.phase;
     this.wasAir = false;
+    this.lastX = b.x;
+    this.slide = 0;
     this.set = Math.min(b.phase, 3) - 1;
     this.capFade = 1;
     this.armAngle = ARMS.droop;
+  }
+
+  // Not a cap sliding along but a spinning top, seen from the side: a flip-book, with arcs of air round it.
+  private spin(x: number, dt: number, vx: number) {
+    if (!this.whirl.visible) {
+      this.body.setVisible(false);
+      this.whirl.setVisible(true);
+      this.hazeX = x;
+      for (const arc of this.arcs) arc.setVisible(true);
+    }
+    const frame = Math.floor(this.clock * WHIRL_FPS) % WHIRL_FRAMES;
+    show(this.whirl, `mo-whirl-${frame}`);
+    this.arcs.forEach((arc, i) => {
+      show(arc, `mo-whirl-arc-${(frame + i * 2) % WHIRL_FRAMES}`);
+      arc
+        .setPosition(0, (-96 + i * 38) * WHIRL_SCALE)
+        .setScale(((112 - i * 8) / 112) * this.units.arc * WHIRL_SCALE, this.units.arc * WHIRL_SCALE);
+    });
+    if (Math.abs(x - this.hazeX) >= WHIRL_HAZE) {
+      this.hazeX = x;
+      this.trail.drop(x - Math.sign(vx) * 40, GROUND - 16);
+    }
+    this.dustT -= dt;
+    if (this.dustT <= 0) {
+      this.dustT = 0.05;
+      this.fx.burst(x, GROUND, { ...DUST, n: 1, speed: 90 });
+    }
+  }
+
+  private stopSpin() {
+    this.whirl.setVisible(false);
+    for (const arc of this.arcs) arc.setVisible(false);
+    this.body.setVisible(true);
+  }
+
+  // The fight's big opening: stars round his cap, and two sparkles beside his face to say "hit me" without a word.
+  private syncDizzy(b: Mo, x: number, feet: number, capH: number, faceH: number, t: number, dt: number) {
+    const dizzy = b.dizzy > 0;
+    this.stars.forEach((star, i) => {
+      star.setVisible(dizzy);
+      if (dizzy) {
+        const a = t * 5 + (i * TAU) / 3;
+        star.setPosition(x + Math.cos(a) * 92, feet - capH - 96 + Math.sin(a) * 15).setRotation(a);
+      }
+    });
+    if (!dizzy) return;
+    this.sparkT -= dt;
+    if (this.sparkT <= 0) {
+      this.sparkT = 0.32;
+      this.sparkSide = -this.sparkSide;
+      this.fx.burst(x + this.sparkSide * 60, feet - faceH - 6, {
+        n: 1,
+        shape: 'star',
+        color: '#fff6b8',
+        speed: 6,
+        size: 9,
+        life: 0.42,
+        gravity: 0,
+        glow: true,
+      });
+    }
   }
 
   // How he throws his arms about when he is up to something, by how cross he is.

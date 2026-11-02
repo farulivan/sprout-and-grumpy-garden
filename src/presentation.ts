@@ -149,6 +149,31 @@ function bounce(p: Presenter, x: number, y: number) {
   });
 }
 
+// A spore pod popping, on a seed or on Pip: it's only his poison, so no cheer, and no petals.
+function popPod(p: Presenter, x: number, y: number) {
+  p.sfx('petal');
+  p.burst(x, y, {
+    n: 6,
+    shape: 'puff',
+    colors: ['#6cc638', '#8fd832', '#3f9a3c'],
+    speed: 90,
+    size: 7,
+    life: 0.5,
+    gravity: -30,
+    alpha: 0.85,
+    drag: 0.7,
+  });
+  p.burst(x, y, {
+    n: 5,
+    shape: 'circle',
+    colors: ['#8fd832', '#e6fb86'],
+    speed: 190,
+    size: 3.4,
+    life: 0.45,
+    gravity: 500,
+  });
+}
+
 // What an event means can depend on who is playing it: a touch screen, and the chapter being played.
 export interface PresentOptions {
   touch: boolean;
@@ -429,6 +454,10 @@ export function present(e: SimEvent, p: Presenter, opts: PresentOptions) {
       });
       break;
     case 'enemyCheered':
+      if (e.kind === 'spore') {
+        popPod(p, e.x, e.y);
+        break;
+      }
       // out of its mood: a cheer, a shower of petals and sparkles, and the stage holds still for a beat
       p.sfx('cheer');
       p.hitStop(0.04);
@@ -454,6 +483,10 @@ export function present(e: SimEvent, p: Presenter, opts: PresentOptions) {
       });
       break;
     case 'enemyBurst':
+      if (e.kind === 'spore') {
+        popPod(p, e.x, e.y);
+        break;
+      }
       // a Puffball on Pip: not cheered up, so no cheer, and its seeds scatter
       p.sfx('petal');
       p.burst(e.x, e.y, {
@@ -588,6 +621,32 @@ export function present(e: SimEvent, p: Presenter, opts: PresentOptions) {
         });
         p.burst(e.x, e.y, { ...DUST, n: 8, speed: 140, color: '#3f9a3c' });
       } else p.burst(e.x, e.y, { ...DUST, n: 9, speed: 140, color: '#cfc6e6' });
+      break;
+    case 'whirl':
+      if (e.wall) {
+        p.shake(4);
+        p.burst(e.x, GROUND - 30, {
+          n: 7,
+          shape: 'spark',
+          color: '#f0d8ff',
+          speed: 320,
+          size: 5,
+          life: 0.3,
+          gravity: 0,
+          glow: true,
+        });
+        p.burst(e.x, GROUND - 4, {
+          n: 8,
+          shape: 'clod',
+          colors: ['#3d2f5c', '#5a4a70', '#2b2342'],
+          speed: 240,
+          size: 4,
+          life: 0.6,
+          gravity: 800,
+          dir: UP,
+          spread: 1.8,
+        });
+      }
       break;
     case 'ringSeek':
       break; // for now
