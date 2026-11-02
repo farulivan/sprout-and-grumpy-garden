@@ -49,7 +49,7 @@ export class BootScene extends Scene {
       bakeShared(this);
       bakeWorld(this);
       bakePlayer(this);
-      for (const boss of Object.values(BOSS_VIEWS)) boss.bake(this);
+      for (const boss of Object.values(BOSS_VIEWS)) boss.bake?.(this);
       bakeProjectiles(this);
       bakeHazards(this);
       bakePickups(this);

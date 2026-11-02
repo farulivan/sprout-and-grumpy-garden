@@ -29,7 +29,7 @@ interface EnemyView extends PooledView {
 }
 
 // The white flash over a set of parts while the enemy is still flinching from a hit.
-class Flash {
+export class Flash {
   private on = false;
   constructor(private parts: GameObjects.Image[]) {}
   sync(flash: number) {
