@@ -5,12 +5,37 @@ import { TAU } from '../../config';
 import { bake, HAZY, SOFT } from '../art/bake';
 import { circle, glow, heart, inside, leaf, line, linear, radial, roundRect } from '../art/draw';
 import { drawFace } from '../art/face';
+import { drawCap, MO_PALETTE, stalkPath, type CapColors } from '../views/mo/art';
+import { drawWholeFace, type MoFace } from '../views/mo/face';
 
 export const BAR_W = 380,
   BAR_H = 22;
 // The coloured bar inside the track.
 export const FILL_W = BAR_W - 5,
   FILL_H = BAR_H - 5;
+
+// Mo's portrait: what reads at this size is his cap, its spots and his eyes.
+function drawMoPortrait(c: CanvasRenderingContext2D, cap: CapColors, mood: MoFace) {
+  glow(c, 0, 3, 30, '#120826', 0.45);
+  c.save();
+  c.translate(0, 14);
+  c.scale(0.42, 0.42);
+  stalkPath(c, 20);
+  c.fillStyle = MO_PALETTE.stalk.lit;
+  c.fill();
+  line(c, MO_PALETTE.ink, 6);
+  c.restore();
+  c.save();
+  c.translate(0, 4);
+  c.scale(0.27, 0.27);
+  drawWholeFace(c, mood);
+  c.restore();
+  c.save();
+  c.translate(0, -6);
+  c.scale(0.29, 0.29);
+  drawCap(c, cap);
+  c.restore();
+}
 
 export function bakeHud(scene: Scene) {
   const heartShape = (c: CanvasRenderingContext2D) => heart(c, 0, 0, 12.5);
@@ -99,6 +124,12 @@ export function bakeHud(scene: Scene) {
       line(c, '#38200f', 2.6);
       drawFace(c, 0, 0.5, 0.52, mood);
     });
+
+  // His here, not with the rest of him: the HUD can show one before his chapter's art is baked
+  (['cross', 'cross', 'furious'] as const).forEach((mood, i) =>
+    bake(scene, `bar-icon-mo-${i}`, 64, 64, 32, 32, (c) => drawMoPortrait(c, MO_PALETTE.caps[i], mood)),
+  );
+  bake(scene, 'bar-icon-mo-joy', 64, 64, 32, 32, (c) => drawMoPortrait(c, MO_PALETTE.caps[3], 'joy'));
 
   // Pip's head, for the stage's path bar: how far along the path to the boss he is
   bake(scene, 'hud-pip', 44, 48, 22, 28, (c) => {

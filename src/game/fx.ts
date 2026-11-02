@@ -9,6 +9,7 @@ import { rand } from './motion';
 import {
   blob,
   circle,
+  ellipse,
   glow,
   heart,
   leaf,
@@ -64,6 +65,15 @@ const SHAPES: Record<ParticleShape, [w: number, h: number, draw: (c: Ctx) => voi
     (c) => {
       leaf(c, -13, 0, 26, 10, 0, 0.55, 0.6);
       c.fillStyle = radial(c, 2, 0, 16, ['#ffffff', '#d9d9d9'], -4, -3);
+      c.fill();
+    },
+  ],
+  spot: [
+    26,
+    20,
+    (c) => {
+      ellipse(c, 0, 0, 11, 8);
+      c.fillStyle = radial(c, 0, 0, 11, ['#ffffff', '#dcdcdc'], -3, -3);
       c.fill();
     },
   ],
@@ -230,7 +240,7 @@ export class Fx {
     const { n = 8, color = '#fff', colors, speed = 120, size = 4, life = 0.5, gravity = 300 } = b;
     const { shape = 'circle', spread = TAU, dir = 0, glow = false, alpha = 1, drag = 0, radius = 0 } = b;
     const key = `fx-${shape}`,
-      flutters = shape === 'leaf' || shape === 'petal' || shape === 'confetti',
+      flutters = shape === 'leaf' || shape === 'petal' || shape === 'spot' || shape === 'confetti',
       spare = glow ? this.spare.glow : this.spare.plain;
     for (let i = 0; i < n && this.particles.length < MAX_PARTICLES; i++) {
       const a = dir + (Math.random() - 0.5) * spread,

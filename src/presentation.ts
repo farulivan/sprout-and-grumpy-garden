@@ -45,6 +45,7 @@ export type ParticleShape =
   | 'soft' // a blurry dot
   | 'leaf'
   | 'petal'
+  | 'spot' // a pale oval off a mushroom's cap
   | 'heart'
   | 'star'
   | 'spark' // a streak, stretched along the way it flies
@@ -305,7 +306,7 @@ export function present(e: SimEvent, p: Presenter, opts: PresentOptions) {
         size: 8,
         life: 1.3,
         gravity: 260,
-        shape: 'petal',
+        shape: opts.chapter.shedShape,
         radius: 50,
       });
       p.burst(e.x, e.y, {
@@ -389,12 +390,12 @@ export function present(e: SimEvent, p: Presenter, opts: PresentOptions) {
       p.ring(e.x, e.y, { color: '#ffffff', from: 30, to: 260, life: 0.6 });
       p.burst(e.x, e.y, {
         n: 34,
-        colors: ['#ffd23f', '#ff8fb1', '#ffffff', '#ffb52e'],
+        colors: opts.chapter.cheeredColors,
         speed: 340,
         size: 8,
         life: 1.6,
         gravity: 200,
-        shape: 'petal',
+        shape: opts.chapter.shedShape,
         radius: 40,
       });
       p.burst(e.x, e.y, {
