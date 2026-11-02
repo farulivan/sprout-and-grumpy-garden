@@ -11,6 +11,8 @@ import { HazardViews } from '../views/HazardViews';
 import { PickupViews } from '../views/PickupViews';
 import { PlayerView } from '../views/PlayerView';
 import { ProjectileViews } from '../views/ProjectileViews';
+import { Ground } from '../views/world/ground';
+import { Land } from '../views/world/land';
 import { WorldView } from '../views/WorldView';
 
 // Back to front.
@@ -51,7 +53,10 @@ export class FightScene extends Scene {
   create() {
     fitCamera(this);
     this.fx = new Fx(this, DEPTH.particles, DEPTH.flash);
-    this.world = new WorldView(this, DEPTH);
+    this.world = new WorldView(this, DEPTH, {
+      land: (scene, layer) => new Land(scene, layer),
+      ground: (scene, depth) => new Ground(scene, depth),
+    });
     this.hazards = new HazardViews(this, DEPTH.hazards, DEPTH.marks, this.fx);
     this.pickups = new PickupViews(this, DEPTH.pickups, this.fx);
     this.player = new PlayerView(this, DEPTH.player, this.fx);
