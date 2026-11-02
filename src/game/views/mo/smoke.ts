@@ -132,8 +132,8 @@ const MID: readonly Piece[] = [
   [40, -15, 18, 15, 0.9],
 ];
 const BODY: readonly Piece[] = [
-  [-58, -9, 28, 12, 0.72],
-  [-30, -13, 28, 16, 0.92],
+  [-58, -9, 28, 12, 0.34], // its tail thins out: it doesn't hurt back there, so it mustn't look solid
+  [-30, -13, 28, 16, 0.66],
   [-2, -16, 28, 19, 1],
   [24, -14, 24, 17, 1],
   [44, -8, 15, 11, 1],
