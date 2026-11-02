@@ -555,16 +555,6 @@ function drawStump(c: Ctx) {
     c.fillStyle = i % 2 ? '#46b08a' : '#7fe0ac';
     c.fill();
   }
-  // a shelf fungus on its side
-  for (const [x, y] of [
-    [70, -112],
-    [70, -82],
-  ] as const) {
-    ellipse(c, x, y, 13, 6);
-    c.fillStyle = linear(c, 0, y - 6, 0, y + 6, ['#ffdf7a', '#c9782a']);
-    c.fill();
-    line(c, INK, 1.8);
-  }
 }
 
 // A wall of brambles rising from the ground, (0, 0) at the middle of its foot: thick stems woven together, in
