@@ -220,12 +220,12 @@ describe("Mo's attacks", () => {
     }
   });
 
-  it('hurts only in the body of the smoke, 72 wide and 36 tall, and not as it swells', () => {
+  it('hurts only in the body of the smoke, 56 wide and 36 tall, and not as it swells', () => {
     const smoke = new AcidSmoke(400, 1, 365, 0, 960);
     expect(smoke.shape()).toBeNull();
     smoke.update(0.11);
     const box = smoke.shape()!;
-    expect(box).toMatchObject({ w: 72, h: 36, y: GROUND - 36 });
+    expect(box).toMatchObject({ w: 56, h: 36, y: GROUND - 36 });
     expect(box.x + box.w / 2).toBeCloseTo(smoke.x);
   });
 

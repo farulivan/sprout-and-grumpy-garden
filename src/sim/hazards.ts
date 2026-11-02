@@ -151,7 +151,7 @@ export class PollenDrop implements Hazard {
 // Acid smoke rolling along the ground each way from where Mo lands. Jump it. It swells for a moment first.
 export class AcidSmoke implements Hazard {
   readonly kind = 'smoke';
-  readonly w = 80;
+  readonly w = 64;
   readonly h = 40;
   readonly y = GROUND - this.h;
   readonly py = this.y;
