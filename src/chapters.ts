@@ -31,6 +31,9 @@ export interface Chapter {
   readonly shed: readonly [string, string]; // what he sheds as he leaves phase 1, then phase 2
   readonly lose: { readonly stage: LoseText; readonly boss: LoseText };
   readonly win: WinText;
+  // The boss on the HUD: his bar's colour in each phase, and his portrait's baked parts (src/game/hud/art.ts).
+  readonly barColors: readonly [number, number, number];
+  readonly portrait: { readonly angry: string; readonly joy: string };
 }
 
 export const SUNFLOWER = {
@@ -58,6 +61,8 @@ export const SUNFLOWER = {
     },
   },
   win: { badge: '🌻', line: 'Sunny feels sunny again and the garden path is open. What a hero, Pip!' },
+  barColors: [0xffd23f, 0xffa42e, 0xff5f3c], // the bar heats up with him
+  portrait: { angry: 'bar-icon-sunny-angry', joy: 'bar-icon-sunny-joy' },
 } as const satisfies Chapter;
 
 export const CHAPTERS = [SUNFLOWER] as const satisfies readonly Chapter[];

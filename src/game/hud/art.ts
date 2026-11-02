@@ -1,5 +1,5 @@
-// The parts of the heads-up display: glossy hearts, the wooden frame of the boss's bar with Sunny's
-// portrait on the end, and the soft shapes that sit behind text so it reads against any sky.
+// The parts of the heads-up display: glossy hearts, the wooden frame of the boss's bar with his portrait on
+// the end, and the soft shapes that sit behind text so it reads against any sky.
 import type { Scene } from 'phaser';
 import { TAU } from '../../config';
 import { bake, HAZY, SOFT } from '../art/bake';
@@ -60,7 +60,7 @@ export function bakeHud(scene: Scene) {
     c.fillStyle = '#fff';
     c.fill();
   });
-  // What lies over the fill: a glassy shine, and notches where Sunny's phases change.
+  // What lies over the fill: a glassy shine, and notches where a boss's phases change.
   bake(scene, 'bar-gloss', BAR_W + 28, BAR_H + 30, 14, 12, (c) => {
     inside(
       c,
@@ -84,7 +84,7 @@ export function bakeHud(scene: Scene) {
   });
   // Sunny's portrait for the end of the bar: grumpy while the fight is on, beaming once he is cheered up
   for (const mood of ['angry', 'joy'] as const)
-    bake(scene, `bar-icon-${mood}`, 64, 64, 32, 32, (c) => {
+    bake(scene, `bar-icon-sunny-${mood}`, 64, 64, 32, 32, (c) => {
       glow(c, 0, 3, 30, '#1a0d05', 0.4);
       for (let i = 0; i < 12; i++) {
         const a = (i / 12) * TAU;
@@ -100,7 +100,7 @@ export function bakeHud(scene: Scene) {
       drawFace(c, 0, 0.5, 0.52, mood);
     });
 
-  // Pip's head, for the stage's path bar: how far along the path to Sunny he is
+  // Pip's head, for the stage's path bar: how far along the path to the boss he is
   bake(scene, 'hud-pip', 44, 48, 22, 28, (c) => {
     glow(c, 0, 4, 20, '#0d2a12', 0.4);
     for (const side of [-1, 1]) {

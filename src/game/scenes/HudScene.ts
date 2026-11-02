@@ -3,7 +3,7 @@
 // src/game/hud/art.ts.
 import { BlendModes, Scene, type GameObjects } from 'phaser';
 import type { App, Played } from '../../app';
-import { CHAPTERS } from '../../chapters';
+import { CHAPTERS, type Chapter } from '../../chapters';
 import { H, RES, TAU, W } from '../../config';
 import type { ToastTone } from '../../presentation';
 import { Fight } from '../../sim/fight';
@@ -32,7 +32,6 @@ const SEED_FLY = 0.4, // seconds each seed of a full set takes to fly to the hea
   SEED_STAGGER = 0.07; // ...one after another
 const BAR_X = W / 2 - BAR_W / 2 + 30,
   BAR_Y = 20;
-const PHASE_COLOR = [0xffd23f, 0xffa42e, 0xff5f3c]; // the bar heats up with Sunny
 // Every letter, digit and mark a toast might use.
 const WARM_UP = 'Sphinx of black quartz, judge my vow! SUPER +1 ↑ ⬆ 0123456789';
 const TONES: Record<ToastTone, { size: number; color: string; stroke: string }> = {
@@ -73,10 +72,11 @@ export class HudScene extends Scene {
   private hitFill!: Fill; // white: flashes over the bar when a hit lands
   private barIcon!: GameObjects.Image;
   private bossName!: GameObjects.Text;
-  // On a stage, instead of the boss's bar: the path to Sunny, Pip's head showing how far along it he is
+  // On a stage, instead of the boss's bar: the path to him, Pip's head showing how far along it he is
   private path!: GameObjects.Container;
   private pathFill!: Fill;
   private pathPip!: GameObjects.Image;
+  private pathBoss!: GameObjects.Image; // the boss, waiting at the end of the path
   private stageName!: GameObjects.Text;
   private seeds: { slot: GameObjects.Image; seed: GameObjects.Image; pop: number }[] = [];
   private seedCount = 0; // the golden seeds shown in their slots
@@ -122,6 +122,7 @@ export class HudScene extends Scene {
 
   create() {
     fitCamera(this);
+    const chapter = CHAPTERS[this.app.chapter];
     // resolution: text is drawn on its own canvas, which has to be as sharp as the zoomed camera
     const text = (size: number, weight: string, color: string, stroke: string, thickness: number) =>
       this.add.text(0, 0, '', {
@@ -158,7 +159,7 @@ export class HudScene extends Scene {
     this.lagFill = fill();
     this.hpFill = fill();
     this.hitFill = fill();
-    this.barIcon = part(this, 'bar-icon-angry', -18, BAR_H / 2);
+    this.barIcon = part(this, chapter.portrait.angry, -18, BAR_H / 2);
     this.bossName = shadowed(text(14, '600', '#ffffff', '#38200f', 4))
       .setOrigin(0, 0)
       .setPosition(16, BAR_H + 3);
@@ -171,6 +172,7 @@ export class HudScene extends Scene {
     ]);
     this.pathFill = fill();
     this.pathPip = part(this, 'hud-pip', FILL_X, BAR_H / 2);
+    this.pathBoss = part(this, chapter.portrait.angry, BAR_W + 18, BAR_H / 2);
     this.stageName = shadowed(text(14, '600', '#ffffff', '#1f6b2f', 4))
       .setOrigin(0, 0)
       .setPosition(16, BAR_H + 3);
@@ -180,7 +182,7 @@ export class HudScene extends Scene {
       this.pathFill.mid,
       this.pathFill.right,
       part(this, 'bar-gloss'),
-      part(this, 'bar-icon-angry', BAR_W + 18, BAR_H / 2), // Sunny, waiting at the end of the path
+      this.pathBoss,
       this.pathPip,
       this.stageName,
     ]);
@@ -216,7 +218,7 @@ export class HudScene extends Scene {
     // over a stage's name as it begins, which chapter it is: in the orange of the old title card's ribbon
     this.chapter = text(24, '700', '#ffffff', '#c4581a', 7)
       .setOrigin(0.5)
-      .setText(CHAPTERS[this.app.chapter].title)
+      .setText(chapter.title)
       .setVisible(false);
     this.go = shadowed(text(96, '700', '#fff7c2', '#e8641c', 14))
       .setOrigin(0.5)
@@ -261,6 +263,7 @@ export class HudScene extends Scene {
       return;
     }
     const dt = deltaMs / 1000,
+      chapter = CHAPTERS[this.app.chapter],
       p = level.player,
       fight = level instanceof Fight ? level : null,
       stage = level instanceof Stage ? level : null;
@@ -272,7 +275,8 @@ export class HudScene extends Scene {
       this.prevPhase = fight?.boss.phase ?? 1;
       this.iconPop = this.barShake = 0;
       this.ready.setText(stage ? stage.name : 'Ready?'); // these two are redrawn only when they change
-      this.chapter.setText(CHAPTERS[this.app.chapter].title);
+      this.chapter.setText(chapter.title);
+      show(this.pathBoss, chapter.portrait.angry);
     }
     // The result cards sit over the middle of the screen, and the boss's bar would poke out above them.
     const result = level.state === 'win' || level.state === 'lose';
@@ -288,7 +292,7 @@ export class HudScene extends Scene {
       this.livesText.setText(`×${Math.max(0, this.app.lives)}`); // redrawn only when it changes
     }
     this.bar.setVisible(!!fight);
-    if (fight) this.syncBar(dt, fight);
+    if (fight) this.syncBar(dt, fight, chapter);
     this.path.setVisible(!!stage);
     for (const s of this.seeds) s.slot.setVisible(!!stage);
     if (stage) this.syncPath(dt, stage);
@@ -410,7 +414,7 @@ export class HudScene extends Scene {
     this.seedCount = count;
   }
 
-  // Pip's head travels along the path to Sunny, and the golden seeds found sit in their slots, or fly up
+  // Pip's head travels along the path to the boss, and the golden seeds found sit in their slots, or fly up
   // into the hearts as a full set.
   private syncPath(dt: number, stage: Stage) {
     const k = stage.progress,
@@ -449,7 +453,7 @@ export class HudScene extends Scene {
     });
   }
 
-  private syncBar(dt: number, fight: Fight) {
+  private syncBar(dt: number, fight: Fight, chapter: Chapter) {
     const b = fight.boss,
       k = b.hp / b.maxHp;
     if (k < this.shown) {
@@ -468,14 +472,14 @@ export class HudScene extends Scene {
     this.iconPop = Math.max(0, this.iconPop - dt * 1.4);
 
     this.setFill(this.lagFill, this.lag, 0xfff3cf, 0.95);
-    this.setFill(this.hpFill, k, PHASE_COLOR[Math.min(b.phase, 3) - 1], 1);
+    this.setFill(this.hpFill, k, chapter.barColors[Math.min(b.phase, 3) - 1], 1);
     this.setFill(this.hitFill, k, 0xffffff, (b.flash / 0.12) * 0.6);
 
     this.bar.setPosition(
       BAR_X + (Math.random() - 0.5) * 5 * this.barShake,
       BAR_Y + (Math.random() - 0.5) * 3 * this.barShake,
     );
-    show(this.barIcon, b.alive ? 'bar-icon-angry' : 'bar-icon-joy');
+    show(this.barIcon, b.alive ? chapter.portrait.angry : chapter.portrait.joy);
     this.barIcon
       .setScale(INV * (1 + Math.sin(this.iconPop * Math.PI) * 0.5 + (b.alive ? 0 : 0.12)))
       .setRotation(
