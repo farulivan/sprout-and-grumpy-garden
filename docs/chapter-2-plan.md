@@ -193,6 +193,8 @@ Small commits, each one passing on its own. Each PR body gets its preview link o
 
 ### PR 5: Mo's look
 
+**Replaced by [`docs/chapter-2-boss-spec.md`](chapter-2-boss-spec.md), written after Farul played PR 4.** It drops the rain cloud for a Fairy Ring and the shockwaves for Acid Smoke. Where the two disagree, the spec wins. The original outline, for reference:
+
 - **New `src/game/views/mo/`:** art and face in layered parts, as `sunny/` does, with `MoView` doing the acting: squash and stretch on hops, the drooping sulk, rearing up, spin, dizzy stars, cap colour for each mood, and the happy ending.
 - **Arena:** his hollow's land and ground, and the `glow` ending.
 - **Attack art:** shockwaves, the gloom cloud and its rain, spore bubbles.
