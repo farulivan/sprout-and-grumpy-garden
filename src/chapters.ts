@@ -79,6 +79,7 @@ export const WOOD = {
   sign: 'Mushroom Wood',
   gate: "Mo's Hollow",
   stage: 'mushroomWood',
+  tunes: { stage: 'wood', boss: 'boss' },
   bounceHint: 'Bounce on it! Hold jump to go higher.',
   lose: {
     stage: {

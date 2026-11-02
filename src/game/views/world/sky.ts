@@ -1,6 +1,7 @@
 // The sky: one gradient per mood (cross-faded), the sun with its glow and turning rays, drifting clouds,
 // the storm clouds that roll in from above, and the rainbow that comes out when Sunny cheers up. At dawn,
-// the sun can be held down behind the hills (sync's rise).
+// the sun can be held down behind the hills (sync's rise). A sky for the night (nightSky) has no sun and no
+// white clouds, and a moon in its place, as bright as the mood says.
 import { BlendModes, type GameObjects, type Scene } from 'phaser';
 import { GROUND, H, TAU, W } from '../../../config';
 import { bake, HAZY, INV, part, show, SOFT, unit } from '../../art/bake';
@@ -48,6 +49,33 @@ const SKIES: Record<Mood, Stops> = {
     [0.6, '#b98bb8'],
     [0.8, '#ffad8c'],
     [1, '#ffe2a6'],
+  ],
+  dusk: [
+    [0, '#1f2259'],
+    [0.32, '#403a82'],
+    [0.58, '#8a5a96'],
+    [0.8, '#e08a84'],
+    [1, '#ffc58a'],
+  ],
+  gloom: [
+    [0, '#0d1138'],
+    [0.38, '#1c2058'],
+    [0.66, '#3a3274'],
+    [0.88, '#674a86'],
+    [1, '#8a5c8c'],
+  ],
+  tantrum: [
+    [0, '#120a30'],
+    [0.4, '#2c1458'],
+    [0.7, '#5a2078'],
+    [1, '#a0347c'],
+  ],
+  glow: [
+    [0, '#1a2a78'],
+    [0.4, '#3a4cac'],
+    [0.7, '#7a6ccc'],
+    [0.9, '#c89ad8'],
+    [1, '#ffd9c2'],
   ],
 };
 
@@ -273,6 +301,7 @@ export class Sky {
   private clouds: Cloud[];
   private ceiling: GameObjects.Image[];
   private drift = 0;
+  private moon: GameObjects.Image | null = null;
 
   constructor(
     scene: Scene,
@@ -322,6 +351,23 @@ export class Sky {
     ]);
   }
 
+  // A sky for the night: no sun and no white clouds, and a moon in their place, a part the level has baked
+  // ('moon'). The storm clouds can still roll in.
+  nightSky(scene: Scene) {
+    const hidden = [
+      this.glow,
+      this.rays,
+      this.rays2,
+      this.disc,
+      this.face,
+      ...this.wisps,
+      ...this.clouds.map((c) => c.image),
+    ];
+    for (const image of hidden) image.setVisible(false);
+    this.moon = part(scene, 'moon');
+    this.behindSun([this.moon]);
+  }
+
   // Show these between the sky's colours and the sun: the stars of the dawn, say.
   behindSun(objects: GameObjects.GameObject[]) {
     this.layer.addAt(objects, MOODS.length);
@@ -344,6 +390,15 @@ export class Sky {
       this.skies[MOODS[i]].setAlpha(alpha).setVisible(!hidden && (i === 0 || alpha > faint));
       if (alpha >= solid) hidden = true;
       below -= w;
+    }
+
+    if (this.moon) {
+      // it has no sun to answer to, and only the storm clouds to duck behind
+      this.moon
+        .setPosition(SUN.x + 36 + pan * 15, SUN.y + 34 - look.moon * 26 - look.ceiling * 64)
+        .setAlpha(0.4 + 0.6 * Math.min(1, look.moon));
+      this.syncCeiling(t, look, pan);
+      return;
     }
 
     this.wisps.forEach((w, i) =>
@@ -382,7 +437,11 @@ export class Sky {
     show(this.face, faceKey('sun', sunMood, blink));
     this.face.setPosition(sx, this.disc.y + 3).setAlpha(0.45 + 0.55 * Math.min(1, sun));
     this.rainbow.setX(430 + pan * 13).setAlpha(look.rainbow * 0.85);
+    this.syncClouds(t, dt, look, pan);
+    this.syncCeiling(t, look, pan);
+  }
 
+  private syncClouds(t: number, dt: number, look: Weather['look'], pan: number) {
     this.drift += dt * (1 + look.wind * 5);
     this.clouds.forEach((c, i) => {
       const far = i < 4;
@@ -396,7 +455,9 @@ export class Sky {
         .setTint(look.cloudTint)
         .setAlpha(c.alpha);
     });
+  }
 
+  private syncCeiling(t: number, look: Weather['look'], pan: number) {
     // the storm bank slides down from above the screen; two copies drift at different speeds
     this.ceiling.forEach((img, i) => {
       const down = Math.min(1, look.ceiling * (i === 0 ? 1.15 : 1));

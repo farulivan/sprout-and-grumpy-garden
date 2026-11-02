@@ -1,5 +1,5 @@
-// What hangs in the air: shafts of sunlight, floating pollen, a few butterflies, gusts of wind when Sunny
-// is furious, and the soft darkening toward the corners of the screen.
+// What hangs in the air: shafts of sunlight, floating pollen (fireflies, by the mood's tint, at night), a few
+// butterflies, gusts of wind when Sunny is furious, and the soft darkening toward the corners of the screen.
 // The butterflies and gusts live behind the fight, where they can't be mistaken for something to dodge.
 import { BlendModes, type GameObjects, type Scene } from 'phaser';
 import { GROUND, H, W } from '../../../config';
@@ -138,10 +138,15 @@ export class Air {
   private dusk: GameObjects.Image;
   private dim = 0;
   private rand = seeded(7);
+  private moteTint = 0xfff3c4;
 
   // The weather has turned at once (Weather.snap): the butterflies are already where it would have sent them.
   settle(weather: Weather) {
-    for (const b of this.butterflies) b.away = weather.look.life > 0.5 ? 0 : 1;
+    for (const b of this.butterflies) b.away = this.flutters(weather) ? 0 : 1;
+  }
+  // By day, unless the weather has driven them off.
+  private flutters({ look }: Weather) {
+    return look.life > 0.5 && look.moon < 0.1;
   }
 
   // `layer` is behind the fight; depth.front is in front of it.
@@ -225,7 +230,7 @@ export class Air {
 
     this.butterflies.forEach((b, i) => {
       // they leave when the weather turns and come back when it clears
-      b.away += ((look.life > 0.5 ? 0 : 1) - b.away) * Math.min(1, dt * 0.9);
+      b.away += ((this.flutters(weather) ? 0 : 1) - b.away) * Math.min(1, dt * 0.9);
       const [hx, hy] = b.home,
         x = hx + Math.sin(t * 0.55 + i * 2.1) * 70 + Math.sin(t * 1.7 + i) * 14 + pan * 6,
         y = hy + Math.sin(t * 0.8 + i * 1.3) * 26 + Math.sin(t * 5.2 + i) * 4 - b.away * 330;
@@ -239,6 +244,10 @@ export class Air {
       b.wings[1].setScale(-0.5 * flap, 0.5);
     });
 
+    if (look.moteTint !== this.moteTint) {
+      this.moteTint = look.moteTint;
+      for (const m of this.motes) m.image.setTint(this.moteTint);
+    }
     for (const m of this.motes) {
       m.x += (m.vx - wind * 160) * dt;
       m.y += m.vy * dt;

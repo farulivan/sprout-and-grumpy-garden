@@ -65,6 +65,7 @@ export class StageScene extends Scene {
   }
 
   create() {
+    this.views.prepare?.(this);
     fitCamera(this);
     const stage = this.app.level as Stage; // this scene is only ever run for a stage
     this.fx = new Fx(this, DEPTH.particles, DEPTH.flash);

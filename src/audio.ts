@@ -77,13 +77,33 @@ const RECIPES: Record<SfxName, (tone: Tone) => void> = {
   },
   menuBack: (tone) =>
     [659, 494].forEach((f, i) => tone(f, { type: 'triangle', dur: 0.08, vol: 0.09, delay: i * 0.07 })),
+  // the Mushroom Wood: a springy bounce, a pad growing, brambles shutting and withering, something heavy stopping
+  bounce: (tone) => {
+    tone(170, { end: 700, type: 'triangle', dur: 0.2, vol: 0.18 });
+    tone(700, { end: 1050, type: 'sine', dur: 0.14, vol: 0.08, delay: 0.11 });
+  },
+  pad: (tone) => {
+    tone(659, { end: 988, type: 'sine', dur: 0.16, vol: 0.11 });
+    tone(1319, { type: 'sine', dur: 0.22, vol: 0.06, delay: 0.09 });
+  },
+  brambles: (tone) => {
+    tone(130, { end: 62, type: 'sawtooth', dur: 0.3, vol: 0.11 });
+    tone(92, { end: 58, type: 'square', dur: 0.2, vol: 0.05, delay: 0.06 });
+  },
+  wither: (tone) =>
+    [440, 523, 659, 880, 1047].forEach((f, i) =>
+      tone(f, { type: 'triangle', dur: 0.2, vol: 0.09, delay: i * 0.07 }),
+    ),
+  thud: (tone) => tone(118, { end: 50, type: 'triangle', dur: 0.17, vol: 0.17 }),
 };
 
 // Looping background music: a pentatonic arpeggio with a bass note under it. Each level has its own tune.
 const NOTES = [261.6, 293.7, 329.6, 392.0, 440.0, 523.3, 587.3, 659.3]; // C pentatonic over two octaves
-export type Tune = 'boss' | 'stage' | 'title';
+const A_MINOR = [220.0, 246.9, 261.6, 293.7, 329.6, 349.2, 392.0, 440.0]; // A natural minor, one octave
+export type Tune = 'boss' | 'stage' | 'title' | 'wood';
 interface TuneDef {
-  pattern: readonly number[]; // indexes into NOTES, one per beat
+  scale?: readonly number[]; // the notes to choose from, if not NOTES
+  pattern: readonly number[]; // indexes into its notes, one per beat
   beat: number; // seconds per beat
   wave: OscillatorType;
   hold: number; // how long each note rings, in beats
@@ -121,6 +141,17 @@ const TUNES: Record<Tune, TuneDef> = {
     vol: 0.05,
     bassEvery: 4,
     bass: [0, 3, 4, 3],
+  },
+  // tiptoeing through the wood at dusk: the same plucked walk, in a minor key, wondering what's ahead
+  wood: {
+    scale: A_MINOR,
+    pattern: [0, 2, 4, 2, 5, 4, 2, 4, 3, 5, 7, 5, 6, 5, 4, 2, 0, 2, 4, 7, 5, 4, 2, 1, 3, 2, 1, 2, 0, 4, 2, 0],
+    beat: 0.25,
+    wave: 'triangle',
+    hold: 1.3,
+    vol: 0.05,
+    bassEvery: 4,
+    bass: [0, 5, 3, 4],
   },
 };
 // Music is scheduled on the audio clock a little ahead of time, so it keeps a steady beat even when the
@@ -214,17 +245,18 @@ export class GameAudio {
       return;
     }
     if (this.nextBeat < now) this.nextBeat = now; // the timer stalled for a long time: skip what was missed
-    const t = this.tune;
+    const t = this.tune,
+      notes = t.scale ?? NOTES;
     while (this.nextBeat < now + LOOKAHEAD) {
       const delay = this.nextBeat - now;
-      this.musicTone(NOTES[t.pattern[this.beat % t.pattern.length]], {
+      this.musicTone(notes[t.pattern[this.beat % t.pattern.length]], {
         type: t.wave,
         dur: t.beat * t.hold,
         vol: t.vol,
         delay,
       });
       if (this.beat % t.bassEvery === 0)
-        this.musicTone(NOTES[t.bass[(this.beat / t.bassEvery) % t.bass.length]] / 2, {
+        this.musicTone(notes[t.bass[(this.beat / t.bassEvery) % t.bass.length]] / 2, {
           type: 'triangle',
           dur: t.beat * 6,
           vol: 0.05,

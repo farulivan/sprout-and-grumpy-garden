@@ -46,6 +46,8 @@ const baked = new Map<string, Baked>();
 let queue: Job[] = [];
 let packed = false; // once the atlas is drawn, anything baked later gets a texture of its own
 let group = 'main';
+let lastPage = -1; // the last atlas page made so far
+const late = new Set<string>(); // the groups bakeLate has baked
 
 // Put the parts that bakeAll() bakes on atlas pages of their own. For art that only one kind of level draws
 // (a stage's ground and enemies, say): it then never crowds the parts every level shares off their page, and
@@ -101,6 +103,17 @@ export function bake(
   texture.refresh();
 }
 
+// Bake a group of parts the first time they are needed, on atlas pages of its own, instead of as the game starts:
+// art that only a later chapter draws, so that nobody waits for it who hasn't got there. Asking again does
+// nothing.
+export function bakeLate(scene: Scene, name: string, bakeAll: () => void) {
+  if (late.has(name)) return;
+  late.add(name);
+  packed = false;
+  bakeApart(name, bakeAll);
+  finishBaking(scene);
+}
+
 // Call once after every bake(): packs the queued parts onto atlas pages and draws them, each group of parts
 // on pages of its own.
 export function finishBaking(scene: Scene) {
@@ -112,8 +125,7 @@ export function finishBaking(scene: Scene) {
   }
   queue = [];
   packed = true;
-  let page = -1;
-  for (const [name, jobs] of groups) page = pack(scene, name, jobs, page);
+  for (const [name, jobs] of groups) lastPage = pack(scene, name, jobs, lastPage);
 }
 
 // Packs one group's parts onto pages numbered from after `page`, and returns the last page it used.

@@ -31,6 +31,7 @@ export interface StripTheme {
   readonly speed: number;
   readonly y: number;
   readonly depth: number;
+  readonly tint?: 'hill' | 'land'; // which of the weather's tints it takes, if not the land's
 }
 // A prop that stands behind the fence. size: how big, if it is scaled at all.
 export interface PropTheme {
@@ -59,6 +60,8 @@ export interface StageTheme {
   readonly gate: string;
   readonly bloom: (i: number) => string; // the i-th thing to grow where a plant was cheered up
   readonly mood: (progress: number) => Mood; // the weather, by how far along the stage Pip is (0 to 1)
+  readonly moodSpeed?: number; // how quickly it turns, if not at the usual pace
+  readonly moon?: boolean; // a night sky: a moon and no sun
 }
 
 const MARGIN = 80; // how far past the edges of the view things are still shown
@@ -67,7 +70,7 @@ const PROP_SPEED = 0.72; // how fast the props behind the fence slide, against t
 // A strip of landscape that repeats, sliding at `speed` times the camera's pace (0 = stays put, 1 = moves
 // with the ground).
 class Strip {
-  private copies: GameObjects.Image[];
+  readonly copies: GameObjects.Image[];
 
   constructor(
     scene: Scene,
@@ -90,7 +93,7 @@ class Strip {
 // Images set along the stage at fixed world positions, shown only while near the view. w: how far each
 // reaches to the right of its x.
 class Strewn {
-  constructor(private items: { x: number; w?: number; image: GameObjects.Image }[]) {}
+  constructor(readonly items: { x: number; w?: number; image: GameObjects.Image }[]) {}
   sync(camX: number) {
     for (const { x, w = 0, image } of this.items)
       image.setVisible(x + w > camX - MARGIN && x < camX + W + MARGIN);
@@ -118,6 +121,7 @@ export class StageWorldView {
   private dressing: Strewn; // tufts and flowers along the ground
   private pads: { image: GameObjects.Image; y: number; x: number }[] = [];
   private walls: { glade: Glade; images: GameObjects.Image[] }[] = [];
+  private fixed: GameObjects.Image[] = []; // logs, trunks, thorns, stalks and the sign
   private blooms: GameObjects.Image[] = [];
   private bloomsUsed = 0;
   private known = new Set<Enemy>();
@@ -125,6 +129,11 @@ export class StageWorldView {
   private scene: Scene;
   private t = 0;
   private blink = 1;
+  // What takes the weather's tints, and the tints they have now. (On a stage whose weather never turns, nothing.)
+  private hillParts: GameObjects.Image[] = [];
+  private landParts: GameObjects.Image[] = [];
+  private groundParts: (GameObjects.Image | GameObjects.TileSprite)[] = [];
+  private tints = { hill: 0xffffff, land: 0xffffff, ground: 0xffffff };
 
   constructor(
     scene: Scene,
@@ -136,6 +145,8 @@ export class StageWorldView {
     this.depth = depth;
     this.skyLayer = scene.add.container(0, 0).setDepth(depth.back);
     this.sky = new Sky(scene, this.skyLayer);
+    if (theme.moon) this.sky.nightSky(scene);
+    this.weather.snap(theme.mood(0));
     const strip = (s: Omit<StripTheme, 'depth'>, at: number) =>
       new Strip(scene, s.key, s.period, s.speed, s.y, at);
     this.strips = theme.strips.map((s) => strip(s, depth.back + s.depth));
@@ -147,6 +158,8 @@ export class StageWorldView {
     this.caps = new Strewn([]);
     this.dressing = new Strewn([]);
     this.build(stage);
+    this.air.settle(this.weather);
+    this.gatherTinted();
   }
 
   // Everything that depends on the stage's layout.
@@ -213,13 +226,17 @@ export class StageWorldView {
 
     // logs, brambles, leaf pads, the sign and the gate
     for (const s of stage.solids.filter((r) => r.y !== GROUND && !stage.trunks.includes(r)))
-      part(scene, theme.log, s.x, s.y + s.h)
-        .setScale((unit(theme.log) * s.w) / 70, (unit(theme.log) * s.h) / 30)
-        .setDepth(depth.ground + 0.03);
+      this.fixed.push(
+        part(scene, theme.log, s.x, s.y + s.h)
+          .setScale((unit(theme.log) * s.w) / 70, (unit(theme.log) * s.h) / 30)
+          .setDepth(depth.ground + 0.03),
+      );
     for (const s of stage.trunks)
-      part(scene, theme.trunk, s.x, s.y + s.h)
-        .setScale((unit(theme.trunk) * s.w) / 70, (unit(theme.trunk) * s.h) / 200)
-        .setDepth(depth.ground + 0.03);
+      this.fixed.push(
+        part(scene, theme.trunk, s.x, s.y + s.h)
+          .setScale((unit(theme.trunk) * s.w) / 70, (unit(theme.trunk) * s.h) / 200)
+          .setDepth(depth.ground + 0.03),
+      );
     for (const t of stage.thorns)
       part(scene, theme.thorns, t.x, t.y + t.h)
         .setScale((unit(theme.thorns) * t.w) / 72, unit(theme.thorns))
@@ -227,16 +244,51 @@ export class StageWorldView {
     for (const p of stage.platforms) {
       const drop = GROUND - p.y - 8;
       part(scene, theme.padShadow, p.x + p.w / 2, GROUND + 4).setDepth(depth.ground + 0.04);
-      part(scene, theme.stalk(drop), p.x + p.w / 2, p.y + 8).setDepth(depth.platforms);
+      this.fixed.push(part(scene, theme.stalk(drop), p.x + p.w / 2, p.y + 8).setDepth(depth.platforms));
       const image = part(scene, theme.pad(p.w)).setDepth(depth.platforms);
       this.pads.push({ image, x: p.x + p.w / 2, y: p.y });
     }
-    part(scene, theme.sign, stage.startX + 130, GROUND - 1).setDepth(depth.ground + 0.03);
+    this.fixed.push(part(scene, theme.sign, stage.startX + 130, GROUND - 1).setDepth(depth.ground + 0.03));
     part(scene, theme.gate, stage.gateX, GROUND).setDepth(depth.ground + 0.03);
   }
 
-  // A new run of the same stage: the flowers from the last one go, and its glades stand open again.
+  // Sort what's been made by which of the weather's tints it takes.
+  private gatherTinted() {
+    this.theme.strips.forEach((s, i) =>
+      (s.tint === 'hill' ? this.hillParts : this.landParts).push(...this.strips[i].copies),
+    );
+    this.landParts.push(...this.fence.copies, ...this.props.map((p) => p.image));
+    this.groundParts.push(
+      ...this.front.copies,
+      ...this.ground.map((g) => g.tiles),
+      ...this.caps.items.map((i) => i.image),
+      ...this.dressing.items.map((i) => i.image),
+      ...this.fixed,
+      ...this.pads.map((p) => p.image),
+    );
+  }
+
+  private retint() {
+    const { hillTint, landTint, groundTint } = this.weather.look;
+    if (hillTint !== this.tints.hill) {
+      this.tints.hill = hillTint;
+      for (const image of this.hillParts) image.setTint(hillTint);
+    }
+    if (landTint !== this.tints.land) {
+      this.tints.land = landTint;
+      for (const image of this.landParts) image.setTint(landTint);
+    }
+    if (groundTint !== this.tints.ground) {
+      this.tints.ground = groundTint;
+      for (const image of this.groundParts) image.setTint(groundTint);
+    }
+  }
+
+  // A new run of the same stage: the flowers from the last one go, its glades stand open again, and the
+  // weather is back to how the stage begins.
   reset(stage: Stage) {
+    this.weather.snap(this.theme.mood(0));
+    this.air.settle(this.weather);
     for (const b of this.blooms) b.setVisible(false);
     this.bloomsUsed = 0;
     this.known.clear();
@@ -272,7 +324,8 @@ export class StageWorldView {
     const t = (this.t += dt);
     this.blink -= dt;
     if (this.blink < -0.14) this.blink = 2.5 + Math.random() * 3;
-    this.weather.update(this.theme.mood(stage.progress), dt);
+    this.weather.update(this.theme.mood(stage.progress), dt, this.theme.moodSpeed);
+    this.retint();
     const pan = (stage.progress - 0.5) * 0.6;
 
     this.skyLayer.setX(camX);
