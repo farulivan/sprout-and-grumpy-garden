@@ -9,6 +9,7 @@ import { Fx } from '../fx';
 import type { GamePresenter } from '../presenter';
 import { BOSS_VIEWS, type BossView } from '../views/bossViews';
 import type { ChapterViews } from '../views/chapterViews';
+import { BouncerViews, EnemyViews } from '../views/EnemyViews';
 import { HazardViews } from '../views/HazardViews';
 import { PickupViews } from '../views/PickupViews';
 import { PlayerView } from '../views/PlayerView';
@@ -22,6 +23,7 @@ const DEPTH = {
   boss: 2,
   platforms: 3,
   hazards: 4,
+  enemies: 4.5,
   pickups: 5,
   player: 6,
   marks: 6.5, // warnings that must show even where Pip is standing
@@ -40,6 +42,8 @@ export class FightScene extends Scene {
   private projectiles!: ProjectileViews;
   private hazards!: HazardViews;
   private pickups!: PickupViews;
+  private enemies!: EnemyViews;
+  private bouncers!: BouncerViews;
   private fx!: Fx;
 
   constructor(
@@ -58,6 +62,8 @@ export class FightScene extends Scene {
     this.world = this.views.arena(this, DEPTH);
     this.hazards = new HazardViews(this, DEPTH.hazards, DEPTH.marks, this.fx);
     this.pickups = new PickupViews(this, DEPTH.pickups, this.fx);
+    this.enemies = new EnemyViews(this, DEPTH.enemies, DEPTH.marks);
+    this.bouncers = new BouncerViews(this, DEPTH.enemies);
     this.player = new PlayerView(this, DEPTH.player, this.fx);
     this.projectiles = new ProjectileViews(this, DEPTH.projectiles);
     this.hitboxes = new HitboxOverlay(this, DEPTH.hitboxes);
@@ -85,6 +91,8 @@ export class FightScene extends Scene {
     this.boss.sync(fight, alpha, dt);
     this.hazards.sync(fight.hazards, alpha, dt);
     this.pickups.sync(fight.pickups, alpha, dt);
+    this.enemies.sync(fight.enemies, alpha, dt);
+    this.bouncers.sync(fight.pads);
     this.player.sync(fight, alpha, dt);
     this.projectiles.sync(fight.projectiles, alpha);
     this.hitboxes.sync(fight);

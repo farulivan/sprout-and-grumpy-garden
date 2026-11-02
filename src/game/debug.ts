@@ -40,6 +40,12 @@ export class HitboxOverlay {
     const boxes = fight.boss.hurtboxes();
     for (const r of boxes.body) shape(r, HURTS_BOSS);
     for (const c of boxes.weak) shape(c, WEAK_SPOT);
+    for (const c of boxes.shield ?? []) shape(c, 0xffffff);
+    for (const e of fight.enemies) {
+      const box = e.hurtbox();
+      if (box) shape(box, HURTS_PIP);
+    }
+    for (const b of fight.pads) shape({ x: b.x - 34, y: b.top, w: 68, h: 2 }, PICKUP);
     for (const p of fight.platforms) shape({ x: p.x, y: p.y, w: p.w, h: 2 }, PIP);
     for (const h of fight.hazards) {
       const s = h.shape();
