@@ -95,12 +95,25 @@ const RECIPES: Record<SfxName, (tone: Tone) => void> = {
       tone(f, { type: 'triangle', dur: 0.2, vol: 0.09, delay: i * 0.07 }),
     ),
   thud: (tone) => tone(118, { end: 50, type: 'triangle', dur: 0.17, vol: 0.17 }),
+  // Mo's fight
+  acid: (tone) => {
+    tone(1800, { end: 600, type: 'sawtooth', dur: 0.35, vol: 0.035 });
+    tone(90, { end: 60, dur: 0.12, vol: 0.06 });
+  },
+  rumble: (tone) => tone(70, { end: 50, type: 'sawtooth', dur: 1.4, vol: 0.05 }),
+  ringUp: (tone) => tone(280, { end: 900, type: 'triangle', dur: 0.75, vol: 0.07 }),
+  erupt: (tone) => {
+    tone(120, { end: 700, type: 'sawtooth', dur: 0.5, vol: 0.14 });
+    tone(60, { end: 40, type: 'sine', dur: 0.4, vol: 0.1 });
+  },
+  pop: (tone) => tone(900, { end: 300, type: 'sine', dur: 0.08, vol: 0.1 }),
+  whirl: (tone) => tone(320, { end: 880, type: 'triangle', dur: 0.3, vol: 0.09 }),
 };
 
 // Looping background music: a pentatonic arpeggio with a bass note under it. Each level has its own tune.
 const NOTES = [261.6, 293.7, 329.6, 392.0, 440.0, 523.3, 587.3, 659.3]; // C pentatonic over two octaves
 const A_MINOR = [220.0, 246.9, 261.6, 293.7, 329.6, 349.2, 392.0, 440.0]; // A natural minor, one octave
-export type Tune = 'boss' | 'stage' | 'title' | 'wood';
+export type Tune = 'boss' | 'stage' | 'title' | 'wood' | 'moSulky' | 'moCross' | 'moFurious';
 interface TuneDef {
   scale?: readonly number[]; // the notes to choose from, if not NOTES
   pattern: readonly number[]; // indexes into its notes, one per beat
@@ -152,6 +165,39 @@ const TUNES: Record<Tune, TuneDef> = {
     vol: 0.05,
     bassEvery: 4,
     bass: [0, 5, 3, 4],
+  },
+  // Mo, in each of his moods: slow and lurching...
+  moSulky: {
+    scale: A_MINOR,
+    pattern: [0, 2, 4, 2, 5, 4, 2, 1, 0, 2, 4, 7, 5, 4, 2, 0],
+    beat: 0.34,
+    wave: 'triangle',
+    hold: 1.4,
+    vol: 0.05,
+    bassEvery: 8,
+    bass: [0, 3],
+  },
+  // ...stomping...
+  moCross: {
+    scale: A_MINOR,
+    pattern: [0, 0, 3, 2, 0, 0, 5, 3, 0, 0, 3, 2, 5, 4, 2, 1],
+    beat: 0.26,
+    wave: 'triangle',
+    hold: 0.9,
+    vol: 0.055,
+    bassEvery: 4,
+    bass: [0, 0, 3, 2],
+  },
+  // ...and frantic
+  moFurious: {
+    scale: A_MINOR,
+    pattern: [0, 3, 5, 7, 5, 3, 0, 3, 1, 4, 6, 7, 6, 4, 1, 4],
+    beat: 0.2,
+    wave: 'sawtooth',
+    hold: 0.8,
+    vol: 0.032,
+    bassEvery: 2,
+    bass: [0, 0, 3, 0, 1, 1, 4, 1],
   },
 };
 // Music is scheduled on the audio clock a little ahead of time, so it keeps a steady beat even when the

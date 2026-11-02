@@ -1,7 +1,7 @@
 // Carries the simulation's events (see src/presentation.ts) to whatever shows them: the synth for sound,
 // the fight scene for particles and camera effects, the HUD for text. Scenes plug themselves in when they
 // start. Views use the same FxTarget for effects of their own (dust under Pip's feet, steam from Sunny).
-import type { GameAudio } from '../audio';
+import type { GameAudio, Tune } from '../audio';
 import type { Burst, Presenter, Ring, SfxName, ToastTone } from '../presentation';
 
 export interface FxTarget {
@@ -31,6 +31,9 @@ export class GamePresenter implements Presenter {
   music(on: boolean) {
     if (on) this.audio.startMusic();
     else this.audio.stopMusic();
+  }
+  tune(name: Tune) {
+    this.audio.startMusic(name);
   }
   burst(x: number, y: number, burst: Burst) {
     this.fx?.burst(x, y, burst);

@@ -25,7 +25,12 @@ export interface Chapter {
   readonly gate: string; // over the gate at its end, where the boss is
   readonly stage: StageId;
   readonly boss: BossId;
-  readonly tunes: { readonly stage: Tune; readonly boss: Tune };
+  // bossPhases: if he has a tune for each phase. boss is what his fight starts on.
+  readonly tunes: {
+    readonly stage: Tune;
+    readonly boss: Tune;
+    readonly bossPhases?: readonly [Tune, Tune, Tune];
+  };
   // The boss's fight, in toasts: a hint as it starts (a touch screen can't aim, so it has its own), a line for
   // each new phase, 2 then 3, and one as he is cheered up.
   readonly fightHint: { readonly aim: string; readonly touch: string };
@@ -85,7 +90,7 @@ export const WOOD = {
   gate: "Mo's Hollow",
   stage: 'mushroomWood',
   boss: 'mo',
-  tunes: { stage: 'wood', boss: 'boss' },
+  tunes: { stage: 'wood', boss: 'moSulky', bossPhases: ['moSulky', 'moCross', 'moFurious'] },
   fightHint: {
     aim: 'He rears up to attack: hold ↑ and hit his face for double damage!',
     // a touch screen can't aim, but a straight seed in the air reaches his face

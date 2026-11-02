@@ -1,6 +1,7 @@
 // What each simulation event looks and sounds like. This is the one place that turns "the boss was hit"
 // into a sound, a puff of particles, a screen shake or a line of text. Whatever draws the game (the
 // Phaser scenes in src/game) supplies a Presenter, and this table knows nothing about how it works.
+import type { Tune } from './audio';
 import type { Chapter } from './chapters';
 import { GROUND, UP, W } from './config';
 import type { SimEvent } from './sim/events';
@@ -38,7 +39,14 @@ export type SfxName =
   | 'pad'
   | 'brambles'
   | 'wither'
-  | 'thud';
+  | 'thud'
+  // Mo's fight
+  | 'acid'
+  | 'rumble' // a root creeping through the soil
+  | 'ringUp'
+  | 'erupt'
+  | 'pop'
+  | 'whirl';
 
 export type ParticleShape =
   | 'circle'
@@ -81,6 +89,7 @@ export type ToastTone = 'info' | 'alert' | 'good';
 export interface Presenter {
   sfx(name: SfxName): void;
   music(on: boolean): void;
+  tune(name: Tune): void; // another tune takes over
   burst(x: number, y: number, burst: Burst): void;
   ring(x: number, y: number, ring: Ring): void;
   shake(px: number): void;
@@ -152,7 +161,7 @@ function bounce(p: Presenter, x: number, y: number) {
 
 // A spore pod popping, on a seed or on Pip: it's only his poison, so no cheer, and no petals.
 function popPod(p: Presenter, x: number, y: number) {
-  p.sfx('petal');
+  p.sfx('pop');
   p.burst(x, y, {
     n: 6,
     shape: 'puff',
@@ -320,6 +329,7 @@ export function present(e: SimEvent, p: Presenter, opts: PresentOptions) {
         glow: true,
       });
       p.toast(opts.chapter.phaseToasts[e.phase - 2], 2.4, 'alert');
+      if (opts.chapter.tunes.bossPhases) p.tune(opts.chapter.tunes.bossPhases[e.phase - 1]);
       break;
     }
     case 'groundPuff':
@@ -607,6 +617,7 @@ export function present(e: SimEvent, p: Presenter, opts: PresentOptions) {
       p.punch(0.025);
       p.hitStop(0.05);
       if (e.acid) {
+        p.sfx('acid');
         p.ring(e.x, e.y, { color: '#b6e84c', from: 40, to: 170, life: 0.45 });
         // a crown of drops thrown up, and dust
         p.burst(e.x, e.y - 6, {
@@ -624,6 +635,7 @@ export function present(e: SimEvent, p: Presenter, opts: PresentOptions) {
       } else p.burst(e.x, e.y, { ...DUST, n: 9, speed: 140, color: '#cfc6e6' });
       break;
     case 'whirl':
+      p.sfx('whirl');
       if (e.wall) {
         p.shake(4);
         p.burst(e.x, GROUND - 30, {
@@ -650,10 +662,13 @@ export function present(e: SimEvent, p: Presenter, opts: PresentOptions) {
       }
       break;
     case 'ringSeek':
-      break; // for now
+      p.sfx('rumble');
+      break;
     case 'ringWarn':
-      break; // for now
+      p.sfx('ringUp');
+      break;
     case 'ringErupt':
+      p.sfx('erupt');
       p.shake(5);
       p.ring(e.x, GROUND - 4, { color: '#8fd832', from: 20, to: 110, life: 0.4 });
       p.burst(e.x, GROUND - 2, {
