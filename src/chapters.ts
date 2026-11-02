@@ -30,6 +30,7 @@ export interface Chapter {
   readonly fightHint: { readonly aim: string; readonly touch: string };
   readonly phaseToasts: readonly [string, string];
   readonly cheeredToast: string;
+  readonly bounceHint?: string; // the one message on a stage with bounce pads, as its first one grows
   readonly shed: readonly [string, string]; // what he sheds as he leaves phase 1, then phase 2
   readonly lose: { readonly stage: LoseText; readonly boss: LoseText };
   readonly win: WinText;
@@ -69,5 +70,24 @@ export const SUNFLOWER = {
   portrait: { angry: 'bar-icon-sunny-angry', joy: 'bar-icon-sunny-joy' },
 } as const satisfies Chapter;
 
-export const CHAPTERS = [SUNFLOWER] as const satisfies readonly Chapter[];
+// Chapter 2 is reached only through ?debug&chapter=2 until it goes live. Until Mo arrives, the gate still leads
+// to Sunny, so what is said about the fight is still his.
+export const WOOD = {
+  ...SUNFLOWER,
+  id: 'wood',
+  title: 'Chapter 2 · The Moody Mushroom',
+  sign: 'Mushroom Wood',
+  gate: "Mo's Hollow",
+  stage: 'mushroomWood',
+  bounceHint: 'Bounce on it! Hold jump to go higher.',
+  lose: {
+    stage: {
+      who: 'The Mushroom Wood is',
+      progress: (percent) => `You made it ${percent}% of the way to Mo!`,
+    },
+    boss: SUNFLOWER.lose.boss,
+  },
+} as const satisfies Chapter;
+
+export const CHAPTERS = [SUNFLOWER, WOOD] as const satisfies readonly Chapter[];
 export type ChapterId = (typeof CHAPTERS)[number]['id'];

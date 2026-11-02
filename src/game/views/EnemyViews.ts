@@ -1,13 +1,18 @@
 // The small enemies on a stage, each acting out what the simulation says it is doing: a Grumbud waddles on
 // its root feet, a Puffball bobs and fluffs, a Pea Pod swells under its "!" and gapes as it spits, a Snapper
 // rumbles in its mound, snaps up chomping and ducks back down. Every hit flashes white. Their parts are baked
-// in enemies/art.ts; the "!" is the same badge the boss's hazards use.
+// in enemies/art.ts; the "!" is the same badge the boss's hazards use. The Mushroom Wood's four (a Capling, a
+// Burr, a Dropcap and a Toadlet) and the bounce pad are simple placeholders so far, baked in wood/art.ts.
 import { TintModes, type GameObjects, type Scene } from 'phaser';
 import { GROUND } from '../../config';
 import { lerp } from '../../sim/math';
+import type { Bouncer } from '../../sim/bouncer';
+import { BURR_WARN, type Burr } from '../../sim/stage/enemies/burr';
+import { DROP_WARN, type Dropcap } from '../../sim/stage/enemies/dropcap';
 import type { Enemy } from '../../sim/stage/enemies/enemy';
 import { PEA_WARN, type PeaPod } from '../../sim/stage/enemies/peaPod';
 import { SNAP_DOWN, SNAP_UP, SNAP_WARN, type Snapper } from '../../sim/stage/enemies/snapper';
+import type { Toadlet } from '../../sim/stage/enemies/toadlet';
 import { INV, part, show } from '../art/bake';
 import { easeOutBack } from '../motion';
 import { faceKey } from './faces';
@@ -16,6 +21,7 @@ import { ViewPool, type PooledView } from './pool';
 
 export { bakeEnemies } from './enemies/art';
 
+const NOBODY: readonly Enemy[] = [];
 const SNAP_HEAD = 1.25; // the Snapper's head is drawn a size up, so its jaws read from across the screen
 
 interface EnemyView extends PooledView {
@@ -233,10 +239,195 @@ class SnapperView implements EnemyView {
   }
 }
 
-export class EnemyViews {
-  private pool: ViewPool<Enemy, EnemyView>;
+// ---- the Mushroom Wood's, as placeholders: one body and a face, moved around ----
+
+class CaplingView implements EnemyView {
+  private body: GameObjects.Image;
+  private face: GameObjects.Image;
+  private flash: Flash;
+  private blink = new Blink();
+
+  constructor(scene: Scene, depth: number) {
+    this.body = part(scene, 'capling-body').setDepth(depth);
+    this.face = part(scene, faceKey('capling', 'angry')).setDepth(depth);
+    this.flash = new Flash([this.body, this.face]);
+  }
+  setVisible(visible: boolean) {
+    this.body.setVisible(visible);
+    this.face.setVisible(visible);
+  }
+  sync(e: Enemy, _alpha: number, dt: number) {
+    const breathe = Math.sin(e.t * 2.4) * 0.03;
+    this.body.setPosition(e.x, e.y).setScale(INV * (1 + breathe), INV * (1 - breathe));
+    show(this.face, faceKey('capling', 'angry', this.blink.closed(dt)));
+    this.face.setPosition(e.x, e.y - 15);
+    this.flash.sync(e.flash);
+  }
+}
+
+class BurrView implements EnemyView {
+  private body: GameObjects.Image;
+  private stars: GameObjects.Image[];
+  private mark: GameObjects.Image;
+  private flash: Flash;
+  private spin = 0;
 
   constructor(scene: Scene, depth: number, markDepth: number) {
+    this.body = part(scene, 'burr-body').setDepth(depth);
+    this.stars = [0, 1, 2].map(() => part(scene, 'burr-star').setDepth(depth + 0.01));
+    this.mark = part(scene, 'warn-mark').setDepth(markDepth).setVisible(false);
+    this.flash = new Flash([this.body]);
+  }
+  setVisible(visible: boolean) {
+    this.body.setVisible(visible);
+    if (!visible) {
+      this.mark.setVisible(false);
+      for (const s of this.stars) s.setVisible(false);
+    }
+  }
+  sync(e: Enemy, alpha: number, dt: number) {
+    const b = e as Burr,
+      x = lerp(e.px, e.x, alpha),
+      warning = b.state === 'warn',
+      dizzy = b.state === 'dizzy';
+    if (b.state === 'roll') this.spin += dt * 16 * b.facing;
+    else if (warning) this.spin += dt * 7 * b.facing * (1 - b.timer / BURR_WARN);
+    // shut tight while it can't be hurt, open and drooping once it is dizzy
+    const size = dizzy ? 1.08 : warning ? 0.86 : 1;
+    this.body
+      .setPosition(x, e.y - 20)
+      .setRotation(dizzy ? Math.sin(e.t * 9) * 0.2 : this.spin)
+      .setScale(INV * size);
+    this.stars.forEach((s, i) => {
+      const a = e.t * 5 + (i * Math.PI * 2) / 3;
+      s.setVisible(dizzy)
+        .setPosition(x + Math.cos(a) * 24, e.y - 48 + Math.sin(a) * 6)
+        .setAlpha(dizzy ? Math.min(1, b.timer / 0.3) : 0);
+    });
+    if (warning) showMark(this.mark, x, e.y - 60, BURR_WARN - b.timer);
+    else this.mark.setVisible(false);
+    this.flash.sync(e.flash);
+  }
+}
+
+class DropcapView implements EnemyView {
+  private thread: GameObjects.Image;
+  private body: GameObjects.Image;
+  private face: GameObjects.Image;
+  private mark: GameObjects.Image;
+  private flash: Flash;
+
+  constructor(scene: Scene, depth: number, markDepth: number) {
+    this.thread = part(scene, 'dropcap-thread').setDepth(depth - 0.01);
+    this.body = part(scene, 'dropcap-body').setDepth(depth);
+    this.face = part(scene, faceKey('dropcap', 'angry')).setDepth(depth);
+    this.mark = part(scene, 'warn-mark').setDepth(markDepth).setVisible(false);
+    this.flash = new Flash([this.body, this.face]);
+  }
+  setVisible(visible: boolean) {
+    for (const img of [this.thread, this.body, this.face]) img.setVisible(visible);
+    if (!visible) this.mark.setVisible(false);
+  }
+  sync(e: Enemy, alpha: number) {
+    const d = e as Dropcap,
+      y = lerp(e.py, e.y, alpha),
+      warning = d.state === 'warn',
+      high = d.state === 'hang' || warning,
+      shaken = warning ? Math.sin(e.t * 50) * 2 : 0;
+    this.thread.setVisible(high).setPosition(e.x, y);
+    this.body.setPosition(e.x + shaken, y).setRotation(high ? Math.sin(e.t * 1.6) * 0.08 : 0);
+    show(this.face, faceKey('dropcap', warning || d.state === 'fall' ? 'surprised' : 'angry'));
+    this.face.setPosition(e.x + shaken, y + 2);
+    if (warning) showMark(this.mark, e.x, y - 38, DROP_WARN - d.timer);
+    else this.mark.setVisible(false);
+    this.flash.sync(e.flash);
+  }
+}
+
+class ToadletView implements EnemyView {
+  private shadow: GameObjects.Image;
+  private body: GameObjects.Image;
+  private face: GameObjects.Image;
+  private spot: GameObjects.Image;
+  private flash: Flash;
+  private blink = new Blink();
+
+  constructor(scene: Scene, depth: number) {
+    this.spot = part(scene, 'toadlet-spot').setDepth(depth - 0.02);
+    this.shadow = part(scene, 'dew-shadow').setDepth(depth - 0.1);
+    this.body = part(scene, 'toadlet-body').setDepth(depth);
+    this.face = part(scene, faceKey('toadlet', 'angry')).setDepth(depth);
+    this.flash = new Flash([this.body, this.face]);
+  }
+  setVisible(visible: boolean) {
+    this.body.setVisible(visible);
+    this.face.setVisible(visible);
+    this.shadow.setVisible(visible);
+    if (!visible) this.spot.setVisible(false);
+  }
+  sync(e: Enemy, alpha: number, dt: number) {
+    const a = e as Toadlet,
+      x = lerp(e.px, e.x, alpha),
+      y = lerp(e.py, e.y, alpha),
+      hop = a.state === 'hop',
+      crouch = hop ? 0 : 0.14 * (1 - Math.min(1, a.timer / 0.3));
+    this.body.setPosition(x, y).setScale(INV * (1 + crouch), INV * (hop ? 1.08 : 1 - crouch));
+    show(this.face, faceKey('toadlet', hop ? 'surprised' : 'angry', !hop && this.blink.closed(dt)));
+    this.face.setPosition(x, y - 16 * (hop ? 1.08 : 1 - crouch));
+    this.shadow.setPosition(x, GROUND + 3).setAlpha(hop ? 0.35 : 0.7);
+    // an orange ring on the ground where it will come down, as for anything that lands
+    this.spot
+      .setVisible(hop)
+      .setPosition(a.landX, GROUND)
+      .setAlpha(0.6 + Math.sin(e.t * 18) * 0.25);
+    this.flash.sync(e.flash);
+  }
+}
+
+// A cheered-up Capling: a bounce pad that squashes as Pip lands on it and springs back.
+class BouncerView implements PooledView {
+  private body: GameObjects.Image;
+
+  constructor(scene: Scene, depth: number) {
+    this.body = part(scene, 'capling-happy').setDepth(depth);
+  }
+  setVisible(visible: boolean) {
+    this.body.setVisible(visible);
+  }
+  sync(b: Bouncer) {
+    const squash = Math.sin(b.sprung * Math.PI) * 0.34,
+      grow = easeOutBack(Math.min(1, b.t / 0.25));
+    this.body
+      .setPosition(b.x, b.y)
+      .setScale(INV * grow * (1 + squash * 0.7), INV * grow * (1 - squash + Math.sin(b.t * 2.4) * 0.02));
+  }
+}
+
+export class BouncerViews {
+  private pool: ViewPool<Bouncer, BouncerView>;
+
+  constructor(scene: Scene, depth: number) {
+    this.pool = new ViewPool(
+      () => 'bouncer',
+      () => new BouncerView(scene, depth),
+    );
+  }
+
+  sync(bouncers: readonly Bouncer[]) {
+    this.pool.sync(bouncers, (b, view) => view.sync(b));
+  }
+}
+
+export class EnemyViews {
+  private pool: ViewPool<Enemy, EnemyView>;
+  // a later wave's plants aren't there yet: an orange "!" stands where each one will come up
+  private arrivals: ViewPool<Enemy, GameObjects.Image>;
+
+  constructor(scene: Scene, depth: number, markDepth: number) {
+    this.arrivals = new ViewPool(
+      () => 'arrival',
+      () => part(scene, 'warn-mark').setDepth(markDepth),
+    );
     this.pool = new ViewPool(
       (e) => e.kind,
       (e): EnemyView => {
@@ -249,12 +440,26 @@ export class EnemyViews {
             return new PeaPodView(scene, depth, markDepth);
           case 'snapper':
             return new SnapperView(scene, depth, markDepth);
+          case 'capling':
+            return new CaplingView(scene, depth);
+          case 'burr':
+            return new BurrView(scene, depth, markDepth);
+          case 'dropcap':
+            return new DropcapView(scene, depth, markDepth);
+          case 'toadlet':
+            return new ToadletView(scene, depth);
         }
       },
     );
   }
 
   sync(enemies: readonly Enemy[], alpha: number, dt: number) {
-    this.pool.sync(enemies, (e, view) => view.sync(e, alpha, dt));
+    const arriving = enemies.some((e) => e.entering > 0);
+    this.pool.sync(arriving ? enemies.filter((e) => e.entering <= 0) : enemies, (e, view) =>
+      view.sync(e, alpha, dt),
+    );
+    this.arrivals.sync(arriving ? enemies.filter((e) => e.entering > 0) : NOBODY, (e, mark) =>
+      showMark(mark, e.x, Math.min(e.y, GROUND - 40), 1 - e.entering),
+    );
   }
 }

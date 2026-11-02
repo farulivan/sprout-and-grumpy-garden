@@ -3,6 +3,7 @@
 import type { Scene } from 'phaser';
 import type { ChapterId } from '../../chapters';
 import type { Stage } from '../../sim/stage/stage';
+import { WOOD_THEME } from './wood/woodTheme';
 import { GARDEN_THEME } from './stage/gardenTheme';
 import { StageWorldView, type StageDepths } from './stage/StageWorldView';
 import { Ground } from './world/ground';
@@ -16,14 +17,21 @@ export interface ChapterViews {
   readonly gateLight: readonly [red: number, green: number, blue: number];
 }
 
+const gardenArena = (scene: Scene, depth: WorldDepths) =>
+  new WorldView(scene, depth, {
+    land: (s, layer) => new Land(s, layer),
+    ground: (s, d) => new Ground(s, d),
+  });
+
 export const CHAPTER_VIEWS: Record<ChapterId, ChapterViews> = {
   sunflower: {
     stageWorld: (scene, stage, depth) => new StageWorldView(scene, stage, depth, GARDEN_THEME),
-    arena: (scene, depth) =>
-      new WorldView(scene, depth, {
-        land: (s, layer) => new Land(s, layer),
-        ground: (s, d) => new Ground(s, d),
-      }),
+    arena: gardenArena,
     gateLight: [255, 248, 225], // the warm light of Sunny's meadow
+  },
+  wood: {
+    stageWorld: (scene, stage, depth) => new StageWorldView(scene, stage, depth, WOOD_THEME),
+    arena: gardenArena, // until Mo has a hollow of his own, the gate leads back to Sunny
+    gateLight: [255, 248, 225],
   },
 };

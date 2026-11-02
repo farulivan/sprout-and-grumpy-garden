@@ -14,6 +14,7 @@ import { bakePlayer } from '../views/PlayerView';
 import { bakeProjectiles } from '../views/ProjectileViews';
 import { bakeStage } from '../views/stage/art';
 import { bakeTitle } from '../views/title/art';
+import { bakeWood } from '../views/wood/art';
 import { bakeWorld } from '../views/WorldView';
 import { bakeHud } from './HudScene';
 
@@ -59,6 +60,7 @@ export class BootScene extends Scene {
         bakeEnemies(this);
       });
       bakeTitle(this);
+      bakeApart('wood', () => bakeWood(this));
       bakeIris(this);
       bakeFx(this);
       bakeHud(this);

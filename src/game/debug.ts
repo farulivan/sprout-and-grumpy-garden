@@ -1,6 +1,7 @@
 // Hitbox overlay: draws what the simulation actually collides with, over the art.
 // Open the game with ?hitboxes, or call sprout.hitboxes(true) from the ?debug console.
 import type { GameObjects, Scene } from 'phaser';
+import { GROUND } from '../config';
 import type { Fight } from '../sim/fight';
 import type { Circle, Rect } from '../sim/math';
 import type { Stage } from '../sim/stage/stage';
@@ -58,6 +59,9 @@ export class HitboxOverlay {
     for (const s of stage.solids) this.shape({ x: s.x, y: s.y, w: s.w, h: Math.min(s.h, 40) }, PIP);
     for (const p of stage.platforms) this.shape({ x: p.x, y: p.y, w: p.w, h: 2 }, PIP);
     for (const t of stage.thorns) this.shape(t, HURTS_PIP);
+    for (const b of stage.bouncers) this.shape({ x: b.x - 34, y: b.top, w: 68, h: 2 }, PICKUP);
+    const glade = stage.glade;
+    if (glade) for (const x of [stage.minX, stage.maxX]) this.shape({ x, y: 0, w: 2, h: GROUND }, PIP);
     for (const e of stage.enemies) {
       const box = e.hurtbox(),
         shield = e.shield();

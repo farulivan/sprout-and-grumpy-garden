@@ -8,7 +8,7 @@
 import type { GameObjects, Scene } from 'phaser';
 import { GROUND, W } from '../../../config';
 import type { Enemy } from '../../../sim/stage/enemies/enemy';
-import type { Stage } from '../../../sim/stage/stage';
+import type { Glade, Stage } from '../../../sim/stage/stage';
 import { INV, part, unit } from '../../art/bake';
 import { Air } from '../world/air';
 import { Sky } from '../world/sky';
@@ -43,12 +43,14 @@ export interface StageTheme {
   readonly horizon: string; // the boss, far off
   readonly fence: StripTheme; // the nearest strip, sliding just slower than the ground
   readonly front: Omit<StripTheme, 'depth'>; // the blur in front of it all, sliding just faster
-  readonly home: PropTheme & { readonly x: number }; // what stands at the start, before the row of props
+  readonly home?: PropTheme & { readonly x: number }; // what stands at the start, before the row of props
   readonly prop: (i: number) => PropTheme; // the i-th in the row
   // the strip that tiles along the ground, the end of a stretch of it, and a pit baked 100 wide
   readonly ground: { readonly tile: string; readonly end: string; readonly pit: string };
   readonly dressing: (i: number) => string; // the i-th small thing strewn along the ground
   readonly log: string; // baked 70 wide and 30 high, and stretched to fit
+  readonly trunk: string; // baked 70 wide and 200 high, and stretched to fit
+  readonly bramble: string; // a glade's wall, its foot in the middle, drawn rising from the ground
   readonly thorns: string; // baked 72 wide, and stretched to fit
   readonly pad: (w: number) => string; // a leaf pad of this width
   readonly stalk: (drop: number) => string; // what holds up a pad, this far above the ground
@@ -115,6 +117,7 @@ export class StageWorldView {
   private caps: Strewn;
   private dressing: Strewn; // tufts and flowers along the ground
   private pads: { image: GameObjects.Image; y: number; x: number }[] = [];
+  private walls: { glade: Glade; images: GameObjects.Image[] }[] = [];
   private blooms: GameObjects.Image[] = [];
   private bloomsUsed = 0;
   private known = new Set<Enemy>();
@@ -157,7 +160,7 @@ export class StageWorldView {
       const image = part(scene, key).setDepth(depth.back + 0.6);
       return size === undefined ? image : image.setScale(unit(key) * size);
     };
-    this.props.push({ x: theme.home.x, image: prop(theme.home) });
+    if (theme.home) this.props.push({ x: theme.home.x, image: prop(theme.home) });
     for (let x = 300, i = 0; x < layerEnd + 200; x += 210 + ((i * 97) % 120), i++)
       this.props.push({ x, image: prop(theme.prop(i)) });
     for (const p of this.props) p.image.setY(GROUND - 12);
@@ -209,9 +212,13 @@ export class StageWorldView {
     this.dressing = new Strewn(dressing);
 
     // logs, brambles, leaf pads, the sign and the gate
-    for (const s of stage.solids.filter((r) => r.y !== GROUND))
+    for (const s of stage.solids.filter((r) => r.y !== GROUND && !stage.trunks.includes(r)))
       part(scene, theme.log, s.x, s.y + s.h)
         .setScale((unit(theme.log) * s.w) / 70, (unit(theme.log) * s.h) / 30)
+        .setDepth(depth.ground + 0.03);
+    for (const s of stage.trunks)
+      part(scene, theme.trunk, s.x, s.y + s.h)
+        .setScale((unit(theme.trunk) * s.w) / 70, (unit(theme.trunk) * s.h) / 200)
         .setDepth(depth.ground + 0.03);
     for (const t of stage.thorns)
       part(scene, theme.thorns, t.x, t.y + t.h)
@@ -228,11 +235,37 @@ export class StageWorldView {
     part(scene, theme.gate, stage.gateX, GROUND).setDepth(depth.ground + 0.03);
   }
 
-  // A new run of the same stage: the flowers from the last one go.
-  reset() {
+  // A new run of the same stage: the flowers from the last one go, and its glades stand open again.
+  reset(stage: Stage) {
     for (const b of this.blooms) b.setVisible(false);
     this.bloomsUsed = 0;
     this.known.clear();
+    this.walls = stage.glades.map((glade, i) => ({
+      glade,
+      images: (this.walls[i]?.images ?? this.makeWalls(glade)).map((image, side) =>
+        image.setX(side ? glade.x1 : glade.x0).setVisible(false),
+      ),
+    }));
+  }
+
+  private makeWalls(glade: Glade) {
+    return [glade.x0, glade.x1].map((x) =>
+      part(this.scene, this.theme.bramble, x, GROUND + 4).setDepth(this.depth.platforms),
+    );
+  }
+
+  // A glade's brambles spring up as it shuts, and wither as it opens.
+  private syncWalls() {
+    for (const { glade, images } of this.walls) {
+      const up =
+        glade.state === 'closed'
+          ? Math.min(1, glade.t / 0.22)
+          : glade.state === 'open'
+            ? Math.max(0, 1 - glade.t / 0.45)
+            : 0;
+      for (const image of images)
+        image.setVisible(up > 0).setScale(unit(this.theme.bramble), unit(this.theme.bramble) * up);
+    }
   }
 
   sync(stage: Stage, camX: number, dt: number) {
@@ -273,6 +306,7 @@ export class StageWorldView {
       pad.image.setPosition(pad.x, pad.y + bob).setRotation(Math.sin(t * 1.1 + pad.x) * 0.012);
     }
     this.growBlooms(stage, t);
+    this.syncWalls();
     this.front.sync(camX);
 
     this.airLayer.setX(camX);
@@ -287,13 +321,14 @@ export class StageWorldView {
     for (const e of this.known) {
       if (now.has(e)) continue;
       this.known.delete(e);
-      if (!e.dead || e.kind === 'puffball') continue; // a Puffball's seeds just float away
+      const rootY = e.bloomY();
+      if (!e.dead || rootY === null) continue;
       let bloom = this.blooms[this.bloomsUsed];
       if (!bloom) {
         bloom = part(this.scene, this.theme.bloom(this.bloomsUsed)).setDepth(this.depth.ground + 0.04);
         this.blooms.push(bloom);
       }
-      bloom.setPosition(e.x, e.y).setVisible(true).setData('born', t);
+      bloom.setPosition(e.x, rootY).setVisible(true).setData('born', t);
       this.bloomsUsed++;
     }
     for (let i = 0; i < this.bloomsUsed; i++) {

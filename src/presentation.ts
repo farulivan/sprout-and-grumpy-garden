@@ -445,6 +445,20 @@ export function present(e: SimEvent, p: Presenter, opts: PresentOptions) {
         glow: true,
       });
       break;
+    case 'enemyBurst':
+      // a Puffball on Pip: not cheered up, so no cheer, and its seeds scatter
+      p.sfx('petal');
+      p.burst(e.x, e.y, {
+        n: 14,
+        colors: ['#ffffff', '#e9e3ff', '#bdb0ea'],
+        speed: 170,
+        size: 6,
+        life: 0.7,
+        gravity: 60,
+        shape: 'soft',
+        drag: 0.6,
+      });
+      break;
     case 'enemyWarn':
       p.sfx('telegraph');
       break;
@@ -517,6 +531,43 @@ export function present(e: SimEvent, p: Presenter, opts: PresentOptions) {
       break;
     case 'stageExit':
       break; // the app moves on to the boss
+    // ---- the Mushroom Wood, with borrowed sounds and simple effects for now ----
+    case 'bounce':
+      p.sfx('boing');
+      p.ring(e.x, e.y, { color: '#ffe680', from: 14, to: 64, life: 0.3 });
+      p.burst(e.x, e.y, { ...DUST, n: 6, speed: 130, dir: UP, spread: 2.8 });
+      break;
+    case 'padReady':
+      p.sfx('seed');
+      p.ring(e.x, e.y - 24, { color: '#fff3b0', from: 10, to: 80, life: 0.45 });
+      if (e.first && opts.chapter.bounceHint) p.toast(opts.chapter.bounceHint, 4, 'good');
+      break;
+    case 'thud':
+      p.sfx('land');
+      p.shake(3);
+      p.burst(e.x, e.y, { ...DUST, n: 7, speed: 110 });
+      break;
+    case 'gladeClose':
+      p.sfx('snap');
+      p.shake(6);
+      break;
+    case 'gladeWave':
+      p.sfx('telegraph');
+      break;
+    case 'gladeOpen':
+      p.sfx('clear');
+      for (const x of [e.x0 + 20, e.x1 - 20])
+        p.burst(x, GROUND - 90, {
+          n: 26,
+          colors: CHEER,
+          speed: 240,
+          size: 8,
+          life: 1.1,
+          gravity: 260,
+          shape: 'petal',
+          radius: 70,
+        });
+      break;
     // The opening's moments are only heard when the browser already lets the game play sound: until the
     // first key press it is silent. The title scene does their acting.
     case 'cue':

@@ -35,11 +35,14 @@ const PAUSE_SCENES = [...PLAY_SCENES, 'hud'];
 const LEVEL_SCENES = ['title', ...PLAY_SCENES];
 
 const params = new URLSearchParams(location.search);
+// ?debug&chapter=2: new games start at that chapter, for working on one that isn't live yet.
+const firstChapter = params.has('debug') ? Number(params.get('chapter')) - 1 : 0;
 const app = new App({
   controls,
   audio,
   presenter,
   skipIntro: params.has('skipintro'),
+  firstChapter: CHAPTERS[firstChapter] ? firstChapter : 0,
   onLevel: (level) => {
     presenter.reset();
     showSceneFor(level);

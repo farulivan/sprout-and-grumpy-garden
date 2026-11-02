@@ -369,7 +369,7 @@ function drawThorns(c: Ctx, w: number) {
 }
 
 // The sign by Pip's gate at the start; (0, 0) is the foot of its post.
-function drawSign(c: Ctx, text: string) {
+export function drawSign(c: Ctx, text: string) {
   glow(c, 0, 1, 34, '#173d1f', 0.35, 6);
   roundRect(c, -4, -70, 8, 70, 3);
   c.fillStyle = linear(c, -4, 0, 4, 0, ['#b5824f', '#7a4e2c']);
@@ -426,7 +426,7 @@ function drawSign(c: Ctx, text: string) {
 
 // Sunny's gate at the end of the path: an arch of trellis wound with vines and sunflowers, and a sign hanging
 // from it; (0, 0) is the middle of its foot.
-function drawGate(c: Ctx, text: string) {
+export function drawGate(c: Ctx, text: string) {
   const half = 62,
     top = -176;
   glow(c, 0, 2, half + 30, '#173d1f', 0.35, 8);
@@ -850,11 +850,10 @@ export function bakeStage(scene: Scene) {
   // every width a stage uses, and a stalk for every height they stand at
   const widths = new Set<number>(),
     drops = new Set<number>();
-  for (const stage of Object.values(STAGES))
-    for (const p of stage.platforms) {
-      widths.add(p.w);
-      drops.add(GROUND - p.y - 8);
-    }
+  for (const p of STAGES[SUNFLOWER.stage].platforms) {
+    widths.add(p.w);
+    drops.add(GROUND - p.y - 8);
+  }
   for (const w of widths)
     bake(scene, `stage-pad-${w}`, w + 44, 48, w / 2 + 20, 15, (c) => drawLeafPlatform(c, w));
   for (const drop of drops)

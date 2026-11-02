@@ -13,7 +13,7 @@ import { Fx } from '../fx';
 import { Iris, IRIS_OPEN } from '../views/Iris';
 import type { GamePresenter } from '../presenter';
 import type { ChapterViews } from '../views/chapterViews';
-import { EnemyViews } from '../views/EnemyViews';
+import { BouncerViews, EnemyViews } from '../views/EnemyViews';
 import { StagePickupViews } from '../views/PickupViews';
 import { PlayerView } from '../views/PlayerView';
 import { ProjectileViews } from '../views/ProjectileViews';
@@ -44,6 +44,7 @@ export class StageScene extends Scene {
   private world!: StageWorldView;
   private player!: PlayerView;
   private enemies!: EnemyViews;
+  private bouncers!: BouncerViews;
   private pickups!: StagePickupViews;
   private projectiles!: ProjectileViews;
   private fx!: Fx;
@@ -69,6 +70,7 @@ export class StageScene extends Scene {
     this.fx = new Fx(this, DEPTH.particles, DEPTH.flash);
     this.world = this.views.stageWorld(this, stage, DEPTH);
     this.enemies = new EnemyViews(this, DEPTH.enemies, DEPTH.marks);
+    this.bouncers = new BouncerViews(this, DEPTH.enemies);
     this.pickups = new StagePickupViews(this, DEPTH.pickups, this.fx);
     this.player = new PlayerView(this, DEPTH.player, this.fx);
     this.projectiles = new ProjectileViews(this, DEPTH.projectiles);
@@ -95,7 +97,7 @@ export class StageScene extends Scene {
     if (stage !== this.seen) {
       // a new run: last run's flowers go, and the fade into the light at the gate is undone
       this.seen = stage;
-      this.world.reset();
+      this.world.reset(stage);
       this.fading = false;
       this.cameras.main.resetFX();
       this.irisT = 0;
@@ -104,6 +106,7 @@ export class StageScene extends Scene {
     this.world.sync(stage, camX, dt);
     this.openIris(stage, camX, dt);
     this.enemies.sync(stage.enemies, alpha, dt);
+    this.bouncers.sync(stage.bouncers);
     this.pickups.sync(stage.pickups, dt);
     this.player.sync(stage, alpha, dt);
     this.projectiles.sync(stage.projectiles, alpha);

@@ -3,6 +3,7 @@
 // States: play -> clear (Pip walks through the gate) -> exit (on to the boss)
 //              | play -> down (Pip naps) -> lose
 import { GROUND, H, STEP, W } from '../../config';
+import { Bouncer } from '../bouncer';
 import type { SimEvent, StageResult } from '../events';
 import { NO_INPUT, type InputFrame } from '../input';
 import type { Level } from '../level';
@@ -23,14 +24,39 @@ export interface StageData {
   readonly length: number; // how wide the stage is
   readonly startX: number;
   readonly gateX: number; // walking past here clears the stage
+  readonly safeEdge?: number; // after a fall, Pip comes back on ground at least this far from either edge of it
   readonly ground: readonly (readonly [number, number])[]; // stretches of ground, from x to x; gaps are pits
   readonly logs: readonly { x: number; w: number; h: number }[]; // lying on the ground
+  // too tall to jump, standing on the ground: seeds stop at them, and logs don't stop seeds
+  readonly trunks?: readonly { x: number; w: number; h: number }[];
   readonly platforms: readonly Rect[]; // one-way leaf pads
   readonly thorns: readonly { x: number; w: number }[]; // bramble patches on the ground
-  // y: its feet, if not on the ground; level: how hard it is (see enemies/index.ts), 1 if not given
-  readonly enemies: readonly { kind: EnemyKind; x: number; y?: number; level?: number }[];
+  // y: its feet, if not on the ground; level: how hard it is (see enemies/index.ts), 1 if not given; glade: the
+  // one it belongs to (see glades), which won't open until it is cheered up; wave: in that glade, which wave
+  // it comes in, from 0. Wave 0 stands there from the start; each later one waits for the one before.
+  readonly enemies: readonly {
+    kind: EnemyKind;
+    x: number;
+    y?: number;
+    level?: number;
+    glade?: number;
+    wave?: number;
+  }[];
   readonly dewdrops: readonly (readonly [number, number])[];
   readonly seeds: readonly (readonly [number, number])[]; // the golden seeds
+  readonly glades?: readonly { readonly x0: number; readonly x1: number }[]; // from wall to wall; flat ground
+}
+
+// A stretch of a stage that shuts behind Pip: the camera stops, and he can't leave until every plant in it has
+// been cheered up. Then the brambles wither.
+export interface Glade {
+  readonly x0: number;
+  readonly x1: number;
+  state: 'waiting' | 'closed' | 'open';
+  t: number; // seconds since its state changed; only for drawing
+  here: Enemy[]; // the plants to cheer up now
+  readonly waves: Enemy[][]; // those still to come
+  wave: number; // which wave is here
 }
 
 export interface StageOptions {
@@ -41,10 +67,13 @@ export interface StageOptions {
 }
 
 const LOOK = 110; // the camera looks this far ahead of Pip, the way he is running
-const SAFE = 48; // after a fall, Pip comes back on ground at least this far from either edge of it
+const SAFE = 48; // how far from an edge Pip comes back after a fall, unless the stage says otherwise
 const FELL = H + 40; // Pip's feet below this: he fell into a pit
 const THORN_H = 22;
 const WALK_IN = { ...NO_INPUT, right: true }; // at the gate, Pip walks on through by himself
+const GLADE_IN = 150; // how far past its first wall Pip is when a glade shuts
+const GLADE_WALL = 26; // how far from a wall of brambles his feet stay, and everything in there with him
+const ARRIVE = 0.8; // seconds a later wave's plants take to arrive, under a "!"
 // Every this many golden seeds make a heart, as a dewdrop does, and then the count starts again.
 export const SEEDS_PER_HEART = 3;
 
@@ -57,15 +86,18 @@ export class Stage implements PlayerWorld, EnemyWorld, Level {
   readonly length: number;
   readonly startX: number;
   readonly gateX: number;
-  readonly minX = 24;
-  readonly maxX: number;
+  minX = 24; // the walls: a closed glade moves them
+  maxX: number;
   readonly solids: readonly Rect[];
+  readonly trunks: readonly Rect[];
   readonly platforms: readonly Rect[];
   readonly thorns: readonly Rect[];
   readonly player: Player;
   enemies: Enemy[];
   projectiles: Projectile[] = [];
   pickups: Placed[];
+  bouncers: Bouncer[] = [];
+  readonly glades: readonly Glade[];
   goldenSeeds = 0; // golden seeds found toward the next heart
   camX = 0; // the world x of the view's left edge
   pcamX = 0; // ...one step ago, for smooth drawing between steps
@@ -75,6 +107,7 @@ export class Stage implements PlayerWorld, EnemyWorld, Level {
   timeScale = 1;
   private look = 0; // how far ahead the camera is looking
   private safeX: number; // where Pip comes back after a fall
+  private readonly safeEdge: number;
   private events: SimEvent[] = [];
 
   constructor(opts: StageOptions) {
@@ -85,16 +118,34 @@ export class Stage implements PlayerWorld, EnemyWorld, Level {
     this.easy = !!opts.easy;
     this.length = data.length;
     this.startX = this.safeX = data.startX;
+    this.safeEdge = data.safeEdge ?? SAFE;
     this.gateX = data.gateX;
     this.maxX = data.length - 24;
+    const stood = (l: { x: number; w: number; h: number }) => ({ x: l.x, y: GROUND - l.h, w: l.w, h: l.h });
+    this.trunks = (data.trunks ?? []).map(stood);
     // the ground is a row of deep boxes, so Pip can't walk out of a pit sideways
     this.solids = [
       ...data.ground.map(([x0, x1]) => ({ x: x0, y: GROUND, w: x1 - x0, h: 300 })),
-      ...data.logs.map((l) => ({ x: l.x, y: GROUND - l.h, w: l.w, h: l.h })),
+      ...data.logs.map(stood),
+      ...this.trunks,
     ];
     this.platforms = data.platforms;
     this.thorns = data.thorns.map((t) => ({ x: t.x, y: GROUND - THORN_H, w: t.w, h: THORN_H }));
-    this.enemies = data.enemies.map((s) => ENEMIES[s.kind](s.x, s.y ?? GROUND, s.level ?? 1));
+    const glades: Glade[] = (data.glades ?? []).map(({ x0, x1 }) => {
+      return { x0, x1, state: 'waiting', t: 0, here: [], waves: [], wave: 0 };
+    });
+    this.glades = glades;
+    this.enemies = [];
+    for (const s of data.enemies) {
+      const e = ENEMIES[s.kind](s.x, s.y ?? GROUND, s.level ?? 1),
+        glade = s.glade === undefined ? undefined : glades[s.glade],
+        wave = s.wave ?? 0;
+      if (glade && wave > 0) (glade.waves[wave - 1] ??= []).push(e);
+      else {
+        this.enemies.push(e);
+        glade?.here.push(e);
+      }
+    }
     this.pickups = [
       ...data.dewdrops.map(([x, y]) => new Placed('dew', x, y)),
       ...data.seeds.map(([x, y]) => new Placed('seed', x, y)),
@@ -107,6 +158,13 @@ export class Stage implements PlayerWorld, EnemyWorld, Level {
 
   get cheering() {
     return this.state === 'clear' || this.state === 'exit';
+  }
+  // The glade Pip is shut in, if he is.
+  get glade() {
+    return this.glades.find((g) => g.state === 'closed') ?? null;
+  }
+  get closed() {
+    return this.glade !== null;
   }
   // How far along the path Pip is, from 0 at the start to 1 at the gate.
   get progress() {
@@ -140,11 +198,13 @@ export class Stage implements PlayerWorld, EnemyWorld, Level {
     }
     this.follow(sdt);
     if (this.state !== 'down') for (const e of this.enemies) if (this.wakes(e)) e.update(sdt, this);
+    for (const b of this.bouncers) b.update(sdt);
     for (const pr of this.projectiles) pr.update(sdt, this.camX);
     if (this.state === 'play') this.collide();
     prune(this.enemies);
     prune(this.projectiles);
     prune(this.pickups);
+    if (this.state === 'play') for (const g of this.glades) this.watchGlade(g, sdt);
 
     if (this.state === 'play' && p.x >= this.gateX) {
       this.state = 'clear';
@@ -184,7 +244,45 @@ export class Stage implements PlayerWorld, EnemyWorld, Level {
     this.camX += (this.cameraGoal() - this.camX) * (1 - Math.exp(-dt * 6));
   }
   private cameraGoal() {
-    return clamp(this.player.x - W / 2 + this.look, 0, this.length - W);
+    const g = this.glade;
+    return clamp(this.player.x - W / 2 + this.look, g ? g.x0 : 0, g ? g.x1 - W : this.length - W);
+  }
+
+  // A glade shuts once Pip is well inside. It holds what is in it to the space inside its walls, so nothing can
+  // be left where he can't reach it, and it moves on when the plants here are all cheered up: to the next
+  // wave, or if that was the last, it opens.
+  private watchGlade(g: Glade, dt: number) {
+    const p = this.player;
+    g.t += dt;
+    if (g.state === 'waiting') {
+      if (p.x < g.x0 + GLADE_IN || p.x > g.x1) return;
+      g.state = 'closed';
+      g.t = 0;
+      this.minX = g.x0 + GLADE_WALL;
+      this.maxX = g.x1 - GLADE_WALL;
+      for (const e of g.here) e.awake = true;
+      this.emit({ type: 'gladeClose', x0: g.x0, x1: g.x1 });
+    } else if (g.state === 'closed') {
+      for (const e of g.here) e.x = clamp(e.x, this.minX, this.maxX);
+      if (!g.here.every((e) => e.dead)) return;
+      const next = g.waves[g.wave];
+      if (next) {
+        g.wave++;
+        g.here = next;
+        for (const e of next) {
+          e.awake = true;
+          e.entering = ARRIVE;
+        }
+        this.enemies.push(...next);
+        this.emit({ type: 'gladeWave', x0: g.x0, x1: g.x1, wave: g.wave + 1 });
+      } else {
+        g.state = 'open';
+        g.t = 0;
+        this.minX = 24;
+        this.maxX = this.length - 24;
+        this.emit({ type: 'gladeOpen', x0: g.x0, x1: g.x1 });
+      }
+    }
   }
 
   // An enemy starts once it has come on screen, and only moves while it is near the view.
@@ -211,7 +309,7 @@ export class Stage implements PlayerWorld, EnemyWorld, Level {
     const p = this.player;
     if (!p.onGround || p.y !== GROUND) return; // on a log or a leaf pad
     for (const s of this.solids)
-      if (s.y === GROUND && p.x - s.x >= SAFE && s.x + s.w - p.x >= SAFE) {
+      if (s.y === GROUND && p.x - s.x >= this.safeEdge && s.x + s.w - p.x >= this.safeEdge) {
         this.safeX = p.x;
         return;
       }
@@ -222,15 +320,24 @@ export class Stage implements PlayerWorld, EnemyWorld, Level {
       hb = p.hitbox;
     for (const pr of this.projectiles) {
       if (pr.dead) continue;
-      if (pr.owner === 'player') this.seedHits(pr);
+      const trunk = this.trunks.find((t) => rectCircleHit(t, pr));
+      if (trunk) {
+        pr.dead = true;
+        if (pr.owner === 'player') this.emit({ type: 'enemyBlock', x: pr.x, y: pr.y });
+      } else if (pr.owner === 'player') this.seedHits(pr);
       else if (p.alive && circleHit(pr, hb)) {
         pr.dead = true;
         p.hurt(pr.x - pr.vx); // knocked the way it was flying
       }
     }
     for (const e of this.enemies) {
-      const box = e.awake ? e.hurtbox() : null;
-      if (box && p.alive && circleHit(box, hb)) p.hurt(e.x);
+      const box = e.awake && e.entering <= 0 ? e.hurtbox() : null;
+      if (!box || !p.alive || !circleHit(box, hb)) continue;
+      p.hurt(e.x);
+      if (e.spentOnTouch) {
+        e.dead = true;
+        this.emit({ type: 'enemyBurst', x: e.x, y: e.y });
+      }
     }
     for (const t of this.thorns) if (p.alive && rectCircleHit(t, hb)) p.hurt(t.x + t.w / 2);
     for (const d of this.pickups) if (!d.dead && circleHit(d, hb)) this.take(d);
@@ -240,12 +347,15 @@ export class Stage implements PlayerWorld, EnemyWorld, Level {
   // One of Pip's seeds: the first enemy it touches is hit, or the seed bounces off if that one is hiding.
   private seedHits(pr: Projectile) {
     for (const e of this.enemies) {
-      if (!e.awake || e.dead) continue;
+      if (!e.awake || e.dead || e.entering > 0) continue;
       const box = e.hurtbox();
       if (box && circleHit(pr, box)) {
         pr.dead = true;
-        if (e.hit()) this.emit({ type: 'enemyCheered', kind: e.kind, x: box.x, y: box.y, baseY: e.y });
-        else this.emit({ type: 'enemyHit', x: pr.x, y: pr.y });
+        if (!e.hittable) this.emit({ type: 'enemyBlock', x: pr.x, y: pr.y });
+        else if (e.hit()) {
+          this.emit({ type: 'enemyCheered', kind: e.kind, x: box.x, y: box.y, baseY: e.y });
+          if (e.kind === 'capling') this.growPad(e);
+        } else this.emit({ type: 'enemyHit', x: pr.x, y: pr.y });
         return;
       }
       const shield = e.shield();
@@ -255,6 +365,12 @@ export class Stage implements PlayerWorld, EnemyWorld, Level {
         return;
       }
     }
+  }
+
+  // A cheered-up Capling stays where it is, as a bounce pad, for good.
+  private growPad(e: Enemy) {
+    this.bouncers.push(new Bouncer(e.x, e.y));
+    this.emit({ type: 'padReady', x: e.x, y: e.y, first: this.bouncers.length === 1 });
   }
 
   private take(d: Placed) {

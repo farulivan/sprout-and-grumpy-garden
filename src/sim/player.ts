@@ -1,5 +1,6 @@
 // Pip, the little sprout hero. Feet are at (x, y).
 import { GROUND } from '../config';
+import type { Bouncer } from './bouncer';
 import type { SimEvent } from './events';
 import type { InputFrame } from './input';
 import { clamp, type Circle, type Rect } from './math';
@@ -14,6 +15,10 @@ const SPEED = 290,
 const SHOT_SPEED = 640,
   SHOT_COOLDOWN = 0.17;
 const JUMP_BUFFER = 0.1; // a jump pressed this long before landing still happens
+// Falling onto a bounce pad throws him up this fast. As with a jump, holding the button goes higher: about
+// 261 px against 152, or 153 against 89 when it is let go.
+export const BOUNCE_V = 840;
+const BOUNCE_GRACE = 0.1; // the button pressed this long after a bounce still counts as held through it
 // His hitbox is a circle this far above his feet. Forgiving: smaller than the sprite.
 const HIT_UP = 22,
   HIT_R = 14;
@@ -32,6 +37,7 @@ export interface PlayerWorld {
   // Boxes he stands on and walks into: on a stage, the ground in stretches (the gaps are pits) and logs.
   // Without them, the floor is a boss arena's: flat, everywhere, at GROUND.
   readonly solids?: readonly Rect[];
+  readonly bouncers?: readonly Bouncer[]; // bounce pads, where a level has them
   readonly projectiles: Projectile[];
   emit(e: SimEvent): void;
 }
@@ -48,6 +54,7 @@ export class Player {
   coyote = 0; // seconds left in which a jump still works after walking off an edge
   jumpBuffer = 0; // seconds left in which an early jump press is still remembered
   jumpHeld = false;
+  bounceGrace = 0; // seconds left in which the button still counts as held through a bounce
   hp = 5;
   maxHp = 5;
   hits = 0;
@@ -100,6 +107,10 @@ export class Player {
       this.sq = 1.35;
       w.emit({ type: 'jump', x: this.x, y: this.y });
     }
+    if (this.bounceGrace > 0) {
+      this.bounceGrace -= dt;
+      if (input.jump) this.jumpHeld = true;
+    }
     if (!input.jump) this.jumpHeld = false;
     this.vy = Math.min(this.vy + (this.vy < 0 && this.jumpHeld ? GRAV_HOLD : GRAV) * dt, 1000);
 
@@ -109,6 +120,7 @@ export class Player {
     this.y += this.vy * dt;
     const wasGround = this.onGround;
     this.onGround = false;
+    if (w.bouncers && ctrl && this.vy >= 0) this.bounceOff(w.bouncers, prevY, input);
     if (w.solids) {
       this.collideSolids(w.solids, prevX, prevY);
     } else if (this.y >= GROUND) {
@@ -145,6 +157,22 @@ export class Player {
       w.emit({ type: 'shoot' });
     }
     this.sq += (1 - this.sq) * Math.min(1, dt * 9);
+  }
+
+  // Falling onto a bounce pad throws him back up, however he got there. Rising, he passes through it.
+  private bounceOff(bouncers: readonly Bouncer[], prevY: number, input: InputFrame) {
+    for (const b of bouncers) {
+      if (!b.catches(this.x, prevY, this.y)) continue;
+      this.y = b.top;
+      this.vy = -BOUNCE_V;
+      this.coyote = this.jumpBuffer = 0;
+      this.jumpHeld = input.jump;
+      this.bounceGrace = BOUNCE_GRACE;
+      this.sq = 1.4;
+      b.sprung = 1;
+      this.world.emit({ type: 'bounce', x: b.x, y: b.top });
+      return;
+    }
   }
 
   // One-way platforms: he lands on one only when falling onto it from above.
