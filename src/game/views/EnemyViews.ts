@@ -429,6 +429,24 @@ class ToadletView implements EnemyView {
   }
 }
 
+// One of Mo's bubbles of spores, wobbling as it drifts. A placeholder.
+class SporeView implements EnemyView {
+  private body: GameObjects.Image;
+
+  constructor(scene: Scene, depth: number) {
+    this.body = part(scene, 'spore-bubble').setDepth(depth);
+  }
+  setVisible(visible: boolean) {
+    this.body.setVisible(visible);
+  }
+  sync(e: Enemy, alpha: number) {
+    const wobble = Math.sin(e.t * 5) * 0.06;
+    this.body
+      .setPosition(lerp(e.px, e.x, alpha), lerp(e.py, e.y, alpha))
+      .setScale(INV * (1 + wobble), INV * (1 - wobble));
+  }
+}
+
 // A cheered-up Capling: a bounce pad that squashes as Pip lands on it and springs back.
 class BouncerView implements PooledView {
   private body: GameObjects.Image;
@@ -496,6 +514,8 @@ export class EnemyViews {
             return new DropcapView(scene, depth, markDepth);
           case 'toadlet':
             return new ToadletView(scene, depth);
+          case 'spore':
+            return new SporeView(scene, depth);
         }
       },
     );

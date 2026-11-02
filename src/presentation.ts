@@ -101,7 +101,7 @@ const CONFETTI = ['#ffd23f', '#ff8fb1', '#8fd8ff', '#b48cff', '#7ccf63', '#fffff
 const LEAVES = ['#7cc644', '#9ad85f', '#5aa83a'];
 const CHEER = ['#ffd23f', '#ff8fb1', '#fff3b0', '#ffb3c7']; // the petals a cheered-up enemy pops into
 const SPORES = ['#ffe27a', '#8feaff', '#ff9be8', '#fff3b0']; // ...and the glowing spores a mushroom does
-const WOOD_KINDS: readonly string[] = ['capling', 'burr', 'dropcap', 'toadlet'];
+const WOOD_KINDS: readonly string[] = ['capling', 'burr', 'dropcap', 'toadlet', 'spore'];
 // The puff of dust that anything landing, sliding or digging kicks up. Views reuse it for theirs.
 export const DUST: Burst = {
   n: 5,
