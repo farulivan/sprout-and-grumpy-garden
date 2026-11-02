@@ -70,8 +70,7 @@ export const SUNFLOWER = {
   portrait: { angry: 'bar-icon-sunny-angry', joy: 'bar-icon-sunny-joy' },
 } as const satisfies Chapter;
 
-// Chapter 2 is reached only through ?debug&chapter=2 until it goes live. Until Mo arrives, the gate still leads
-// to Sunny, so what is said about the fight is still his.
+// Chapter 2 is reached only through ?debug&chapter=2 until it goes live.
 export const WOOD = {
   ...SUNFLOWER,
   id: 'wood',
@@ -79,15 +78,29 @@ export const WOOD = {
   sign: 'Mushroom Wood',
   gate: "Mo's Hollow",
   stage: 'mushroomWood',
+  boss: 'mo',
   tunes: { stage: 'wood', boss: 'boss' },
+  fightHint: {
+    aim: 'He rears up to attack: hold ↑ and hit his face for double damage!',
+    // a touch screen can't aim, but a straight seed in the air reaches his face
+    touch: 'He rears up to attack: jump and hit his face for double damage!',
+  },
+  phaseToasts: ['Mo is getting cross!', 'Mo is FURIOUS!'],
+  cheeredToast: 'Mo is beaming!',
+  shed: ['#6a8cff', '#ff7a3c'], // the blue of his cap, then the orange
   bounceHint: 'Bounce on it! Hold jump to go higher.',
   lose: {
     stage: {
       who: 'The Mushroom Wood is',
       progress: (percent) => `You made it ${percent}% of the way to Mo!`,
     },
-    boss: SUNFLOWER.lose.boss,
+    boss: {
+      who: 'Mo is',
+      progress: (percent) => `You cheered Mo up ${percent}% of the way!`,
+    },
   },
+  win: { badge: '🍄', line: 'Mo is all smiles, and the whole wood is aglow. What a hero, Pip!' },
+  barColors: [0x6a8cff, 0xff7a3c, 0xa85cf0], // his cap, as his mood turns
 } as const satisfies Chapter;
 
 export const CHAPTERS = [SUNFLOWER, WOOD] as const satisfies readonly Chapter[];

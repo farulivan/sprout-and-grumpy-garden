@@ -11,7 +11,7 @@ import { Air, bakeAir } from './world/air';
 import { bakeGround } from './world/ground';
 import { bakeLand } from './world/land';
 import { bakeSky, Sky } from './world/sky';
-import { moodOf, Weather } from './world/weather';
+import { moodOf, Weather, type Mood } from './world/weather';
 
 export function bakeWorld(scene: Scene) {
   bakeSky(scene);
@@ -39,6 +39,9 @@ export interface ArenaGround {
 export interface ArenaParts {
   land(scene: Scene, layer: GameObjects.Container): ArenaLand;
   ground(scene: Scene, depth: WorldDepths): ArenaGround;
+  night?: boolean; // a moon and no sun
+  mood?(fight: Fight): Mood; // the weather, if not Sunny's...
+  startMood?: Mood; // ...and what it starts as
 }
 
 export class WorldView {
@@ -47,6 +50,7 @@ export class WorldView {
   private land: ArenaLand;
   private ground: ArenaGround;
   private air: Air;
+  private moodFor: (fight: Fight) => Mood;
   private t = 0;
   private pan = 0; // -1..1: follows Pip across the arena, smoothly
   private blink = 1 + Math.random() * 3;
@@ -54,8 +58,14 @@ export class WorldView {
   constructor(scene: Scene, depth: WorldDepths, parts: ArenaParts) {
     const back = scene.add.container(0, 0).setDepth(depth.back);
     this.sky = new Sky(scene, back);
+    if (parts.night) this.sky.nightSky(scene);
+    this.moodFor = parts.mood ?? moodOf;
     this.land = parts.land(scene, back);
     this.air = new Air(scene, back, depth);
+    if (parts.startMood) {
+      this.weather.snap(parts.startMood);
+      this.air.settle(this.weather);
+    }
     this.ground = parts.ground(scene, depth);
   }
 
@@ -64,7 +74,7 @@ export class WorldView {
     this.blink -= dt;
     if (this.blink < -0.14) this.blink = 2.5 + Math.random() * 3;
 
-    this.weather.update(moodOf(fight), dt);
+    this.weather.update(this.moodFor(fight), dt);
     const px = lerp(fight.player.px, fight.player.x, alpha);
     this.pan += (clamp((px - W / 2) / (W / 2), -1, 1) - this.pan) * Math.min(1, dt * 2);
 

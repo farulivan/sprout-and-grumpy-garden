@@ -39,6 +39,7 @@ import {
   wave,
   type GroundLook,
 } from '../stage/art';
+import { MO_PLATFORMS } from '../../../sim/bosses/mo';
 import { bakeWoodEnemies } from './enemyArt';
 import { bakeMo } from './moArt';
 
@@ -947,7 +948,7 @@ export function bakeWood(scene: Scene) {
     bake(scene, `wood-bloom-${i}`, 84, 84, 42, 78, (c) => drawGlowBloom(c, i));
   const widths = new Set<number>(),
     drops = new Set<number>();
-  for (const p of STAGES[WOOD.stage].platforms) {
+  for (const p of [...STAGES[WOOD.stage].platforms, ...MO_PLATFORMS]) {
     widths.add(p.w);
     drops.add(GROUND - p.y - 8);
   }

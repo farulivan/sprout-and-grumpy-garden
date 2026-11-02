@@ -11,6 +11,8 @@ import { StageWorldView, type StageDepths } from './stage/StageWorldView';
 import { Ground } from './world/ground';
 import { Land } from './world/land';
 import { WorldView, type WorldDepths } from './WorldView';
+import type { Mood } from './world/weather';
+import { HollowGround, HollowLand } from './wood/hollow';
 
 export interface ChapterViews {
   // Make ready what only this chapter draws, the first time it is played.
@@ -27,6 +29,8 @@ const gardenArena = (scene: Scene, depth: WorldDepths) =>
     ground: (s, d) => new Ground(s, d),
   });
 
+const MO_MOODS: readonly Mood[] = ['dusk', 'gloom', 'tantrum'];
+
 export const CHAPTER_VIEWS: Record<ChapterId, ChapterViews> = {
   sunflower: {
     stageWorld: (scene, stage, depth) => new StageWorldView(scene, stage, depth, GARDEN_THEME),
@@ -36,7 +40,14 @@ export const CHAPTER_VIEWS: Record<ChapterId, ChapterViews> = {
   wood: {
     prepare: (scene) => bakeLate(scene, 'wood', () => bakeWood(scene)),
     stageWorld: (scene, stage, depth) => new StageWorldView(scene, stage, depth, WOOD_THEME),
-    arena: gardenArena, // until Mo has a hollow of his own, the gate leads back to Sunny
+    arena: (scene, depth) =>
+      new WorldView(scene, depth, {
+        land: (s, layer) => new HollowLand(s, layer),
+        ground: (s, d) => new HollowGround(s, d),
+        night: true,
+        startMood: 'dusk',
+        mood: (fight) => (fight.boss.alive ? MO_MOODS[Math.min(fight.boss.phase, 3) - 1] : 'glow'),
+      }),
     gateLight: [206, 220, 255], // moonlight, through the hollow
   },
 };
