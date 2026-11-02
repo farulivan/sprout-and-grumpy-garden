@@ -17,5 +17,5 @@ export const BOSS_VIEWS: Record<
   { bake?(scene: Scene): void; create(scene: Scene, depth: number, fx: FxTarget): BossView }
 > = {
   sunny: { bake: bakeSunny, create: (scene, depth, fx) => new SunnyView(scene, depth, fx) },
-  mo: { create: (scene, depth) => new MoView(scene, depth) },
+  mo: { create: (scene, depth, fx) => new MoView(scene, depth, fx) },
 };
