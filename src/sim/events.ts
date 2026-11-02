@@ -48,6 +48,8 @@ export type SimEvent =
   | { type: 'pea'; x: number; y: number }
   | { type: 'snap'; x: number; y: number }
   | { type: 'pitFall'; x: number }
+  | { type: 'padReady'; x: number; y: number; first: boolean } // a cheered-up plant stays as a bounce pad
+  | { type: 'thud'; x: number; y: number } // something heavy stopped: a Burr at a wall, a Dropcap on the ground
   | { type: 'gladeClose'; x0: number; x1: number } // brambles shut Pip in until every plant is cheered up
   | { type: 'gladeWave'; x0: number; x1: number; wave: number } // the next plants arrive (wave 2, then 3...)
   | { type: 'gladeOpen'; x0: number; x1: number } // ...and the brambles wither

@@ -523,6 +523,16 @@ export function present(e: SimEvent, p: Presenter, opts: PresentOptions) {
       p.ring(e.x, e.y, { color: '#ffe680', from: 14, to: 64, life: 0.3 });
       p.burst(e.x, e.y, { ...DUST, n: 6, speed: 130, dir: UP, spread: 2.8 });
       break;
+    case 'padReady':
+      p.sfx('seed');
+      p.ring(e.x, e.y - 24, { color: '#fff3b0', from: 10, to: 80, life: 0.45 });
+      if (e.first && opts.chapter.bounceHint) p.toast(opts.chapter.bounceHint, 4, 'good');
+      break;
+    case 'thud':
+      p.sfx('land');
+      p.shake(3);
+      p.burst(e.x, e.y, { ...DUST, n: 7, speed: 110 });
+      break;
     case 'gladeClose':
       p.sfx('snap');
       p.shake(6);

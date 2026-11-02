@@ -5,7 +5,8 @@ import type { Circle, Rect } from '../../math';
 import type { Player } from '../../player';
 import type { Projectile } from '../../projectile';
 
-export type EnemyKind = 'grumbud' | 'puffball' | 'peaPod' | 'snapper';
+export type EnemyKind =
+  'grumbud' | 'puffball' | 'peaPod' | 'snapper' | 'capling' | 'burr' | 'dropcap' | 'toadlet';
 
 // What an enemy can see and do.
 export interface EnemyWorld {
@@ -46,6 +47,14 @@ export abstract class Enemy {
   // Where seeds bounce off it without doing anything, or null.
   shield(): Circle | null {
     return null;
+  }
+  // Whether a seed on its hurtbox cheers it at all. If not, the seed bounces off.
+  get hittable() {
+    return true;
+  }
+  // Where a flower grows once it is cheered up, or null if none does.
+  bloomY(): number | null {
+    return this.y;
   }
 
   update(dt: number, w: EnemyWorld) {

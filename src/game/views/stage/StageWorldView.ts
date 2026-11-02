@@ -316,13 +316,14 @@ export class StageWorldView {
     for (const e of this.known) {
       if (now.has(e)) continue;
       this.known.delete(e);
-      if (!e.dead || e.kind === 'puffball') continue; // a Puffball's seeds just float away
+      const rootY = e.bloomY();
+      if (!e.dead || rootY === null) continue;
       let bloom = this.blooms[this.bloomsUsed];
       if (!bloom) {
         bloom = part(this.scene, this.theme.bloom(this.bloomsUsed)).setDepth(this.depth.ground + 0.04);
         this.blooms.push(bloom);
       }
-      bloom.setPosition(e.x, e.y).setVisible(true).setData('born', t);
+      bloom.setPosition(e.x, rootY).setVisible(true).setData('born', t);
       this.bloomsUsed++;
     }
     for (let i = 0; i < this.bloomsUsed; i++) {

@@ -3,7 +3,7 @@
 // States: play -> clear (Pip walks through the gate) -> exit (on to the boss)
 //              | play -> down (Pip naps) -> lose
 import { GROUND, H, STEP, W } from '../../config';
-import type { Bouncer } from '../bouncer';
+import { Bouncer } from '../bouncer';
 import type { SimEvent, StageResult } from '../events';
 import { NO_INPUT, type InputFrame } from '../input';
 import type { Level } from '../level';
@@ -333,8 +333,11 @@ export class Stage implements PlayerWorld, EnemyWorld, Level {
       const box = e.hurtbox();
       if (box && circleHit(pr, box)) {
         pr.dead = true;
-        if (e.hit()) this.emit({ type: 'enemyCheered', kind: e.kind, x: box.x, y: box.y, baseY: e.y });
-        else this.emit({ type: 'enemyHit', x: pr.x, y: pr.y });
+        if (!e.hittable) this.emit({ type: 'enemyBlock', x: pr.x, y: pr.y });
+        else if (e.hit()) {
+          this.emit({ type: 'enemyCheered', kind: e.kind, x: box.x, y: box.y, baseY: e.y });
+          if (e.kind === 'capling') this.growPad(e);
+        } else this.emit({ type: 'enemyHit', x: pr.x, y: pr.y });
         return;
       }
       const shield = e.shield();
@@ -344,6 +347,12 @@ export class Stage implements PlayerWorld, EnemyWorld, Level {
         return;
       }
     }
+  }
+
+  // A cheered-up Capling stays where it is, as a bounce pad, for good.
+  private growPad(e: Enemy) {
+    this.bouncers.push(new Bouncer(e.x, e.y));
+    this.emit({ type: 'padReady', x: e.x, y: e.y, first: this.bouncers.length === 1 });
   }
 
   private take(d: Placed) {

@@ -7,8 +7,11 @@ import type { SimEvent } from '../../src/sim/events';
 import { NO_INPUT, type InputFrame } from '../../src/sim/input';
 import { Bouncer } from '../../src/sim/bouncer';
 import { BODY_HALF, Player, type PlayerWorld } from '../../src/sim/player';
+import { Burr, BURR_DIZZY, BURR_WARN } from '../../src/sim/stage/enemies/burr';
+import { Dropcap, DROP_WARN } from '../../src/sim/stage/enemies/dropcap';
 import { PEA_WARN } from '../../src/sim/stage/enemies/peaPod';
 import { SNAP_WARN } from '../../src/sim/stage/enemies/snapper';
+import { Toadlet } from '../../src/sim/stage/enemies/toadlet';
 import { Stage, type StageData } from '../../src/sim/stage/stage';
 import { STAGES } from '../../src/sim/stage/stages';
 
@@ -412,6 +415,48 @@ describe('bounce pads', () => {
     expect(held.apex).toBeGreaterThan(jump.apex + 100);
   });
 
+  it('only bounce him when he comes down on them, not walking through or rising through', () => {
+    const stage = stageWith({ enemies: [{ kind: 'capling', x: 480 }] });
+    stage.player.x = stage.player.px = 300;
+    run(stage, 1, SHOOT);
+    expect(stage.bouncers.length).toBe(1);
+    const walked = run(stage, 1, RIGHT);
+    expect(stage.player.x).toBeGreaterThan(480);
+    expect(has(walked, 'bounce')).toBe(false);
+
+    stage.player.x = stage.player.px = 480;
+    const rising = run(stage, 0.1, { ...NO_INPUT, jump: true, jumpPressed: true });
+    expect(has(rising, 'bounce')).toBe(false);
+    expect(stage.player.vy).toBeLessThan(0); // through the pad on the way up...
+    const falling = run(stage, 1.5, NO_INPUT, (e) => e.type === 'bounce');
+    expect(has(falling, 'bounce')).toBe(true); // ...and thrown back up on the way down
+  });
+
+  it('count the button pressed just after the bounce as held, and no later', () => {
+    const fly = (pressAfter: number) => {
+      const stage = stageWith({ enemies: [{ kind: 'capling', x: 480 }] });
+      stage.player.x = stage.player.px = 300;
+      run(stage, 1, SHOOT);
+      stage.player.x = stage.player.px = 480;
+      stage.player.y = stage.player.py = stage.bouncers[0].top - 30;
+      run(stage, 1, NO_INPUT, (e) => e.type === 'bounce');
+      let top = stage.player.y;
+      run(stage, 1, () => {
+        top = Math.min(top, stage.player.y);
+        return { ...NO_INPUT, jump: stage.t > pressAfter };
+      });
+      return GROUND - top;
+    };
+    const base = (() => {
+      const stage = stageWith({ enemies: [{ kind: 'capling', x: 480 }] });
+      stage.player.x = stage.player.px = 300;
+      run(stage, 1, SHOOT);
+      return stage.t;
+    })();
+    expect(fly(base + 0.05)).toBeGreaterThan(250); // within a few frames of the bounce: a high one
+    expect(fly(base + 0.6)).toBeLessThan(220); // long after: too late
+  });
+
   it('leave a Pip who is down alone', () => {
     const stage = stageWith({});
     stage.bouncers.push(new Bouncer(300, GROUND));
@@ -421,6 +466,164 @@ describe('bounce pads', () => {
     stage.player.hurt();
     expect(stage.player.alive).toBe(false);
     expect(has(run(stage, 1), 'bounce')).toBe(false);
+  });
+});
+
+describe('the Mushroom Wood enemies', () => {
+  it('Capling sits still and hurts to touch; two seeds make it a pad for good, and say so once', () => {
+    const touched = stageWith({ enemies: [{ kind: 'capling', x: 420 }] });
+    const x0 = touched.enemies[0].x;
+    expect(has(run(touched, 2, RIGHT), 'playerHurt')).toBe(true);
+    expect(touched.enemies[0].x).toBe(x0);
+
+    const stage = stageWith({
+      enemies: [
+        { kind: 'capling', x: 480 },
+        { kind: 'capling', x: 620 },
+      ],
+    });
+    stage.player.x = stage.player.px = 300;
+    const events = run(stage, 2.5, SHOOT);
+    expect(events.flatMap((e) => (e.type === 'padReady' ? [e.first] : []))).toEqual([true, false]);
+    expect(stage.enemies.length).toBe(0);
+    expect(stage.bouncers.map((b) => b.x)).toEqual([480, 620]);
+    run(stage, 30);
+    expect(stage.bouncers.length).toBe(2);
+    expect(stage.player.hp).toBe(5);
+  });
+
+  it('Burr warns, rolls at Pip with seeds bouncing off, and stops dizzy at a wall, when three seeds land', () => {
+    const stage = stageWith({
+      logs: [{ x: 360, w: 40, h: 30 }],
+      enemies: [{ kind: 'burr', x: 620 }],
+    });
+    stage.player.x = stage.player.px = 300; // behind the log, out of its way
+    const burr = stage.enemies[0] as Burr;
+    const events = run(stage, 0.1, NO_INPUT).concat(run(stage, BURR_WARN + 0.1, SHOOT));
+    expect(has(events, 'enemyWarn')).toBe(true);
+    expect(burr.state).toBe('roll');
+    const rolling = run(stage, 3, SHOOT, (e) => e.type === 'thud');
+    expect(has(rolling, 'enemyBlock')).toBe(true);
+    expect(has(rolling, 'enemyHit')).toBe(false);
+    expect(burr.state).toBe('dizzy');
+    expect(burr.x - 20).toBeCloseTo(400, -1); // at the log
+    const dizzy = run(stage, BURR_DIZZY - 0.1, SHOOT, (e) => e.type === 'enemyCheered');
+    expect(has(dizzy, 'enemyCheered')).toBe(true);
+    expect(stage.player.hp).toBe(5);
+  });
+
+  it('Burr stops at the edge of a pit, can be jumped, and stays behind Pip once he is past', () => {
+    const edge = stageWith({
+      ground: [
+        [-40, 400],
+        [540, 3040],
+      ],
+      enemies: [{ kind: 'burr', x: 600 }],
+    });
+    edge.player.x = edge.player.px = 300;
+    edge.player.inv = 99;
+    run(edge, 4);
+    expect((edge.enemies[0] as Burr).x).toBeGreaterThan(530);
+
+    const past = stageWith({ enemies: [{ kind: 'burr', x: 400 }] });
+    past.player.x = past.player.px = 700;
+    expect(has(run(past, 4), 'enemyWarn')).toBe(false);
+
+    const jumped = stageWith({ enemies: [{ kind: 'burr', x: 520 }] });
+    run(jumped, 5, (s) => {
+      const b = s.enemies[0] as Burr,
+        near = b.state === 'roll' && Math.abs(b.x - s.player.x) < 150;
+      return { ...NO_INPUT, jump: true, jumpPressed: near && s.player.onGround };
+    });
+    expect(jumped.player.hp).toBe(5);
+  });
+
+  it('Dropcap hangs out of reach of straight shots, and lands on a Pip who keeps running', () => {
+    const shot = stageWith({ enemies: [{ kind: 'dropcap', x: 580, y: 170 }] }); // where a seed aimed up crosses
+    shot.player.x = shot.player.px = 300;
+    const straight = run(shot, 1, SHOOT);
+    expect(has(straight, 'enemyCheered')).toBe(false);
+    expect(has(run(shot, 1.5, { ...SHOOT, up: true }), 'enemyCheered')).toBe(true);
+
+    const ran = stageWith({ enemies: [{ kind: 'dropcap', x: 800, y: 170 }] });
+    const events = run(ran, 4, RIGHT);
+    const warned = events.findIndex((e) => e.type === 'enemyWarn'),
+      hurt = events.findIndex((e) => e.type === 'playerHurt');
+    expect(warned).toBeGreaterThanOrEqual(0);
+    expect(hurt).toBeGreaterThan(warned);
+
+    // one who looks up and stops is safe, and it sits there for a seed
+    const looked = stageWith({ enemies: [{ kind: 'dropcap', x: 800, y: 170 }] });
+    const cap = looked.enemies[0] as Dropcap;
+    run(looked, 4, () => (cap.state === 'hang' ? RIGHT : NO_INPUT));
+    expect(cap.state).toBe('down');
+    expect(looked.player.hp).toBe(5);
+    expect(cap.bloomY()).toBe(GROUND);
+    expect(has(run(looked, 2, SHOOT), 'enemyCheered')).toBe(true);
+    expect(DROP_WARN).toBeGreaterThanOrEqual(0.4);
+  });
+
+  it('Toadlet hops at Pip over straight shots, lands where it said, and he can run under it', () => {
+    const stage = stageWith({ enemies: [{ kind: 'toadlet', x: 620 }] });
+    stage.player.x = stage.player.px = 300;
+    stage.player.inv = 99;
+    const toad = stage.enemies[0] as Toadlet;
+    let landedAt = 0,
+      aimedAt = 0;
+    run(
+      stage,
+      3,
+      () => {
+        if (toad.state === 'hop') aimedAt = toad.landX;
+        if (toad.state === 'sit' && aimedAt) landedAt = toad.x;
+        return NO_INPUT;
+      },
+      () => false,
+    );
+    expect(aimedAt).toBeGreaterThan(0);
+    expect(landedAt).toBeCloseTo(aimedAt, 0);
+
+    // at the top of a hop it is out of a straight seed's way and over Pip's head
+    const top = stageWith({ enemies: [{ kind: 'toadlet', x: 700 }] });
+    const flying = top.enemies[0] as Toadlet;
+    for (let i = 0; i < 600 && !(flying.state === 'hop' && flying.y < GROUND - 90); i++) top.step(NO_INPUT);
+    const box = flying.hurtbox();
+    expect(box.y + box.r).toBeLessThan(GROUND - 28 - 7); // clear of a straight seed
+    expect(box.y + box.r).toBeLessThan(GROUND - 22 - 14); // clear of his head
+  });
+
+  it('Toadlet hops across a pit and never comes down in one', () => {
+    const stage = stageWith({
+      ground: [
+        [-40, 500],
+        [660, 3040],
+      ],
+      enemies: [{ kind: 'toadlet', x: 800 }],
+    });
+    stage.player.x = stage.player.px = 300;
+    stage.player.inv = 99;
+    const toad = stage.enemies[0] as Toadlet;
+    run(stage, 8);
+    expect(toad.dead).toBe(false);
+    expect(toad.x).toBeLessThan(500); // it has crossed
+    expect(toad.y).toBe(GROUND);
+  });
+
+  it('every one warns before it can hurt a Pip who stands still', () => {
+    for (const enemy of [
+      { kind: 'burr', x: 420 },
+      { kind: 'dropcap', x: 300, y: 170 },
+      { kind: 'peaPod', x: 420 },
+      { kind: 'snapper', x: 320 },
+    ] as const) {
+      const stage = stageWith({ enemies: [enemy] });
+      stage.player.x = stage.player.px = 300;
+      const events = run(stage, 6);
+      const warned = events.findIndex((e) => e.type === 'enemyWarn'),
+        hurt = events.findIndex((e) => e.type === 'playerHurt');
+      expect(warned, enemy.kind).toBeGreaterThanOrEqual(0);
+      expect(hurt, enemy.kind).toBeGreaterThan(warned);
+    }
   });
 });
 

@@ -30,6 +30,7 @@ export interface Chapter {
   readonly fightHint: { readonly aim: string; readonly touch: string };
   readonly phaseToasts: readonly [string, string];
   readonly cheeredToast: string;
+  readonly bounceHint?: string; // the one message on a stage with bounce pads, as its first one grows
   readonly shed: readonly [string, string]; // what he sheds as he leaves phase 1, then phase 2
   readonly lose: { readonly stage: LoseText; readonly boss: LoseText };
   readonly win: WinText;

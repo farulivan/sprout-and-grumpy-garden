@@ -27,6 +27,10 @@ export class Puffball extends Enemy {
     return { x: this.x, y: this.y, r: 17 };
   }
 
+  override bloomY() {
+    return null; // its seeds just float away
+  }
+
   protected act(dt: number, w: EnemyWorld) {
     const p = w.player,
       dx = p.x + p.facing * AHEAD - this.x;
