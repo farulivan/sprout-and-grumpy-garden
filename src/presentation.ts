@@ -523,6 +523,27 @@ export function present(e: SimEvent, p: Presenter, opts: PresentOptions) {
       p.ring(e.x, e.y, { color: '#ffe680', from: 14, to: 64, life: 0.3 });
       p.burst(e.x, e.y, { ...DUST, n: 6, speed: 130, dir: UP, spread: 2.8 });
       break;
+    case 'gladeClose':
+      p.sfx('snap');
+      p.shake(6);
+      break;
+    case 'gladeWave':
+      p.sfx('telegraph');
+      break;
+    case 'gladeOpen':
+      p.sfx('clear');
+      for (const x of [e.x0 + 20, e.x1 - 20])
+        p.burst(x, GROUND - 90, {
+          n: 26,
+          colors: CHEER,
+          speed: 240,
+          size: 8,
+          life: 1.1,
+          gravity: 260,
+          shape: 'petal',
+          radius: 70,
+        });
+      break;
     // The opening's moments are only heard when the browser already lets the game play sound: until the
     // first key press it is silent. The title scene does their acting.
     case 'cue':

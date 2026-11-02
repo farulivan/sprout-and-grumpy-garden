@@ -22,6 +22,7 @@ export const GARDEN_THEME: StageTheme = {
   ground: { tile: 'stage-ground', end: 'stage-ground-end', pit: 'stage-pit' },
   dressing: (i) => (i % 3 === 0 ? `flower-${(i * 3) % 5}` : `tuft-${i % 3}`),
   log: 'stage-log',
+  bramble: 'stage-thorns', // (nor any glades)
   thorns: 'stage-thorns',
   pad: (w) => `stage-pad-${w}`,
   stalk: (drop) => `stage-stalk-${drop}`,

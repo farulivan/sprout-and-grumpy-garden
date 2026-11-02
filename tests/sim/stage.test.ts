@@ -423,3 +423,102 @@ describe('bounce pads', () => {
     expect(has(run(stage, 1), 'bounce')).toBe(false);
   });
 });
+
+const GLADE: Partial<StageData> = {
+  glades: [{ x0: 500, x1: 1460 }],
+  enemies: [
+    { kind: 'grumbud', x: 1000, glade: 0 },
+    { kind: 'grumbud', x: 1100, glade: 0 },
+    { kind: 'grumbud', x: 1200, glade: 0, wave: 1 },
+  ],
+};
+const shutIn = () => {
+  const stage = stageWith(GLADE);
+  run(stage, 4, RIGHT, (e) => e.type === 'gladeClose');
+  return stage;
+};
+
+describe('glades', () => {
+  it('shut once Pip is inside: the camera stops and the brambles hold him in', () => {
+    const stage = shutIn();
+    expect(stage.player.x).toBeGreaterThan(500);
+    expect(stage.closed).toBe(true);
+    stage.player.inv = 999;
+    run(stage, 5, RIGHT);
+    expect(stage.player.x).toBeLessThan(1460);
+    expect(stage.camX).toBeCloseTo(500, 0);
+    run(stage, 6, { ...NO_INPUT, left: true });
+    expect(stage.player.x).toBeGreaterThan(500);
+    expect(stage.camX).toBeCloseTo(500, 0);
+  });
+
+  it("can't open until every plant of every wave is cheered up, and each wave waits for the last", () => {
+    const stage = shutIn();
+    const [a, b] = stage.enemies;
+    expect(stage.enemies.length).toBe(2); // the second wave isn't there yet
+    const hit = (e: (typeof stage.enemies)[number]) => {
+      e.hp = 1;
+      e.hit();
+      return run(stage, 0.1);
+    };
+    expect(has(hit(a), 'gladeWave')).toBe(false);
+    expect(stage.closed).toBe(true);
+    const events = hit(b);
+    expect(has(events, 'gladeOpen')).toBe(false);
+    expect(events.find((e) => e.type === 'gladeWave')).toMatchObject({ wave: 2 });
+    expect(stage.closed).toBe(true);
+    const last = stage.enemies.find((e) => e.x === 1200)!;
+    expect(last.entering).toBeGreaterThan(0);
+    const opened = hit(last);
+    expect(has(opened, 'gladeOpen')).toBe(true);
+    expect(stage.closed).toBe(false);
+    stage.player.inv = 999;
+    run(stage, 6, RIGHT);
+    expect(stage.player.x).toBeGreaterThan(1500);
+  });
+
+  it("gives a later wave's plants a warning: until they arrive they can't hurt or be hurt", () => {
+    const stage = stageWith({
+      glades: [{ x0: 200, x1: 1160 }],
+      enemies: [
+        { kind: 'grumbud', x: 900, glade: 0 },
+        { kind: 'grumbud', x: 460, glade: 0, wave: 1 },
+      ],
+    });
+    stage.player.x = stage.player.px = 460;
+    run(stage, 0.1);
+    expect(stage.closed).toBe(true);
+    stage.enemies[0].hp = 1;
+    stage.enemies[0].hit();
+    run(stage, 0.1);
+    const late = stage.enemies.find((e) => e.x === 460)!;
+    expect(late.entering).toBeGreaterThan(0.5);
+    const hp = stage.player.hp;
+    run(stage, 0.5, SHOOT);
+    expect(stage.player.hp).toBe(hp);
+    expect(late.hp).toBe(2);
+    expect(has(run(stage, 1.5), 'playerHurt')).toBe(true); // it has arrived
+  });
+
+  it("can't trap Pip: anything that wandered off is brought back inside the walls", () => {
+    const stage = stageWith({
+      glades: [{ x0: 500, x1: 1460 }],
+      enemies: [{ kind: 'grumbud', x: 600, glade: 0 }],
+    });
+    stage.enemies[0].x = 300; // somehow out on the wrong side
+    stage.player.x = stage.player.px = 660;
+    stage.player.inv = 999;
+    run(stage, 0.1);
+    expect(stage.closed).toBe(true);
+    run(stage, 0.1);
+    expect(stage.enemies[0].x).toBeGreaterThanOrEqual(stage.minX);
+    expect(stage.enemies[0].awake).toBe(true);
+    // and it can still be reached: a Pip who goes after it cheers it up
+    const opened = run(stage, 20, (s) => {
+      const e = s.enemies[0],
+        dx = e ? e.x - s.player.x : 0;
+      return { ...SHOOT, left: dx < 0, right: dx > 0 };
+    });
+    expect(has(opened, 'gladeOpen')).toBe(true);
+  });
+});

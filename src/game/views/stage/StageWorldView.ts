@@ -8,7 +8,7 @@
 import type { GameObjects, Scene } from 'phaser';
 import { GROUND, W } from '../../../config';
 import type { Enemy } from '../../../sim/stage/enemies/enemy';
-import type { Stage } from '../../../sim/stage/stage';
+import type { Glade, Stage } from '../../../sim/stage/stage';
 import { INV, part, unit } from '../../art/bake';
 import { Air } from '../world/air';
 import { Sky } from '../world/sky';
@@ -49,6 +49,7 @@ export interface StageTheme {
   readonly ground: { readonly tile: string; readonly end: string; readonly pit: string };
   readonly dressing: (i: number) => string; // the i-th small thing strewn along the ground
   readonly log: string; // baked 70 wide and 30 high, and stretched to fit
+  readonly bramble: string; // a glade's wall, its foot in the middle, drawn rising from the ground
   readonly thorns: string; // baked 72 wide, and stretched to fit
   readonly pad: (w: number) => string; // a leaf pad of this width
   readonly stalk: (drop: number) => string; // what holds up a pad, this far above the ground
@@ -115,6 +116,7 @@ export class StageWorldView {
   private caps: Strewn;
   private dressing: Strewn; // tufts and flowers along the ground
   private pads: { image: GameObjects.Image; y: number; x: number }[] = [];
+  private walls: { glade: Glade; images: GameObjects.Image[] }[] = [];
   private blooms: GameObjects.Image[] = [];
   private bloomsUsed = 0;
   private known = new Set<Enemy>();
@@ -228,11 +230,37 @@ export class StageWorldView {
     part(scene, theme.gate, stage.gateX, GROUND).setDepth(depth.ground + 0.03);
   }
 
-  // A new run of the same stage: the flowers from the last one go.
-  reset() {
+  // A new run of the same stage: the flowers from the last one go, and its glades stand open again.
+  reset(stage: Stage) {
     for (const b of this.blooms) b.setVisible(false);
     this.bloomsUsed = 0;
     this.known.clear();
+    this.walls = stage.glades.map((glade, i) => ({
+      glade,
+      images: (this.walls[i]?.images ?? this.makeWalls(glade)).map((image, side) =>
+        image.setX(side ? glade.x1 : glade.x0).setVisible(false),
+      ),
+    }));
+  }
+
+  private makeWalls(glade: Glade) {
+    return [glade.x0, glade.x1].map((x) =>
+      part(this.scene, this.theme.bramble, x, GROUND + 4).setDepth(this.depth.platforms),
+    );
+  }
+
+  // A glade's brambles spring up as it shuts, and wither as it opens.
+  private syncWalls() {
+    for (const { glade, images } of this.walls) {
+      const up =
+        glade.state === 'closed'
+          ? Math.min(1, glade.t / 0.22)
+          : glade.state === 'open'
+            ? Math.max(0, 1 - glade.t / 0.45)
+            : 0;
+      for (const image of images)
+        image.setVisible(up > 0).setScale(unit(this.theme.bramble), unit(this.theme.bramble) * up);
+    }
   }
 
   sync(stage: Stage, camX: number, dt: number) {
@@ -273,6 +301,7 @@ export class StageWorldView {
       pad.image.setPosition(pad.x, pad.y + bob).setRotation(Math.sin(t * 1.1 + pad.x) * 0.012);
     }
     this.growBlooms(stage, t);
+    this.syncWalls();
     this.front.sync(camX);
 
     this.airLayer.setX(camX);

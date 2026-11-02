@@ -48,6 +48,9 @@ export type SimEvent =
   | { type: 'pea'; x: number; y: number }
   | { type: 'snap'; x: number; y: number }
   | { type: 'pitFall'; x: number }
+  | { type: 'gladeClose'; x0: number; x1: number } // brambles shut Pip in until every plant is cheered up
+  | { type: 'gladeWave'; x0: number; x1: number; wave: number } // the next plants arrive (wave 2, then 3...)
+  | { type: 'gladeOpen'; x0: number; x1: number } // ...and the brambles wither
   // found: toward the next heart (see SEEDS_PER_HEART); healed: on the seed that makes a heart, whether there
   // was an empty heart to fill
   | { type: 'goldenSeed'; x: number; y: number; found: number; healed?: boolean }

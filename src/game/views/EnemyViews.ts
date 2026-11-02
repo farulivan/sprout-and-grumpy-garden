@@ -16,6 +16,7 @@ import { ViewPool, type PooledView } from './pool';
 
 export { bakeEnemies } from './enemies/art';
 
+const NOBODY: readonly Enemy[] = [];
 const SNAP_HEAD = 1.25; // the Snapper's head is drawn a size up, so its jaws read from across the screen
 
 interface EnemyView extends PooledView {
@@ -235,8 +236,14 @@ class SnapperView implements EnemyView {
 
 export class EnemyViews {
   private pool: ViewPool<Enemy, EnemyView>;
+  // a later wave's plants aren't there yet: an orange "!" stands where each one will come up
+  private arrivals: ViewPool<Enemy, GameObjects.Image>;
 
   constructor(scene: Scene, depth: number, markDepth: number) {
+    this.arrivals = new ViewPool(
+      () => 'arrival',
+      () => part(scene, 'warn-mark').setDepth(markDepth),
+    );
     this.pool = new ViewPool(
       (e) => e.kind,
       (e): EnemyView => {
@@ -255,6 +262,12 @@ export class EnemyViews {
   }
 
   sync(enemies: readonly Enemy[], alpha: number, dt: number) {
-    this.pool.sync(enemies, (e, view) => view.sync(e, alpha, dt));
+    const arriving = enemies.some((e) => e.entering > 0);
+    this.pool.sync(arriving ? enemies.filter((e) => e.entering <= 0) : enemies, (e, view) =>
+      view.sync(e, alpha, dt),
+    );
+    this.arrivals.sync(arriving ? enemies.filter((e) => e.entering > 0) : NOBODY, (e, mark) =>
+      showMark(mark, e.x, Math.min(e.y, GROUND - 40), 1 - e.entering),
+    );
   }
 }

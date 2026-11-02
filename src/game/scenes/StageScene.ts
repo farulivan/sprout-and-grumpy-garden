@@ -95,7 +95,7 @@ export class StageScene extends Scene {
     if (stage !== this.seen) {
       // a new run: last run's flowers go, and the fade into the light at the gate is undone
       this.seen = stage;
-      this.world.reset();
+      this.world.reset(stage);
       this.fading = false;
       this.cameras.main.resetFX();
       this.irisT = 0;
