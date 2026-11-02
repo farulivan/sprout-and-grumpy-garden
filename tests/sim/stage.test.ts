@@ -725,3 +725,259 @@ describe('glades', () => {
     expect(has(opened, 'gladeOpen')).toBe(true);
   });
 });
+
+// Plays the Mushroom Wood untouchable, by a simple plan: cheer up what's in the way, go round by the bounce
+// pads, and in a glade go for each plant in turn. Without aim, as on a touch screen, it hops to reach what hangs
+// above straight shots.
+function routeBot(data: StageData, opts: { aim: boolean }) {
+  const pits = data.ground.slice(1).map(([x1], i) => ({ x0: data.ground[i][1], x1 })),
+    wide = pits.filter((p) => p.x1 - p.x0 > longestJump().distance * 0.75),
+    walls = [...(data.trunks ?? []).map((t) => t.x), ...wide.map((p) => p.x0)].sort((a, b) => a - b),
+    hops = [...data.logs.map((l) => l.x), ...data.thorns.map((t) => t.x)],
+    edges = pits.filter((p) => !wide.includes(p)).map((p) => p.x0);
+  const used = new Set<Bouncer>();
+  return (s: Stage): InputFrame => {
+    const p = s.player;
+    p.inv = 999;
+    for (const b of s.bouncers) if (b.sprung > 0) used.add(b);
+    const glade = s.glade;
+    if (glade) {
+      const live = s.enemies.filter((e) => glade.here.includes(e) && e.entering <= 0);
+      const near = live.sort((a, b) => Math.abs(a.x - p.x) - Math.abs(b.x - p.x))[0];
+      if (!near) return { ...NO_INPUT, shoot: true };
+      const dx = near.x - p.x,
+        high = near.kind === 'puffball' || (near instanceof Dropcap && near.y < GROUND - 60),
+        under = near.kind === 'dropcap' || near.kind === 'snapper';
+      // right on top of a plant a seed flies past it, so back off; otherwise close in and face it
+      const reach = under ? 40 : 110,
+        away = !under && Math.abs(dx) < 40,
+        room = dx === 0 ? 1 : p.x < (glade.x0 + glade.x1) / 2 ? 1 : -1; // which way there is more of it
+      return {
+        ...NO_INPUT,
+        shoot: true,
+        up: opts.aim && high,
+        left: away ? room < 0 : dx < -reach || (dx < 0 && p.facing > 0),
+        right: away ? room > 0 : dx > reach || (dx > 0 && p.facing < 0),
+        jump: true,
+        jumpPressed: !opts.aim && high && p.onGround,
+      };
+    }
+    // the next thing only a bounce gets past, and the pad or Capling just before it
+    const wall = walls.find((x) => p.x < x + 40 && x - p.x < 420 && p.y > GROUND - 150),
+      pad = wall === undefined ? undefined : s.bouncers.find((b) => b.x < wall && wall - b.x < 300),
+      capling =
+        wall === undefined
+          ? undefined
+          : s.enemies.find((e) => e.kind === 'capling' && e.x < wall && wall - e.x < 300);
+    if (wall !== undefined && capling && !pad) {
+      // walk up within range and cheer it up
+      return { ...NO_INPUT, shoot: true, right: capling.x - p.x > 220 };
+    }
+    if (pad && p.x < pad.x + 40 && (p.onGround || !used.has(pad))) {
+      const dist = pad.x - p.x;
+      const air = !p.onGround;
+      return {
+        ...NO_INPUT,
+        shoot: true,
+        jump: true,
+        jumpPressed: p.onGround && Math.abs(dist) < 70,
+        right: air ? dist > 3 : dist > 40,
+        left: air ? dist < -3 : dist < 20,
+      };
+    }
+    const hop =
+      hops.some((x) => x - p.x > 10 && x - p.x < 70) || edges.some((x) => x - p.x > 0 && x - p.x < 30);
+    return { ...RIGHT, shoot: true, jump: true, jumpPressed: hop && p.onGround };
+  };
+}
+
+const HELD = { ...RIGHT, jump: true };
+
+describe('the Mushroom Wood', () => {
+  const data = STAGES.mushroomWood,
+    wood = () => new Stage({ seed: 1, stage: 'mushroomWood' });
+
+  it('can be played to the end by an untouchable Pip, aiming or not, and not quickly', () => {
+    for (const aim of [true, false]) {
+      const stage = wood();
+      run(stage, 180, routeBot(data, { aim }), (e) => e.type === 'stageClear');
+      expect(stage.state, `aim: ${aim}, stuck at ${stage.player.x}`).toBe('clear');
+      expect(stage.stageTime).toBeGreaterThan(45);
+    }
+  });
+
+  it("can't be cleared by holding right and shoot, jumping only at what's in the way", () => {
+    const pits = data.ground.slice(1).map(([x1], i) => ({ x0: data.ground[i][1], x1 })),
+      obstacles = [
+        ...data.logs.map((l) => l.x),
+        ...data.thorns.map((t) => t.x),
+        ...(data.trunks ?? []).map((t) => t.x),
+        ...pits.map((p) => p.x0 - 20),
+      ];
+    const stage = wood();
+    run(stage, 240, (s) => {
+      const ahead = obstacles.some((x) => x - s.player.x > 10 && x - s.player.x < 70);
+      return { ...RIGHT, shoot: true, jump: true, jumpPressed: ahead && s.player.onGround };
+    });
+    expect(stage.state).not.toBe('exit');
+    expect(stage.state).not.toBe('clear');
+  });
+
+  it("can't be cleared by holding right and shoot and jumping blindly either", () => {
+    for (const seed of [1, 2, 3, 4, 5]) {
+      const stage = new Stage({ seed, stage: 'mushroomWood' });
+      let f = 0;
+      run(stage, 240, () => ({ ...RIGHT, shoot: true, jump: true, jumpPressed: f++ % 30 === 0 }));
+      expect(stage.state, `seed ${seed}`).not.toBe('exit');
+      expect(stage.state, `seed ${seed}`).not.toBe('clear');
+    }
+  });
+
+  it('has trunks that only a held bounce gets over, each with a Capling before it', () => {
+    const jump = longestJump(),
+      low = bounceFrom(false),
+      high = bounceFrom(true);
+    expect(data.trunks?.length).toBeGreaterThan(0);
+    for (const t of data.trunks ?? []) {
+      expect(t.h).toBeGreaterThan(jump.apex);
+      expect(t.h).toBeGreaterThan(low.apex);
+      expect(t.h).toBeLessThan(high.apex - 30);
+      const capling = data.enemies.find((e) => e.kind === 'capling' && e.x < t.x && t.x - e.x < 240);
+      expect(capling, `trunk at ${t.x}`).toBeDefined();
+    }
+  });
+
+  // Whether Pip gets over a pit this wide, with `play` saying how he goes about it: the pit's edge is at x 600.
+  const EDGE = 600;
+  const gets = (width: number, setup: (s: Stage) => void, play: (s: Stage) => InputFrame) => {
+    const stage = stageWith({
+      ground: [
+        [-40, EDGE],
+        [EDGE + width, 3040],
+      ],
+    });
+    setup(stage);
+    const events = run(stage, 4, play, (e) => e.type === 'pitFall' || e.type === 'land');
+    return !has(events, 'pitFall') && stage.player.x > EDGE + width;
+  };
+  // ...by a jump, however close to the edge or past it he presses it,
+  const jumpsIt = (width: number) => {
+    for (let press = -30; press <= 70; press++) {
+      let pressed = false;
+      const made = gets(
+        width,
+        (s) => (s.player.x = s.player.px = EDGE - 200),
+        (s) => {
+          const go = !pressed && s.player.x >= EDGE + press;
+          if (go) pressed = true;
+          return { ...HELD, jumpPressed: go };
+        },
+      );
+      if (made) return true;
+    }
+    return false;
+  };
+  // ...or by a held bounce off a pad this far from the edge, coming down on the middle of it.
+  const bouncesIt = (width: number, fromEdge: number, speed: number) =>
+    gets(
+      width,
+      (s) => {
+        const pad = new Bouncer(EDGE - fromEdge, GROUND);
+        s.bouncers.push(pad);
+        s.player.x = s.player.px = pad.x;
+        s.player.y = s.player.py = pad.top - 2;
+        s.player.vy = 60;
+        s.player.vx = speed;
+      },
+      () => HELD,
+    );
+
+  it('has pits that only a held bounce crosses, each with a Capling at its edge, and the rest can be jumped', () => {
+    const pits = data.ground.slice(1).map(([x1], i) => ({ x0: data.ground[i][1], x1 }));
+    const wide = pits.filter((p) => !jumpsIt(p.x1 - p.x0));
+    expect(wide.length).toBeGreaterThan(0);
+    for (const pit of wide) {
+      const width = pit.x1 - pit.x0,
+        capling = data.enemies.find((e) => e.kind === 'capling' && e.x < pit.x0 && pit.x0 - e.x < 60);
+      expect(capling, `pit at ${pit.x0}`).toBeDefined();
+      const fromEdge = pit.x0 - capling!.x;
+      expect(bouncesIt(width, fromEdge, 290), `pit at ${pit.x0}, at a run`).toBe(true);
+      expect(bouncesIt(width, fromEdge, 0), `pit at ${pit.x0}, from a hop`).toBe(true);
+    }
+    // the others are for jumping, with room to spare
+    for (const pit of pits.filter((p) => !wide.includes(p)))
+      expect(pit.x1 - pit.x0).toBeLessThan(longestJump().distance * 0.75);
+  });
+
+  it('bounces Pip off a pad even where it hangs over the edge of a pit', () => {
+    const stage = stageWith({
+      ground: [
+        [-40, EDGE],
+        [EDGE + 300, 3040],
+      ],
+    });
+    const pad = new Bouncer(EDGE - 10, GROUND);
+    stage.bouncers.push(pad);
+    stage.player.x = stage.player.px = pad.x + 22; // over the pit, on the pad's far side
+    stage.player.y = stage.player.py = pad.top - 2;
+    stage.player.vy = 60;
+    stage.player.vx = 290;
+    const events = run(stage, 3, HELD);
+    expect(has(events, 'bounce')).toBe(true);
+    expect(has(events, 'pitFall')).toBe(false);
+    expect(stage.player.x).toBeGreaterThan(EDGE + 300);
+  });
+
+  it('can reach every leaf pad: the first of the high road by a bounce only, the rest by jumps along it', () => {
+    const jump = longestJump(),
+      high = bounceFrom(true);
+    const road = [...data.platforms].sort((a, b) => a.x - b.x);
+    expect(GROUND - road[0].y).toBeGreaterThan(jump.apex);
+    expect(GROUND - road[0].y).toBeLessThan(high.apex - 30);
+    const capling = data.enemies.find(
+      (e) => e.kind === 'capling' && e.x < road[0].x && road[0].x - e.x < 240,
+    );
+    expect(capling).toBeDefined();
+    for (let i = 1; i < road.length; i++) {
+      const gap = road[i].x - (road[i - 1].x + road[i - 1].w);
+      expect(gap).toBeLessThan(jump.distance * 0.8);
+    }
+  });
+
+  it('keeps every glade on flat ground with room to move, and everything placed in it inside its walls', () => {
+    for (const [i, g] of (data.glades ?? []).entries()) {
+      expect(g.x1 - g.x0).toBeGreaterThanOrEqual(W);
+      expect(data.ground.some(([x0, x1]) => x0 <= g.x0 && x1 >= g.x1)).toBe(true);
+      expect((data.trunks ?? []).some((t) => t.x < g.x1 && t.x + t.w > g.x0)).toBe(false);
+      const here = data.enemies.filter((e) => e.glade === i);
+      expect(here.length).toBeGreaterThan(0);
+      for (const e of here) {
+        expect(e.x).toBeGreaterThan(g.x0 + 60);
+        expect(e.x).toBeLessThan(g.x1 - 60);
+      }
+    }
+    expect(data.enemies.some((e) => e.glade === 1 && e.wave === 1)).toBe(true);
+  });
+
+  it('hides three golden seeds and two dewdrops, the last seed only on a held bounce', () => {
+    expect(data.seeds.length).toBe(3);
+    expect(data.dewdrops.length).toBe(2);
+    const [x, y] = data.seeds[2],
+      high = bounceFrom(true),
+      low = bounceFrom(false),
+      seedHeight = GROUND - y;
+    expect(seedHeight - 36 - 14).toBeLessThan(high.apex); // his head reaches it...
+    expect(seedHeight - 36 - 14).toBeGreaterThan(low.apex); // ...only at the top of a held bounce
+    expect(data.enemies.some((e) => e.kind === 'capling' && x - e.x < 260 && x - e.x > 100)).toBe(true);
+  });
+
+  it('replays identically from the same seed and inputs', () => {
+    const play = () => {
+      const stage = wood(),
+        bot = routeBot(data, { aim: true });
+      run(stage, 60, bot);
+      return [stage.stageTime, stage.player.x, stage.camX, stage.enemies.length, stage.bouncers.length];
+    };
+    expect(play()).toEqual(play());
+  });
+});

@@ -1,13 +1,18 @@
-// The Mushroom Wood's enemies, as placeholders: simple shapes in bold outlines, so that they can be played and
-// their feel judged before their art is drawn. They have their own atlas page (see bakeApart).
+// The Mushroom Wood's own parts, as placeholders: simple shapes in bold outlines, so that the stage can be
+// played and its feel judged before its art is drawn. They have their own atlas page (see bakeApart).
 import type { Scene } from 'phaser';
-import { TAU } from '../../../config';
+import { WOOD } from '../../../chapters';
+import { GROUND, TAU } from '../../../config';
+import { STAGES } from '../../../sim/stage/stages';
 import { bake } from '../../art/bake';
 import { EARTH_LINE } from '../../art/color';
-import { circle, ellipse, line, radial, roundRect, type Ctx } from '../../art/draw';
+import { circle, ellipse, line, linear, radial, roundRect, type Ctx } from '../../art/draw';
 import { drawFace } from '../../art/face';
+import { drawGate, drawSign } from '../stage/art';
+import { drawLeafPlatform, drawStalk } from '../world/ground';
 import { bakeFaces } from '../faces';
 
+export const WOOD_BLOOMS = 2;
 const CAP_LINE = '#3a1440';
 
 // A mushroom standing on (0, 0): a stalk and a round cap, in the colours given.
@@ -47,6 +52,59 @@ function drawBurr(c: Ctx) {
   c.fill();
   line(c, '#2f1c06', 2.6);
   drawFace(c, 0, 1, 0.42, 'angry');
+}
+
+function drawTrunk(c: Ctx) {
+  roundRect(c, 0, -200, 70, 204, 6);
+  c.fillStyle = linear(c, 0, 0, 70, 0, ['#6b4a35', '#4a3122', '#33211a']);
+  c.fill();
+  line(c, '#1b100a', 3);
+  for (const x of [14, 30, 49]) {
+    c.beginPath();
+    c.moveTo(x, -190);
+    c.bezierCurveTo(x - 5, -130, x + 5, -70, x, -10);
+    line(c, '#241610', 2, 0.6);
+  }
+  ellipse(c, 35, -198, 33, 8);
+  c.fillStyle = '#8fae5f';
+  c.fill();
+  line(c, '#1b100a', 2.4);
+}
+
+// A wall of brambles rising from the ground, (0, 0) at the middle of its foot: thick stems with thorns on.
+function drawBramble(c: Ctx) {
+  for (const [lean, w, col] of [
+    [-16, 11, '#3d5a2a'],
+    [14, 12, '#2f4a22'],
+    [-4, 14, '#4b6b30'],
+  ] as const) {
+    for (let y = 0; y > -440; y -= 60) {
+      const x = Math.sin(y * 0.02 + lean) * 12 + lean;
+      c.beginPath();
+      c.moveTo(x, y);
+      c.lineTo(Math.sin((y - 62) * 0.02 + lean) * 12 + lean, y - 62);
+      line(c, '#1d2c12', w + 4);
+      c.beginPath();
+      c.moveTo(x, y);
+      c.lineTo(Math.sin((y - 62) * 0.02 + lean) * 12 + lean, y - 62);
+      line(c, col, w);
+      for (const side of [-1, 1]) {
+        c.beginPath();
+        c.moveTo(x + (side * w) / 2, y - 26);
+        c.lineTo(x + side * (w / 2 + 10), y - 34);
+        c.lineTo(x + (side * w) / 2, y - 38);
+        c.closePath();
+        c.fillStyle = '#e8dcc0';
+        c.fill();
+        line(c, '#1d2c12', 1.6);
+      }
+    }
+  }
+}
+
+function drawGlowBloom(c: Ctx, kind: number) {
+  const cap = kind ? (['#bff7ff', '#47b8d8'] as const) : (['#fff0b0', '#e8b23f'] as const);
+  drawMushroom(c, kind ? 26 : 32, kind ? 30 : 36, cap);
 }
 
 export function bakeWood(scene: Scene) {
@@ -89,4 +147,21 @@ export function bakeWood(scene: Scene) {
   bakeFaces(scene, 'capling', 0.42, ['angry']);
   bakeFaces(scene, 'dropcap', 0.36, ['angry', 'surprised']);
   bakeFaces(scene, 'toadlet', 0.4, ['angry', 'surprised']);
+
+  bake(scene, 'wood-trunk', 80, 216, 5, 208, drawTrunk);
+  bake(scene, 'wood-bramble', 90, 450, 45, 445, drawBramble);
+  bake(scene, 'wood-sign', 130, 100, 64, 96, (c) => drawSign(c, WOOD.sign));
+  bake(scene, 'wood-gate', 190, 210, 95, 204, (c) => drawGate(c, WOOD.gate));
+  for (let i = 0; i < WOOD_BLOOMS; i++)
+    bake(scene, `wood-bloom-${i}`, 44, 44, 22, 40, (c) => drawGlowBloom(c, i));
+  const widths = new Set<number>(),
+    drops = new Set<number>();
+  for (const p of STAGES[WOOD.stage].platforms) {
+    widths.add(p.w);
+    drops.add(GROUND - p.y - 8);
+  }
+  for (const w of widths)
+    bake(scene, `wood-pad-${w}`, w + 44, 48, w / 2 + 20, 15, (c) => drawLeafPlatform(c, w));
+  for (const drop of drops)
+    bake(scene, `wood-stalk-${drop}`, 76, drop + 8, 38, 2, (c) => drawStalk(c, drop, drop % 2 ? 12 : -10));
 }

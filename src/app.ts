@@ -29,6 +29,7 @@ export interface AppOptions {
   audio: GameAudio;
   presenter: Presenter;
   skipIntro?: boolean; // open on the main menu (?skipintro), for working on the game
+  firstChapter?: number; // where a new game starts, if not at the beginning (?debug&chapter=2)
   onLevel?: (level: Played) => void; // a new level replaced the old one
   onPause?: (paused: boolean) => void;
   onMute?: (muted: boolean) => void;
@@ -41,12 +42,13 @@ export class App {
   alpha = 1;
   private acc = 0;
   private frozen = 0; // seconds of hit-stop left
-  chapter = 0; // which of CHAPTERS is being played, or was last
+  chapter: number; // which of CHAPTERS is being played, or was last
   lives = LIVES; // left in this game, counting the one being played
   private overlay: Overlay;
   private path: StagePath | null = null; // how this run's stage went, for the win card
 
   constructor(private o: AppOptions) {
+    this.chapter = o.firstChapter ?? 0;
     this.overlay = new Overlay(
       {
         play: () => this.play(),
@@ -91,7 +93,7 @@ export class App {
   // Play again, and Start again once the lives are gone: a new game from the first chapter, with all of
   // Pip's lives.
   start() {
-    this.chapter = 0;
+    this.chapter = this.o.firstChapter ?? 0;
     this.lives = LIVES;
     this.startStage();
   }

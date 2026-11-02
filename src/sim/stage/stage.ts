@@ -24,8 +24,11 @@ export interface StageData {
   readonly length: number; // how wide the stage is
   readonly startX: number;
   readonly gateX: number; // walking past here clears the stage
+  readonly safeEdge?: number; // after a fall, Pip comes back on ground at least this far from either edge of it
   readonly ground: readonly (readonly [number, number])[]; // stretches of ground, from x to x; gaps are pits
   readonly logs: readonly { x: number; w: number; h: number }[]; // lying on the ground
+  // too tall to jump, standing on the ground: seeds stop at them, and logs don't stop seeds
+  readonly trunks?: readonly { x: number; w: number; h: number }[];
   readonly platforms: readonly Rect[]; // one-way leaf pads
   readonly thorns: readonly { x: number; w: number }[]; // bramble patches on the ground
   // y: its feet, if not on the ground; level: how hard it is (see enemies/index.ts), 1 if not given; glade: the
@@ -64,7 +67,7 @@ export interface StageOptions {
 }
 
 const LOOK = 110; // the camera looks this far ahead of Pip, the way he is running
-const SAFE = 48; // after a fall, Pip comes back on ground at least this far from either edge of it
+const SAFE = 48; // how far from an edge Pip comes back after a fall, unless the stage says otherwise
 const FELL = H + 40; // Pip's feet below this: he fell into a pit
 const THORN_H = 22;
 const WALK_IN = { ...NO_INPUT, right: true }; // at the gate, Pip walks on through by himself
@@ -86,6 +89,7 @@ export class Stage implements PlayerWorld, EnemyWorld, Level {
   minX = 24; // the walls: a closed glade moves them
   maxX: number;
   readonly solids: readonly Rect[];
+  readonly trunks: readonly Rect[];
   readonly platforms: readonly Rect[];
   readonly thorns: readonly Rect[];
   readonly player: Player;
@@ -103,6 +107,7 @@ export class Stage implements PlayerWorld, EnemyWorld, Level {
   timeScale = 1;
   private look = 0; // how far ahead the camera is looking
   private safeX: number; // where Pip comes back after a fall
+  private readonly safeEdge: number;
   private events: SimEvent[] = [];
 
   constructor(opts: StageOptions) {
@@ -113,12 +118,16 @@ export class Stage implements PlayerWorld, EnemyWorld, Level {
     this.easy = !!opts.easy;
     this.length = data.length;
     this.startX = this.safeX = data.startX;
+    this.safeEdge = data.safeEdge ?? SAFE;
     this.gateX = data.gateX;
     this.maxX = data.length - 24;
+    const stood = (l: { x: number; w: number; h: number }) => ({ x: l.x, y: GROUND - l.h, w: l.w, h: l.h });
+    this.trunks = (data.trunks ?? []).map(stood);
     // the ground is a row of deep boxes, so Pip can't walk out of a pit sideways
     this.solids = [
       ...data.ground.map(([x0, x1]) => ({ x: x0, y: GROUND, w: x1 - x0, h: 300 })),
-      ...data.logs.map((l) => ({ x: l.x, y: GROUND - l.h, w: l.w, h: l.h })),
+      ...data.logs.map(stood),
+      ...this.trunks,
     ];
     this.platforms = data.platforms;
     this.thorns = data.thorns.map((t) => ({ x: t.x, y: GROUND - THORN_H, w: t.w, h: THORN_H }));
@@ -300,7 +309,7 @@ export class Stage implements PlayerWorld, EnemyWorld, Level {
     const p = this.player;
     if (!p.onGround || p.y !== GROUND) return; // on a log or a leaf pad
     for (const s of this.solids)
-      if (s.y === GROUND && p.x - s.x >= SAFE && s.x + s.w - p.x >= SAFE) {
+      if (s.y === GROUND && p.x - s.x >= this.safeEdge && s.x + s.w - p.x >= this.safeEdge) {
         this.safeX = p.x;
         return;
       }
@@ -311,7 +320,11 @@ export class Stage implements PlayerWorld, EnemyWorld, Level {
       hb = p.hitbox;
     for (const pr of this.projectiles) {
       if (pr.dead) continue;
-      if (pr.owner === 'player') this.seedHits(pr);
+      const trunk = this.trunks.find((t) => rectCircleHit(t, pr));
+      if (trunk) {
+        pr.dead = true;
+        if (pr.owner === 'player') this.emit({ type: 'enemyBlock', x: pr.x, y: pr.y });
+      } else if (pr.owner === 'player') this.seedHits(pr);
       else if (p.alive && circleHit(pr, hb)) {
         pr.dead = true;
         p.hurt(pr.x - pr.vx); // knocked the way it was flying
