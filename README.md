@@ -279,6 +279,9 @@ one world:
 - **The stage is the same garden, walked.** Its layers repeat and slide past at their own speeds (the far
   hills barely move, the fence hurries by), Sunny grows on the horizon as Pip gets closer, and every plant he
   cheers up leaves a flower behind.
+- **The wood is painted for dusk.** Its far trees go pale into the last warm light, its giant mushrooms glow but
+  stay well faded so they can't be taken for anything in the fight, and halfway along the weather slowly tints
+  it all into deeper dusk: a moon, more fireflies. Only what hurts and what helps stays untinted and bright.
 - **The title is Pip's yard, and belongs to no boss.** It is made from the path's and the arena's own parts
   (the sky, the far hills, the cottage, hedges and fence), with the dawn as a weather of its own. Its
   opening is staged like a cartoon's: an iris in, a camera move, things that drop, squash and settle, and an
@@ -323,8 +326,8 @@ keyboard / gamepad / touch ─► Controls ─► App ──step(input)──►
 | `src/game/views/title/` | Pip's yard (`YardView`), the logo in parts (`Logo`), the studio's sting (`Sting`), and their art (`art.ts`) |
 | `src/game/views/Iris.ts` | The round hole that opens on a scene and closes on it, as old cartoons do: the title's, and each stage's start |
 | `src/game/views/stage/` | A stage's world: `StageWorldView` (the sky that stays put, landscape strips that repeat and slide by how far away they are, the ground with its pits, logs, thorns and leaf pads, the sign, the gate, and the flowers cheered-up plants leave), which lays out any theme, and the Garden Path's theme (`gardenTheme.ts`) and parts (`art.ts`) |
-| `src/game/views/wood/` | The Mushroom Wood's theme and parts. Placeholders so far, so that it can be played before its art is drawn |
-| `src/game/views/world/` | The arena, one file per layer: `sky.ts`, `air.ts` and `weather.ts` (which blends between the moods: Sunny's four, and the title's dawn) are shared; `land.ts` and `ground.ts` are the garden's, handed to `WorldView` by `chapterViews.ts` |
+| `src/game/views/wood/` | The Mushroom Wood's theme (`woodTheme.ts`), its world (`art.ts`) and its enemies and bounce pad (`enemyArt.ts`), baked the first time the chapter is played |
+| `src/game/views/world/` | The arena, one file per layer: `sky.ts`, `air.ts` and `weather.ts` (which blends between the moods: Sunny's four, the title's dawn, and the wood's and Mo's four) are shared; `land.ts` and `ground.ts` are the garden's, handed to `WorldView` by `chapterViews.ts` |
 | `src/game/views/sunny/`, `hazards/` | The bigger views keep their drawing code beside them: Sunny's parts (`art.ts`) and layered face (`face.ts`), the hazards' parts (`art.ts`) |
 | `src/game/scenes/`, `src/game/hud/` | `BootScene` (font, baking), `TitleScene`, `FightScene` and `StageScene` (sync the views every frame; only the one for what is being played runs, and each chapter has a `FightScene` and a `StageScene` of its own; `TitleScene` also stages the opening), `HudScene` (hearts, the boss's bar or the stage's path bar and golden seeds, toasts, the chapter and stage names); `hud/art.ts` bakes the HUD's parts |
 | `src/game/fx.ts`, `motion.ts`, `debug.ts` | Particles, rings, the screen flash, shake and camera punch; small helpers for moving things (`rand`, `easeOutBack`); the hitbox overlay |
@@ -364,7 +367,9 @@ none are left; and Main menu makes a `Yard` straight at its menu.
   and goes on a page of its own: it doesn't crowd the shared page, and a boss fight never switches between
   pages because of it. Make images with `part()` and swap them with `show()`; never call `setTexture`
   yourself. Parts longer than 512 texture pixels keep their own texture. Big soft glows are baked small
-  (`SOFT`, `HAZY`) so they fit: scale those with `unit(key)`, not `INV`.
+  (`SOFT`, `HAZY`) so they fit: scale those with `unit(key)`, not `INV`. Art that only a later chapter draws is
+  baked as that chapter's scenes first start (`bakeLate`, called from `prepare` in `chapterViews.ts`), so nobody
+  who hasn't got there pays for it in memory or at boot.
 - **One texture per draw batch, on purpose.** `BootScene` sets this for every device (Phaser's default on
   phones and tablets). Otherwise Phaser compiles a new shader the first time a batch uses a new number of
   textures, which drops frames mid-fight. Thanks to the atlas a frame is still only about 20-35 draw calls.
