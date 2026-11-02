@@ -15,6 +15,7 @@ import { EnemyViews } from '../views/EnemyViews';
 import { StagePickupViews } from '../views/PickupViews';
 import { PlayerView } from '../views/PlayerView';
 import { ProjectileViews } from '../views/ProjectileViews';
+import { GARDEN_THEME } from '../views/stage/gardenTheme';
 import { StageWorldView } from '../views/stage/StageWorldView';
 
 // Back to front.
@@ -65,7 +66,7 @@ export class StageScene extends Scene {
     fitCamera(this);
     const stage = this.app.level as Stage; // this scene is only ever run for a stage
     this.fx = new Fx(this, DEPTH.particles, DEPTH.flash);
-    this.world = new StageWorldView(this, stage, DEPTH);
+    this.world = new StageWorldView(this, stage, DEPTH, GARDEN_THEME);
     this.enemies = new EnemyViews(this, DEPTH.enemies, DEPTH.marks);
     this.pickups = new StagePickupViews(this, DEPTH.pickups, this.fx);
     this.player = new PlayerView(this, DEPTH.player, this.fx);

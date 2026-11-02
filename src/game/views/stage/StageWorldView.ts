@@ -1,18 +1,19 @@
 // A stage's world, back to front: the sky (it stays put), the landscape sliding past slower the farther away
-// it is, Sunny on the horizon growing as Pip nears him, hedges, trees and Pip's cottage, the fence, then the
-// ground with its pits, logs, brambles and leaf pads, the sign and the gate, the flowers that grow where a
-// grumpy plant was cheered up, and the blurred grass in front. Parts are baked in ./art.ts.
+// it is, the boss on the horizon growing as Pip nears him, what stands behind the fence (Pip's cottage, hedges
+// and trees on the Garden Path), the fence, then the ground with its pits, logs, brambles and leaf pads, the
+// sign and the gate, what grows where a grumpy plant was cheered up, and the blur in front. Which parts those
+// are is the stage's theme (see gardenTheme.ts); this file lays them out for any stage's layout.
 // Everything here is in world positions. Things that should seem to stay put, or to drift slower than the
 // ground, are moved with the camera each frame by how far away they are.
 import type { GameObjects, Scene } from 'phaser';
-import { GROUND, H, W } from '../../../config';
+import { GROUND, W } from '../../../config';
 import type { Enemy } from '../../../sim/stage/enemies/enemy';
 import type { Stage } from '../../../sim/stage/stage';
 import { INV, part, unit } from '../../art/bake';
 import { Air } from '../world/air';
 import { Sky } from '../world/sky';
-import { Weather } from '../world/weather';
-import { BLOOMS, FAR_P, FENCE_P, GROUND_BOTTOM, GROUND_TOP, HEDGES, MEADOW_P, TILE } from './art';
+import { Weather, type Mood } from '../world/weather';
+import { GROUND_BOTTOM, GROUND_TOP } from './art';
 
 export interface StageDepths {
   back: number;
@@ -21,8 +22,45 @@ export interface StageDepths {
   front: number;
 }
 
+// A strip of landscape that repeats: its part, how long it is before it repeats, how fast it slides against
+// the ground (0 = stays put, 1 = moves with the ground) and how high it sits. depth: where it goes, just over
+// depth.back (the boss on the horizon is at 0.2 and the props at 0.6).
+export interface StripTheme {
+  readonly key: string;
+  readonly period: number;
+  readonly speed: number;
+  readonly y: number;
+  readonly depth: number;
+}
+// A prop that stands behind the fence. size: how big, if it is scaled at all.
+export interface PropTheme {
+  readonly key: string;
+  readonly size?: number;
+}
+// What a stage's world is made of: the keys of its baked parts, and the weather along it.
+export interface StageTheme {
+  readonly strips: readonly StripTheme[]; // far to near
+  readonly horizon: string; // the boss, far off
+  readonly fence: StripTheme; // the nearest strip, sliding just slower than the ground
+  readonly front: Omit<StripTheme, 'depth'>; // the blur in front of it all, sliding just faster
+  readonly home: PropTheme & { readonly x: number }; // what stands at the start, before the row of props
+  readonly prop: (i: number) => PropTheme; // the i-th in the row
+  // the strip that tiles along the ground, the end of a stretch of it, and a pit baked 100 wide
+  readonly ground: { readonly tile: string; readonly end: string; readonly pit: string };
+  readonly dressing: (i: number) => string; // the i-th small thing strewn along the ground
+  readonly log: string; // baked 70 wide and 30 high, and stretched to fit
+  readonly thorns: string; // baked 72 wide, and stretched to fit
+  readonly pad: (w: number) => string; // a leaf pad of this width
+  readonly stalk: (drop: number) => string; // what holds up a pad, this far above the ground
+  readonly padShadow: string;
+  readonly sign: string;
+  readonly gate: string;
+  readonly bloom: (i: number) => string; // the i-th thing to grow where a plant was cheered up
+  readonly mood: (progress: number) => Mood; // the weather, by how far along the stage Pip is (0 to 1)
+}
+
 const MARGIN = 80; // how far past the edges of the view things are still shown
-const PROP_SPEED = 0.72; // how fast the hedges, trees and cottage slide, against the ground
+const PROP_SPEED = 0.72; // how fast the props behind the fence slide, against the ground
 
 // A strip of landscape that repeats, sliding at `speed` times the camera's pace (0 = stays put, 1 = moves
 // with the ground).
@@ -69,8 +107,8 @@ export class StageWorldView {
   private sky: Sky;
   private air: Air;
   private strips: Strip[];
-  private farSunny: GameObjects.Image;
-  private props: Prop[] = []; // hedges, trees and the cottage, sliding at PROP_SPEED
+  private horizon: GameObjects.Image; // the boss, far off
+  private props: Prop[] = []; // what stands behind the fence, sliding at PROP_SPEED
   private fence: Strip;
   private front: Strip;
   private ground: { x0: number; x1: number; tiles: GameObjects.TileSprite }[] = [];
@@ -85,21 +123,24 @@ export class StageWorldView {
   private t = 0;
   private blink = 1;
 
-  constructor(scene: Scene, stage: Stage, depth: StageDepths) {
+  constructor(
+    scene: Scene,
+    stage: Stage,
+    depth: StageDepths,
+    private theme: StageTheme,
+  ) {
     this.scene = scene;
     this.depth = depth;
     this.skyLayer = scene.add.container(0, 0).setDepth(depth.back);
     this.sky = new Sky(scene, this.skyLayer);
-    this.strips = [
-      new Strip(scene, 'stage-mountains', FAR_P, 0.06, 0, depth.back + 0.1),
-      new Strip(scene, 'stage-far', FAR_P, 0.16, 0, depth.back + 0.3),
-      new Strip(scene, 'stage-meadow', MEADOW_P, 0.38, 0, depth.back + 0.4),
-    ];
-    this.farSunny = part(scene, 'stage-far-sunny').setDepth(depth.back + 0.2);
+    const strip = (s: Omit<StripTheme, 'depth'>, at: number) =>
+      new Strip(scene, s.key, s.period, s.speed, s.y, at);
+    this.strips = theme.strips.map((s) => strip(s, depth.back + s.depth));
+    this.horizon = part(scene, theme.horizon).setDepth(depth.back + 0.2);
     this.airLayer = scene.add.container(0, 0).setDepth(depth.back + 0.5);
     this.air = new Air(scene, this.airLayer, depth);
-    this.fence = new Strip(scene, 'stage-fence', FENCE_P, 0.85, 0, depth.back + 0.7);
-    this.front = new Strip(scene, 'stage-front-grass', TILE, 1.12, H + 6, depth.front);
+    this.fence = strip(theme.fence, depth.back + theme.fence.depth);
+    this.front = strip(theme.front, depth.front);
     this.caps = new Strewn([]);
     this.dressing = new Strewn([]);
     this.build(stage);
@@ -108,64 +149,59 @@ export class StageWorldView {
   // Everything that depends on the stage's layout.
   private build(stage: Stage) {
     const scene = this.scene,
-      depth = this.depth;
-    // hedges and trees in a row behind the fence, Pip's cottage first
+      depth = this.depth,
+      theme = this.theme;
+    // a row of props behind the fence, the home first
     const layerEnd = W + (stage.length - W) * PROP_SPEED;
-    this.props.push({
-      x: 70,
-      image: part(scene, 'stage-cottage')
-        .setDepth(depth.back + 0.6)
-        .setScale(unit('stage-cottage') * 0.82),
-    });
-    for (let x = 300, i = 0; x < layerEnd + 200; x += 210 + ((i * 97) % 120), i++) {
-      const tree = i % 3 !== 1,
-        key = tree ? `tree-${(i * 2) % 3}` : `stage-hedge-${i % HEDGES}`;
+    const prop = ({ key, size }: PropTheme) => {
       const image = part(scene, key).setDepth(depth.back + 0.6);
-      if (tree) image.setScale(unit(key) * (0.85 + ((i * 7) % 4) * 0.08));
-      this.props.push({ x, image });
-    }
+      return size === undefined ? image : image.setScale(unit(key) * size);
+    };
+    this.props.push({ x: theme.home.x, image: prop(theme.home) });
+    for (let x = 300, i = 0; x < layerEnd + 200; x += 210 + ((i * 97) % 120), i++)
+      this.props.push({ x, image: prop(theme.prop(i)) });
     for (const p of this.props) p.image.setY(GROUND - 12);
 
     // the ground: one tiling strip per stretch, kept to the part in view; the ends of each stretch, and pits
+    const { tile, end, pit: pitKey } = theme.ground;
     const solids = stage.solids.filter((s) => s.y === GROUND);
     const caps: { x: number; w?: number; image: GameObjects.Image }[] = [];
     for (const s of solids) {
       const tiles = scene.add
-        .tileSprite(s.x, GROUND_TOP, 1, GROUND_BOTTOM - GROUND_TOP, 'stage-ground')
+        .tileSprite(s.x, GROUND_TOP, 1, GROUND_BOTTOM - GROUND_TOP, tile)
         .setOrigin(0, 0)
-        .setTileScale(unit('stage-ground'))
+        .setTileScale(unit(tile))
         .setDepth(depth.ground);
       this.ground.push({ x0: s.x, x1: s.x + s.w, tiles });
     }
-    const u = unit('stage-ground-end');
+    const u = unit(end);
     for (let i = 0; i < solids.length; i++) {
       const s = solids[i];
       if (i > 0) {
         caps.push({
           x: s.x,
-          image: part(scene, 'stage-ground-end', s.x, 0)
+          image: part(scene, end, s.x, 0)
             .setScale(-u, u)
             .setDepth(depth.ground + 0.02),
         });
         const gap0 = solids[i - 1].x + solids[i - 1].w,
-          pit = part(scene, 'stage-pit', gap0, 0).setDepth(depth.ground - 0.01);
-        pit.setScale((unit('stage-pit') * (s.x - gap0)) / 100, unit('stage-pit'));
+          pit = part(scene, pitKey, gap0, 0).setDepth(depth.ground - 0.01);
+        pit.setScale((unit(pitKey) * (s.x - gap0)) / 100, unit(pitKey));
         caps.push({ x: gap0, w: s.x - gap0, image: pit });
       }
       if (i < solids.length - 1)
         caps.push({
           x: s.x + s.w,
-          image: part(scene, 'stage-ground-end', s.x + s.w, 0).setDepth(depth.ground + 0.02),
+          image: part(scene, end, s.x + s.w, 0).setDepth(depth.ground + 0.02),
         });
     }
     this.caps = new Strewn(caps);
 
-    // tufts and flowers strewn along the ground, never at a pit's edge
+    // small things strewn along the ground, never at a pit's edge
     const dressing: { x: number; image: GameObjects.Image }[] = [];
     for (const s of solids)
       for (let x = s.x + 30, i = 0; x < s.x + s.w - 30; x += 26 + ((i * 53) % 23), i++) {
-        const flower = i % 3 === 0,
-          key = flower ? `flower-${(i * 3) % 5}` : `tuft-${i % 3}`,
+        const key = theme.dressing(i),
           image = part(scene, key, x, GROUND - 2).setDepth(depth.ground + 0.01);
         image.setScale(unit(key) * (0.7 + ((i * 11) % 6) * 0.07));
         dressing.push({ x, image });
@@ -174,22 +210,22 @@ export class StageWorldView {
 
     // logs, brambles, leaf pads, the sign and the gate
     for (const s of stage.solids.filter((r) => r.y !== GROUND))
-      part(scene, 'stage-log', s.x, s.y + s.h)
-        .setScale((unit('stage-log') * s.w) / 70, (unit('stage-log') * s.h) / 30)
+      part(scene, theme.log, s.x, s.y + s.h)
+        .setScale((unit(theme.log) * s.w) / 70, (unit(theme.log) * s.h) / 30)
         .setDepth(depth.ground + 0.03);
     for (const t of stage.thorns)
-      part(scene, 'stage-thorns', t.x, t.y + t.h)
-        .setScale((unit('stage-thorns') * t.w) / 72, unit('stage-thorns'))
+      part(scene, theme.thorns, t.x, t.y + t.h)
+        .setScale((unit(theme.thorns) * t.w) / 72, unit(theme.thorns))
         .setDepth(depth.ground + 0.03);
     for (const p of stage.platforms) {
       const drop = GROUND - p.y - 8;
-      part(scene, 'stage-pad-shadow', p.x + p.w / 2, GROUND + 4).setDepth(depth.ground + 0.04);
-      part(scene, `stage-stalk-${drop}`, p.x + p.w / 2, p.y + 8).setDepth(depth.platforms);
-      const image = part(scene, `stage-pad-${p.w}`).setDepth(depth.platforms);
+      part(scene, theme.padShadow, p.x + p.w / 2, GROUND + 4).setDepth(depth.ground + 0.04);
+      part(scene, theme.stalk(drop), p.x + p.w / 2, p.y + 8).setDepth(depth.platforms);
+      const image = part(scene, theme.pad(p.w)).setDepth(depth.platforms);
       this.pads.push({ image, x: p.x + p.w / 2, y: p.y });
     }
-    part(scene, 'stage-sign', stage.startX + 130, GROUND - 1).setDepth(depth.ground + 0.03);
-    part(scene, 'stage-gate', stage.gateX, GROUND).setDepth(depth.ground + 0.03);
+    part(scene, theme.sign, stage.startX + 130, GROUND - 1).setDepth(depth.ground + 0.03);
+    part(scene, theme.gate, stage.gateX, GROUND).setDepth(depth.ground + 0.03);
   }
 
   // A new run of the same stage: the flowers from the last one go.
@@ -203,17 +239,17 @@ export class StageWorldView {
     const t = (this.t += dt);
     this.blink -= dt;
     if (this.blink < -0.14) this.blink = 2.5 + Math.random() * 3;
-    this.weather.update('calm', dt);
+    this.weather.update(this.theme.mood(stage.progress), dt);
     const pan = (stage.progress - 0.5) * 0.6;
 
     this.skyLayer.setX(camX);
     this.sky.sync(t, dt, this.weather, pan, 'happy', this.blink < 0);
     for (const s of this.strips) s.sync(camX);
-    // Sunny, far off over the hills, comes closer as Pip walks the path
+    // the boss, far off over the hills, comes closer as Pip walks the path
     const near = stage.progress;
-    this.farSunny
+    this.horizon
       .setPosition(camX + 800 - near * 90, 412 - near * 12)
-      .setScale(unit('stage-far-sunny') * (0.5 + near * 0.62))
+      .setScale(unit(this.theme.horizon) * (0.5 + near * 0.62))
       .setRotation(Math.sin(t * 0.7) * 0.03);
     for (const p of this.props) {
       const x = p.x + camX * (1 - PROP_SPEED);
@@ -243,7 +279,8 @@ export class StageWorldView {
     this.air.sync(t, dt, this.weather, pan, stage.state === 'down', camX);
   }
 
-  // Where a grumpy plant on the ground was cheered up, a smiling flower grows and stays.
+  // Where a grumpy plant on the ground was cheered up, something happy grows and stays (a smiling flower, on
+  // the Garden Path).
   private growBlooms(stage: Stage, t: number) {
     const now = new Set(stage.enemies);
     for (const e of now) this.known.add(e);
@@ -253,9 +290,7 @@ export class StageWorldView {
       if (!e.dead || e.kind === 'puffball') continue; // a Puffball's seeds just float away
       let bloom = this.blooms[this.bloomsUsed];
       if (!bloom) {
-        bloom = part(this.scene, `stage-bloom-${this.bloomsUsed % BLOOMS}`).setDepth(
-          this.depth.ground + 0.04,
-        );
+        bloom = part(this.scene, this.theme.bloom(this.bloomsUsed)).setDepth(this.depth.ground + 0.04);
         this.blooms.push(bloom);
       }
       bloom.setPosition(e.x, e.y).setVisible(true).setData('born', t);

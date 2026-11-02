@@ -20,6 +20,8 @@ export interface WinText {
 export interface Chapter {
   readonly id: string; // names its scenes and its entry in chapterViews.ts
   readonly title: string; // shown over the stage's name as it begins
+  readonly sign: string; // on the signpost at the start of the stage
+  readonly gate: string; // over the gate at its end, where the boss is
   readonly stage: StageId;
   readonly boss: BossId;
   readonly tunes: { readonly stage: Tune; readonly boss: Tune };
@@ -39,6 +41,8 @@ export interface Chapter {
 export const SUNFLOWER = {
   id: 'sunflower',
   title: 'Chapter 1 · The Grumpy Sunflower',
+  sign: 'Garden Path',
+  gate: "Sunny's Meadow",
   stage: 'gardenPath',
   boss: 'sunny',
   tunes: { stage: 'stage', boss: 'boss' },
