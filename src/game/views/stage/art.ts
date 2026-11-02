@@ -6,6 +6,7 @@
 // Strips that repeat are drawn so their two ends meet: shapes are periodic over the strip, and anything near
 // one end is drawn again a strip away.
 import type { Scene } from 'phaser';
+import { SUNFLOWER } from '../../../chapters';
 import { GROUND, H, TAU } from '../../../config';
 import { STAGES } from '../../../sim/stage/stages';
 import { bake, SOFT } from '../../art/bake';
@@ -842,8 +843,8 @@ export function bakeStage(scene: Scene) {
   bake(scene, 'stage-pit', 100, GROUND_BOTTOM - GROUND + 2, 0, -(GROUND - 2), (c) => drawPit(c, 100));
   bake(scene, 'stage-log', 80, 50, 4, 44, (c) => drawLog(c, 70, 30));
   bake(scene, 'stage-thorns', 84, 40, 6, 36, (c) => drawThorns(c, 72));
-  bake(scene, 'stage-sign', 130, 100, 64, 96, (c) => drawSign(c, 'Garden Path'));
-  bake(scene, 'stage-gate', 190, 210, 95, 204, (c) => drawGate(c, "Sunny's Meadow"));
+  bake(scene, 'stage-sign', 130, 100, 64, 96, (c) => drawSign(c, SUNFLOWER.sign));
+  bake(scene, 'stage-gate', 190, 210, 95, 204, (c) => drawGate(c, SUNFLOWER.gate));
   for (let i = 0; i < BLOOMS; i++) bake(scene, `stage-bloom-${i}`, 44, 62, 22, 58, (c) => drawBloom(c, i));
   // leaf pads (the arena's, baked again so they sit on the stage's own atlas page with their stalks), in
   // every width a stage uses, and a stalk for every height they stand at

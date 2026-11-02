@@ -26,7 +26,6 @@ const STEM_LEAVES = [
 ] as const; // [how far up the stem, which side]
 
 export class SunnyView implements BossView {
-  private all: GameObjects.Container;
   private halo: GameObjects.Image;
   private haloUnit: number; // the halo is baked small: this is the scale that shows it at full size
   private stem: Ribbon;
@@ -93,7 +92,7 @@ export class SunnyView implements BossView {
     this.warn = part(scene, 'warn-bubble').setVisible(false);
     this.zzz = [0, 1, 2].map(() => part(scene, 'zzz').setVisible(false));
     // one container keeps the draw order: glow, stem, leaves, soil, head, then the signs on top
-    this.all = scene.add
+    scene.add
       .container(0, 0, [
         this.halo,
         this.stem.rope,
@@ -104,10 +103,6 @@ export class SunnyView implements BossView {
         ...this.zzz,
       ])
       .setDepth(depth);
-  }
-
-  setVisible(visible: boolean) {
-    this.all.setVisible(visible);
   }
 
   sync(fight: Fight, alpha: number, dt: number) {

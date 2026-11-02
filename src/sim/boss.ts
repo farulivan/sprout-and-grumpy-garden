@@ -42,6 +42,9 @@ export abstract class Boss {
     this.hp = maxHp;
   }
 
+  // The arena he fights in: where Pip can stand, and how far right he can walk.
+  abstract readonly platforms: readonly Rect[];
+  abstract readonly maxX: number;
   // Per-phase tuning, index = phase - 1.
   protected abstract readonly idleTime: readonly number[]; // pause between attacks
   protected abstract readonly speedMuls: readonly number[]; // projectile speed

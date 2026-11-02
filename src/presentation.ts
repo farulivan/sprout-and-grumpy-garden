@@ -1,6 +1,7 @@
 // What each simulation event looks and sounds like. This is the one place that turns "the boss was hit"
 // into a sound, a puff of particles, a screen shake or a line of text. Whatever draws the game (the
 // Phaser scenes in src/game) supplies a Presenter, and this table knows nothing about how it works.
+import type { Chapter } from './chapters';
 import { GROUND, UP, W } from './config';
 import type { SimEvent } from './sim/events';
 import { SEEDS_PER_HEART } from './sim/stage/stage';
@@ -90,8 +91,6 @@ const CUE_SOUNDS: Record<TitleCue, SfxName> = {
   logo: 'land',
   stamp: 'boing',
 };
-// The petals Sunny sheds when he leaves a phase: yellow, then orange, then red.
-const PETAL_COLOR = ['#ffc62e', '#ff982c', '#f7622c'];
 const CONFETTI = ['#ffd23f', '#ff8fb1', '#8fd8ff', '#b48cff', '#7ccf63', '#ffffff'];
 const LEAVES = ['#7cc644', '#9ad85f', '#5aa83a'];
 const CHEER = ['#ffd23f', '#ff8fb1', '#fff3b0', '#ffb3c7']; // the petals a cheered-up enemy pops into
@@ -142,7 +141,13 @@ function bounce(p: Presenter, x: number, y: number) {
   });
 }
 
-export function present(e: SimEvent, p: Presenter, opts: { touch: boolean }) {
+// What an event means can depend on who is playing it: a touch screen, and the chapter being played.
+export interface PresentOptions {
+  touch: boolean;
+  chapter: Chapter;
+}
+
+export function present(e: SimEvent, p: Presenter, opts: PresentOptions) {
   switch (e.type) {
     case 'jump':
       p.sfx('jump');
@@ -249,16 +254,10 @@ export function present(e: SimEvent, p: Presenter, opts: { touch: boolean }) {
       p.punch(0.03);
       break;
     case 'fightStart':
-      p.toast(
-        // a touch screen can't aim, but a straight seed from the high leaf reaches his face
-        opts.touch
-          ? 'Shoot his face from the high leaf: double damage!'
-          : 'Hold ↑ to aim at his face for double damage!',
-        4,
-      );
+      p.toast(opts.touch ? opts.chapter.fightHint.touch : opts.chapter.fightHint.aim, 4);
       break;
     case 'phase': {
-      const shed = PETAL_COLOR[e.phase - 2]; // he sheds the petals of the phase he just left
+      const shed = opts.chapter.shed[e.phase - 2]; // he sheds the petals of the phase he just left
       p.sfx('roar');
       p.shake(12);
       p.hitStop(0.12);
@@ -286,7 +285,7 @@ export function present(e: SimEvent, p: Presenter, opts: { touch: boolean }) {
         shape: 'spark',
         glow: true,
       });
-      p.toast(e.phase === 2 ? 'Sunny is getting grumpier!' : 'Sunny is SUPER grumpy!', 2.4, 'alert');
+      p.toast(opts.chapter.phaseToasts[e.phase - 2], 2.4, 'alert');
       break;
     }
     case 'groundPuff':
@@ -352,7 +351,7 @@ export function present(e: SimEvent, p: Presenter, opts: { touch: boolean }) {
       p.flash(0.5, '#fff6d0');
       p.music(false);
       p.sfx('win');
-      p.toast('Sunny is blooming!', 3, 'good');
+      p.toast(opts.chapter.cheeredToast, 3, 'good');
       p.ring(e.x, e.y, { color: '#ffe680', from: 50, to: 420, life: 0.9 });
       p.ring(e.x, e.y, { color: '#ffffff', from: 30, to: 260, life: 0.6 });
       p.burst(e.x, e.y, {

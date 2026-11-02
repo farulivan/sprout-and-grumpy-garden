@@ -1,6 +1,7 @@
-// Draws a stage. The App advances the simulation; every frame this scene makes the views match it and points
-// the camera where the stage's own camera is (with the shake and punch the effects add). Each run opens with
-// an iris on Pip, as the title's closed on him when he set off.
+// Draws a chapter's stage. The App advances the simulation; every frame this scene makes the views match it and
+// points the camera where the stage's own camera is (with the shake and punch the effects add). Each run opens
+// with an iris on Pip, as the title's closed on him when he set off. Each chapter has a scene of its own, and
+// only the one being played runs (see main.ts).
 import { Scene, type GameObjects } from 'phaser';
 import type { App } from '../../app';
 import { W } from '../../config';
@@ -11,11 +12,12 @@ import { HitboxOverlay } from '../debug';
 import { Fx } from '../fx';
 import { Iris, IRIS_OPEN } from '../views/Iris';
 import type { GamePresenter } from '../presenter';
+import type { ChapterViews } from '../views/chapterViews';
 import { EnemyViews } from '../views/EnemyViews';
 import { StagePickupViews } from '../views/PickupViews';
 import { PlayerView } from '../views/PlayerView';
 import { ProjectileViews } from '../views/ProjectileViews';
-import { StageWorldView } from '../views/stage/StageWorldView';
+import type { StageWorldView } from '../views/stage/StageWorldView';
 
 // Back to front.
 const DEPTH = {
@@ -33,8 +35,6 @@ const DEPTH = {
   iris: 11,
   hitboxes: 100,
 };
-// The warm light of Sunny's meadow, which the garden fades into at the gate
-const MEADOW_LIGHT = [255, 248, 225] as const;
 const NIGHT = 0x123f2c; // the iris: the dark green around the game
 const IRIS_DARK = 0.12; // a moment of dark before it opens...
 const IRIS_OPENS = 0.75; // ...and how long it takes
@@ -55,17 +55,19 @@ export class StageScene extends Scene {
   private fading = false;
 
   constructor(
+    key: string,
     private app: App,
     private presenter: GamePresenter,
+    private views: ChapterViews,
   ) {
-    super('stage');
+    super(key);
   }
 
   create() {
     fitCamera(this);
     const stage = this.app.level as Stage; // this scene is only ever run for a stage
     this.fx = new Fx(this, DEPTH.particles, DEPTH.flash);
-    this.world = new StageWorldView(this, stage, DEPTH);
+    this.world = this.views.stageWorld(this, stage, DEPTH);
     this.enemies = new EnemyViews(this, DEPTH.enemies, DEPTH.marks);
     this.pickups = new StagePickupViews(this, DEPTH.pickups, this.fx);
     this.player = new PlayerView(this, DEPTH.player, this.fx);
@@ -91,7 +93,7 @@ export class StageScene extends Scene {
     const dt = deltaMs / 1000,
       alpha = this.app.alpha;
     if (stage !== this.seen) {
-      // a new run: last run's flowers go, and the fade into the boss's meadow is undone
+      // a new run: last run's flowers go, and the fade into the light at the gate is undone
       this.seen = stage;
       this.world.reset();
       this.fading = false;
@@ -107,10 +109,10 @@ export class StageScene extends Scene {
     this.projectiles.sync(stage.projectiles, alpha);
     this.hitboxes.syncStage(stage);
     this.fx.update(dt * stage.timeScale, dt, camX + W / 2);
-    // walking through the gate, the garden fades into the warm light of Sunny's meadow
+    // walking through the gate, the stage fades into the light beyond it
     if (stage.state === 'clear' && stage.endT > 1.75 && !this.fading) {
       this.fading = true;
-      this.cameras.main.fadeOut(420, ...MEADOW_LIGHT);
+      this.cameras.main.fadeOut(420, ...this.views.gateLight);
     }
   }
 

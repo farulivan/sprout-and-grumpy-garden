@@ -1,4 +1,5 @@
-// Draws the fight. The App advances the simulation; every frame this scene makes the views match it.
+// Draws a chapter's boss fight. The App advances the simulation; every frame this scene makes the views match
+// it. Each chapter has a scene of its own, and only the one being played runs (see main.ts).
 import { Scene } from 'phaser';
 import type { App } from '../../app';
 import { Fight } from '../../sim/fight';
@@ -7,11 +8,12 @@ import { HitboxOverlay } from '../debug';
 import { Fx } from '../fx';
 import type { GamePresenter } from '../presenter';
 import { BOSS_VIEWS, type BossView } from '../views/bossViews';
+import type { ChapterViews } from '../views/chapterViews';
 import { HazardViews } from '../views/HazardViews';
 import { PickupViews } from '../views/PickupViews';
 import { PlayerView } from '../views/PlayerView';
 import { ProjectileViews } from '../views/ProjectileViews';
-import { WorldView } from '../views/WorldView';
+import type { WorldView } from '../views/WorldView';
 
 // Back to front.
 const DEPTH = {
@@ -33,8 +35,7 @@ const DEPTH = {
 export class FightScene extends Scene {
   hitboxes!: HitboxOverlay;
   private world!: WorldView;
-  private bosses = new Map<string, BossView>(); // one view per boss met so far; only the current one shows
-  private showing = '';
+  private boss: BossView | null = null; // made as his fight is first drawn
   private player!: PlayerView;
   private projectiles!: ProjectileViews;
   private hazards!: HazardViews;
@@ -42,16 +43,18 @@ export class FightScene extends Scene {
   private fx!: Fx;
 
   constructor(
+    key: string,
     private app: App,
     private presenter: GamePresenter,
+    private views: ChapterViews,
   ) {
-    super('fight');
+    super(key);
   }
 
   create() {
     fitCamera(this);
     this.fx = new Fx(this, DEPTH.particles, DEPTH.flash);
-    this.world = new WorldView(this, DEPTH);
+    this.world = this.views.arena(this, DEPTH);
     this.hazards = new HazardViews(this, DEPTH.hazards, DEPTH.marks, this.fx);
     this.pickups = new PickupViews(this, DEPTH.pickups, this.fx);
     this.player = new PlayerView(this, DEPTH.player, this.fx);
@@ -59,11 +62,11 @@ export class FightScene extends Scene {
     this.hitboxes = new HitboxOverlay(this, DEPTH.hitboxes);
     this.hitboxes.visible = new URLSearchParams(location.search).has('hitboxes');
     // Through a stage's gate: this scene's effects take over, starting clean, and the arena fades in from
-    // the warm light of the meadow. The first fight creates the scene; later ones wake it.
+    // the light at the gate. The first fight creates the scene; later ones wake it.
     const enter = () => {
       this.fx.clear();
       this.presenter.fx = this.fx;
-      this.cameras.main.fadeIn(500, 255, 248, 225);
+      this.cameras.main.fadeIn(500, ...this.views.gateLight);
     };
     enter();
     this.events.on('wake', enter);
@@ -77,7 +80,8 @@ export class FightScene extends Scene {
     if (!(fight instanceof Fight)) return; // a stage is being played: its own scene draws it
 
     this.world.sync(dt, fight, alpha);
-    this.bossView(fight.boss.id).sync(fight, alpha, dt);
+    this.boss ??= BOSS_VIEWS[fight.boss.id].create(this, DEPTH.boss, this.fx);
+    this.boss.sync(fight, alpha, dt);
     this.hazards.sync(fight.hazards, alpha, dt);
     this.pickups.sync(fight.pickups, alpha, dt);
     this.player.sync(fight, alpha, dt);
@@ -87,18 +91,5 @@ export class FightScene extends Scene {
     // Particles slow down with the fight during the win slow-motion; the camera always settles in real time.
     const still = fight.state === 'win' || fight.state === 'lose';
     this.fx.update(still ? dt : dt * fight.timeScale, dt);
-  }
-
-  private bossView(id: keyof typeof BOSS_VIEWS): BossView {
-    let view = this.bosses.get(id);
-    if (!view) {
-      view = BOSS_VIEWS[id].create(this, DEPTH.boss, this.fx);
-      this.bosses.set(id, view);
-    }
-    if (id !== this.showing) {
-      this.showing = id;
-      for (const [key, other] of this.bosses) other.setVisible(key === id);
-    }
-    return view;
   }
 }

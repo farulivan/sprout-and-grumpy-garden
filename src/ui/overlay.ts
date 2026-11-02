@@ -1,5 +1,6 @@
 // The HTML layer over the game: "Press any key" on the title, the main menu and its pages, the win, lose and
 // pause cards, plus the round sound and pause buttons.
+import type { LoseText, WinText } from '../chapters';
 import type { FightResult } from '../sim/events';
 
 export type Card = 'press' | 'menu' | Page | 'win' | 'lose' | 'pause';
@@ -277,8 +278,11 @@ export class Overlay {
       : undefined;
   }
 
-  // path: how the stage before the boss went, if this run came that way.
-  showWin(r: FightResult, best: number | null, isBest: boolean, path?: StagePath) {
+  // text: what the chapter says about the win. path: how the stage before the boss went, if this run came
+  // that way.
+  showWin(r: FightResult, best: number | null, isBest: boolean, text: WinText, path?: StagePath) {
+    byId('win-badge').textContent = text.badge;
+    byId('win-line').textContent = text.line;
     // Each star earned pops in, one after another (see .star.on in style.css).
     byId('win-stars').replaceChildren(
       ...[1, 2, 3].map((n) => el('span', n <= r.stars ? 'star on' : 'star', '★')),
@@ -295,9 +299,10 @@ export class Overlay {
     this.show('win');
   }
 
-  // where: lost on the way to the boss (a stage) or against him. lives: how many Pip has left; with none
-  // the game is over, and its button starts a new one from the first level.
-  showLose(progress: number, where: 'stage' | 'boss', lives: number) {
+  // text: what the chapter says about the level that was lost, on the way to the boss (a stage) or against
+  // him. lives: how many Pip has left; with none the game is over, and its button starts a new one from the
+  // first level.
+  showLose(progress: number, text: LoseText, lives: number) {
     const over = lives <= 0,
       meter = el('div', 'meter'),
       fill = el('i', '');
@@ -306,18 +311,11 @@ export class Overlay {
     byId('lose-title').textContent = over ? 'Game over' : 'Pip needs a nap';
     byId('lose-tip').hidden = over;
     byId('lose-over').hidden = !over;
-    byId('lose-who').textContent = where === 'stage' ? 'The garden path is' : 'Sunny is';
+    byId('lose-who').textContent = text.who;
     byId('btn-retry').textContent = over ? 'Start again' : 'Try again';
     byId('btn-lose-menu').hidden = !over; // the game is over: a way back to the menu too
-    const progressLine = el(
-      'span',
-      '',
-      where === 'stage'
-        ? `You made it ${progress}% of the way to Sunny!`
-        : `You cheered Sunny up ${progress}% of the way!`,
-    );
     byId('lose-progress').replaceChildren(
-      progressLine,
+      el('span', '', text.progress(progress)),
       meter,
       ...(over ? [] : [el('span', 'lives', lives === 1 ? 'Last life!' : `${lives} lives left`)]),
     );

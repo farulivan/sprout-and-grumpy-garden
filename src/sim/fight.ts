@@ -1,15 +1,14 @@
 // One boss fight: the whole game state plus the rules that advance it.
 // States: play -> ending (boss blooms) -> win
 //         play -> down (Pip naps) -> lose
-import { ARENA_R, STEP } from '../config';
-import { platforms } from './arena';
+import { STEP } from '../config';
 import type { Boss } from './boss';
 import { BOSSES, type BossId } from './bosses';
 import type { FightResult, SimEvent } from './events';
 import type { Hazard } from './hazards';
 import type { InputFrame } from './input';
 import type { Level } from './level';
-import { circleHit, clamp, prune } from './math';
+import { circleHit, clamp, prune, type Rect } from './math';
 import type { Dewdrop } from './pickups';
 import { PIP_LOWEST, Player, type PlayerWorld } from './player';
 import type { Projectile } from './projectile';
@@ -29,8 +28,8 @@ export class Fight implements PlayerWorld, Level {
   readonly easy: boolean;
   readonly rng: Rng;
   readonly minX = 24;
-  readonly maxX = ARENA_R;
-  readonly platforms = platforms;
+  readonly maxX: number; // these two are the boss's arena
+  readonly platforms: readonly Rect[];
   readonly player: Player;
   readonly boss: Boss;
   projectiles: Projectile[] = [];
@@ -48,6 +47,8 @@ export class Fight implements PlayerWorld, Level {
     this.easy = !!opts.easy;
     this.player = new Player(this);
     this.boss = BOSSES[opts.boss ?? 'sunny'](this);
+    this.maxX = this.boss.maxX;
+    this.platforms = this.boss.platforms;
     if (this.easy) this.player.hp = this.player.maxHp = 8;
     if (opts.hearts !== undefined) this.player.hp = clamp(Math.round(opts.hearts), 1, this.player.maxHp);
     this.boss.state = 'intro';
