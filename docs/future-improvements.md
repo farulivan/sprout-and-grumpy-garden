@@ -109,19 +109,14 @@ the cards' buttons bigger on touch screens (or give them bigger hit areas).
 
 ### #17 One chapter profile, before a second chapter
 
-Sunny is written into many places: the messages in `src/presentation.ts`, the lose texts in
-`src/ui/overlay.ts` ("Sunny is still grumpy…", "of the way to Sunny"), How to play in `index.html`, the
-portrait on the boss bar and the
-stage's path bar (`bar-icon-*` in `src/game/hud/art.ts`), the sunflower on the stage's horizon, and the
-colours of his shed petals. `CHAPTER` in `src/app.ts` pairs him with the Garden Path and holds the
-chapter's title ("Chapter 1 · The Grumpy Sunflower"), which the HUD shows as the stage begins: the start of
-that profile. The title screen no longer names him (it is Pip's yard). `Boss.mood` in `src/sim/boss.ts` is
-set but never read.
+Mostly done. `CHAPTERS` in `src/chapters.ts` holds each chapter's stage and boss, its title and tunes, its
+messages, its win and lose texts, the sign and the gate, and the boss's colours and portrait, and the cards,
+the HUD and the presentation read them. `src/game/views/chapterViews.ts` says how its world looks, and each
+chapter has scenes of its own.
 
-**Fix:** one profile for each chapter (its stage, and its boss's name, story line, messages, lose texts,
-colours and portrait) that the cards, the HUD and the presentation all read. Then a second chapter and a
-level-select map, which Play on the main menu would open; "Add a stage", "Add a small enemy" and "Add a boss" in the README list the steps. Use
-`Boss.mood` or remove it.
+**What's left**, in the last pull request of `docs/chapter-2-plan.md`: How to play in `index.html` still names
+Sunny, and nothing moves on to a next chapter yet. Separately, `Boss.mood` in `src/sim/boss.ts` is set but never
+read: use it or remove it.
 
 ## Game design
 
