@@ -8,7 +8,6 @@ import { bakeSunny, SunnyView } from './SunnyView';
 export interface BossView {
   // fight.boss is the boss to draw; the view may also look at the rest of the fight (where Pip is, say).
   sync(fight: Fight, alpha: number, dt: number): void;
-  setVisible(visible: boolean): void;
 }
 
 export const BOSS_VIEWS: Record<

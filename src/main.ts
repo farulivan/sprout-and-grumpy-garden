@@ -5,6 +5,7 @@ import '@fontsource/fredoka/latin-700.css';
 import { Core } from 'phaser';
 import { App, type Played } from './app';
 import { GameAudio } from './audio';
+import { CHAPTERS } from './chapters';
 import { Controls } from './controls';
 import { createGame } from './game/createGame';
 import { GamePresenter } from './game/presenter';
@@ -13,6 +14,7 @@ import { FightScene } from './game/scenes/FightScene';
 import { HudScene } from './game/scenes/HudScene';
 import { StageScene } from './game/scenes/StageScene';
 import { TitleScene } from './game/scenes/TitleScene';
+import { CHAPTER_VIEWS } from './game/views/chapterViews';
 import { Stage } from './sim/stage/stage';
 import { Yard } from './sim/yard';
 import { initLayout } from './ui/layout';
@@ -23,6 +25,14 @@ const audio = new GameAudio();
 const unlockAudio = () => audio.init(); // browsers only allow sound after a key press or touch
 const controls = new Controls(unlockAudio);
 const presenter = new GamePresenter(audio);
+
+// Each chapter's stage and boss fight are drawn by scenes of its own, so a chapter's world is only made when
+// it is first played, and scenes asleep draw nothing.
+const fightKey = (chapter: number) => `fight-${CHAPTERS[chapter].id}`;
+const stageKey = (chapter: number) => `stage-${CHAPTERS[chapter].id}`;
+const PLAY_SCENES = CHAPTERS.flatMap((_, i) => [fightKey(i), stageKey(i)]);
+const PAUSE_SCENES = [...PLAY_SCENES, 'hud'];
+const LEVEL_SCENES = ['title', ...PLAY_SCENES];
 
 const params = new URLSearchParams(location.search);
 const app = new App({
@@ -36,7 +46,7 @@ const app = new App({
   },
   // pausing the scenes freezes everything they animate, not just the simulation
   onPause: (paused) => {
-    for (const key of ['fight', 'stage', 'hud']) {
+    for (const key of PAUSE_SCENES) {
       if (paused && game.scene.isActive(key)) game.scene.pause(key);
       else if (!paused && game.scene.isPaused(key)) game.scene.resume(key);
     }
@@ -47,9 +57,9 @@ const app = new App({
 // Pip's yard, a boss fight and a stage are drawn by scenes of their own: only the one being played runs. A
 // paused scene can't be put to sleep, so it is resumed first; and run() would restart a scene that is
 // already running, so it is only asked to start, wake or resume one that isn't.
-const LEVEL_SCENES = ['title', 'fight', 'stage'];
 function showSceneFor(level: Played) {
-  const on = level instanceof Yard ? 'title' : level instanceof Stage ? 'stage' : 'fight';
+  const on =
+    level instanceof Yard ? 'title' : level instanceof Stage ? stageKey(app.chapter) : fightKey(app.chapter);
   for (const off of LEVEL_SCENES) {
     if (off === on) continue;
     if (game.scene.isPaused(off)) game.scene.resume(off);
@@ -62,14 +72,15 @@ presenter.onHitStop = (seconds) => app.hitStop(seconds);
 
 const stage = document.getElementById('stage') as HTMLElement;
 initLayout(stage);
-const fightScene = new FightScene(app, presenter);
-const stageScene = new StageScene(app, presenter);
+const levelScenes = CHAPTERS.flatMap(({ id }, i) => [
+  new FightScene(fightKey(i), app, presenter, CHAPTER_VIEWS[id]),
+  new StageScene(stageKey(i), app, presenter, CHAPTER_VIEWS[id]),
+]);
 // Drawn in this order, so the HUD is over every level.
 const game = createGame('game-root', [
   new BootScene(audio),
   new TitleScene(app, presenter),
-  fightScene,
-  stageScene,
+  ...levelScenes,
   new HudScene(app, presenter),
 ]);
 // The App runs before the scenes each frame: it advances the simulation, then the scenes draw it.
@@ -106,7 +117,10 @@ if (params.has('debug')) {
       startStage: () => app.startStage(),
       startBoss: (hearts?: number) => app.startBoss(hearts),
       setPaused: (paused: boolean) => app.setPaused(paused),
-      hitboxes: (on = true) => (fightScene.hitboxes.visible = stageScene.hitboxes.visible = on),
+      // (a scene not played yet has no overlay: it reads ?hitboxes itself when it starts)
+      hitboxes: (on = true) => {
+        for (const scene of levelScenes) if (scene.hitboxes) scene.hitboxes.visible = on;
+      },
       step(n = 1) {
         for (let i = 0; i < n; i++) game.step(performance.now(), 1000 / 60);
       },
