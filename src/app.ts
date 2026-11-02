@@ -4,6 +4,7 @@
 // stage's gate starts the boss fight with the hearts Pip has left. It knows nothing about how the game is
 // drawn; whatever draws it hands in a Presenter and calls tick() once per display frame.
 import { GameAudio, type Tune } from './audio';
+import { CHAPTERS } from './chapters';
 import { STEP } from './config';
 import { Controls } from './controls';
 import { present, type Presenter } from './presentation';
@@ -16,12 +17,6 @@ import { Overlay, type StagePath } from './ui/overlay';
 
 const MAX_FRAME = 0.05; // after a long hitch, slow down instead of catching up all at once
 const newSeed = () => Math.floor(Math.random() * 2 ** 32);
-// The chapter: a stage, then its boss through the stage's gate. Its title shows as the stage begins.
-export const CHAPTER = {
-  title: 'Chapter 1 · The Grumpy Sunflower',
-  stage: 'gardenPath',
-  boss: 'sunny',
-} as const;
 // Pip's lives in a game, as in Super Mario Bros.: losing a level, or giving it up with Start over, costs one,
 // and with none left the game starts again from its first level.
 export const LIVES = 3;
@@ -46,6 +41,7 @@ export class App {
   alpha = 1;
   private acc = 0;
   private frozen = 0; // seconds of hit-stop left
+  chapter = 0; // which of CHAPTERS is being played, or was last
   lives = LIVES; // left in this game, counting the one being played
   private overlay: Overlay;
   private path: StagePath | null = null; // how this run's stage went, for the win card
@@ -92,9 +88,10 @@ export class App {
     this.overlay.show(null);
   }
 
-  // Play again, and Start again once the lives are gone: a new game from its first level, with all of Pip's
-  // lives.
+  // Play again, and Start again once the lives are gone: a new game from the first chapter, with all of
+  // Pip's lives.
   start() {
+    this.chapter = 0;
     this.lives = LIVES;
     this.startStage();
   }
@@ -114,13 +111,15 @@ export class App {
   }
 
   startStage() {
+    const { stage, tunes } = CHAPTERS[this.chapter];
     this.path = null;
-    this.begin(new Stage({ seed: newSeed(), stage: CHAPTER.stage, easy: this.overlay.easy }), 'stage');
+    this.begin(new Stage({ seed: newSeed(), stage, easy: this.overlay.easy }), tunes.stage);
   }
 
   // hearts: what Pip carried in from the stage; without it he starts with all of them.
   startBoss(hearts?: number) {
-    this.begin(new Fight({ seed: newSeed(), boss: CHAPTER.boss, easy: this.overlay.easy, hearts }), 'boss');
+    const { boss, tunes } = CHAPTERS[this.chapter];
+    this.begin(new Fight({ seed: newSeed(), boss, easy: this.overlay.easy, hearts }), tunes.boss);
   }
 
   private begin(level: Played, tune: Tune) {

@@ -2,7 +2,8 @@
 // the fight and stage scenes with its own camera, so screen shake does not move it. The parts are baked in
 // src/game/hud/art.ts.
 import { BlendModes, Scene, type GameObjects } from 'phaser';
-import { CHAPTER, type App, type Played } from '../../app';
+import type { App, Played } from '../../app';
+import { CHAPTERS } from '../../chapters';
 import { H, RES, TAU, W } from '../../config';
 import type { ToastTone } from '../../presentation';
 import { Fight } from '../../sim/fight';
@@ -215,7 +216,7 @@ export class HudScene extends Scene {
     // over a stage's name as it begins, which chapter it is: in the orange of the old title card's ribbon
     this.chapter = text(24, '700', '#ffffff', '#c4581a', 7)
       .setOrigin(0.5)
-      .setText(CHAPTER.title)
+      .setText(CHAPTERS[this.app.chapter].title)
       .setVisible(false);
     this.go = shadowed(text(96, '700', '#fff7c2', '#e8641c', 14))
       .setOrigin(0.5)
@@ -270,7 +271,8 @@ export class HudScene extends Scene {
       this.lag = this.shown = 1;
       this.prevPhase = fight?.boss.phase ?? 1;
       this.iconPop = this.barShake = 0;
-      this.ready.setText(stage ? stage.name : 'Ready?'); // redrawn only when it changes
+      this.ready.setText(stage ? stage.name : 'Ready?'); // these two are redrawn only when they change
+      this.chapter.setText(CHAPTERS[this.app.chapter].title);
     }
     // The result cards sit over the middle of the screen, and the boss's bar would poke out above them.
     const result = level.state === 'win' || level.state === 'lose';
