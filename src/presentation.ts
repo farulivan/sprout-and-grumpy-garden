@@ -567,6 +567,13 @@ export function present(e: SimEvent, p: Presenter, opts: PresentOptions) {
       p.shake(3);
       p.burst(e.x, e.y, { ...DUST, n: 7, speed: 110, color: '#cfc6e6' });
       break;
+    case 'bossLand':
+      p.sfx('thud');
+      p.shake(7);
+      p.punch(0.025);
+      p.hitStop(0.05);
+      p.burst(e.x, e.y, { ...DUST, n: 7, speed: 110, color: '#cfc6e6' });
+      break;
     case 'gladeClose':
       p.sfx('brambles');
       p.shake(7);

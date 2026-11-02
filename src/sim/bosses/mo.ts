@@ -29,20 +29,21 @@ export const MO_PLATFORMS: readonly Rect[] = [
   { x: W - 146, y: 388, w: 110, h: 22 },
 ];
 const MAX_X = W - 24;
-// How far along the floor he goes: never so near a wall that a Pip beside it would be touching him.
-export const MO_LEFT = 150,
-  MO_RIGHT = W - 150;
+// How far along the floor he goes: never so near a wall that a Pip beside it would be touching him, or couldn't
+// jump up onto his cap. Keep them at the cap's width plus 68.
+export const MO_LEFT = 162,
+  MO_RIGHT = W - 162;
 const START_X = 690;
 
 // His shape, from his feet. rear goes from 0 (sulking, cap down) to 1 (reared up, face open).
 export const MID = 70, // his y is this far above his feet: the middle of him, for effects
-  CAP_RX = 82, // half the cap's width...
+  CAP_RX = 94, // half the cap's width (its art is about 104, so seeds and bounces land close to its edge)...
   CAP_RY = 36, // ...and half its height
   CAP_LOW = 92, // how high the cap's middle is, sulking...
   CAP_HIGH = 178, // ...and reared up
-  STALK_HALF = 36,
+  STALK_HALF = 46,
   FACE_LOW = 64, // how high his face is, sulking...
-  FACE_HIGH = 122, // ...and reared up
+  FACE_HIGH = 115, // ...and reared up, clear of the brim
   FACE_R = 32,
   SPIN_R = 52; // spinning, he is one low round whirl
 const HOP_T = 0.8, // seconds in the air
@@ -186,7 +187,7 @@ export class Mo extends Boss {
     this.airborne = false;
     this.landX = null;
     if (!this.alive || this.state !== 'fight') return;
-    f.emit({ type: 'thud', x: this.x, y: GROUND });
+    f.emit({ type: 'bossLand', x: this.x, y: GROUND });
     const speed = SMOKE_SPEED * this.speedMul;
     for (const dir of [-1, 1] as const)
       f.hazards.push(new AcidSmoke(this.x + dir * SMOKE_AT, dir, speed, f.minX - 40, f.maxX + 40));
@@ -342,7 +343,7 @@ export class Mo extends Boss {
     }
     this.spinning = false;
     this.x = clamp(this.x, MO_LEFT, MO_RIGHT);
-    f.emit({ type: 'thud', x: this.x, y: GROUND });
+    f.emit({ type: 'bossLand', x: this.x, y: GROUND });
     this.open = true;
     this.dizzy = DIZZY;
     yield DIZZY;

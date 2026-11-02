@@ -5,6 +5,7 @@ import { GROUND } from '../../src/config';
 import { CAP_RX, Mo, MO_LEFT, MO_PLATFORMS, MO_RIGHT } from '../../src/sim/bosses/mo';
 import type { SimEvent } from '../../src/sim/events';
 import { Fight } from '../../src/sim/fight';
+import { AcidSmoke } from '../../src/sim/hazards';
 import { NO_INPUT, type InputFrame } from '../../src/sim/input';
 import { Projectile } from '../../src/sim/projectile';
 
@@ -205,6 +206,27 @@ describe("Mo's attacks", () => {
     expect(has(events, 'bounce')).toBe(true);
     expect(has(events, 'playerHurt')).toBe(false);
     expect(fight.player.x).toBeGreaterThan(mo.x);
+  });
+
+  it('comes down with his whole weight: a hop and the end of a spin are his own event, not a small thud', () => {
+    for (const name of ['bigHop', 'capSpin']) {
+      const { fight, mo } = fightMo();
+      fight.player.x = fight.player.px = 300;
+      fight.player.inv = 999;
+      mo.startAttack(name);
+      const events = run(fight, 6);
+      expect(has(events, 'bossLand')).toBe(true);
+      expect(has(events, 'thud')).toBe(false);
+    }
+  });
+
+  it('hurts only in the body of the smoke, 72 wide and 36 tall, and not as it swells', () => {
+    const smoke = new AcidSmoke(400, 1, 365, 0, 960);
+    expect(smoke.shape()).toBeNull();
+    smoke.update(0.11);
+    const box = smoke.shape()!;
+    expect(box).toMatchObject({ w: 72, h: 36, y: GROUND - 36 });
+    expect(box.x + box.w / 2).toBeCloseTo(smoke.x);
   });
 
   it('erupts through a shelf: the Fairy Ring reaches Pip on one', () => {

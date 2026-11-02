@@ -27,6 +27,7 @@ export type SimEvent =
   | { type: 'playerHurt'; x: number; y: number }
   | { type: 'bossHit'; x: number; y: number; weak: boolean } // weak = the double-damage spot
   | { type: 'bossBlock'; x: number; y: number } // a seed hit him while he can't be hurt, and bounced off
+  | { type: 'bossLand'; x: number; y: number } // a boss's whole weight came down
   | { type: 'telegraph' }
   | { type: 'spit' }
   | { type: 'petals' }
