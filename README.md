@@ -282,6 +282,10 @@ one world:
 - **The wood is painted for dusk.** Its far trees go pale into the last warm light, its giant mushrooms glow but
   stay well faded so they can't be taken for anything in the fight, and halfway along the weather slowly tints
   it all into deeper dusk: a moon, more fireflies. Only what hurts and what helps stays untinted and bright.
+- **Mo is the boldest thing there.** He has the thickest outline and the strongest colour, and his hollow's mist
+  keeps the bright mushrooms behind it from competing with him. All his poison is one acid green. What looks
+  solid with a dark rim hurts, and what is soft and see-through never does. Smoke is layers of soft puffs with
+  curls in it: hard-edged circles look like a hedge.
 - **The title is Pip's yard, and belongs to no boss.** It is made from the path's and the arena's own parts
   (the sky, the far hills, the cottage, hedges and fence), with the dawn as a weather of its own. Its
   opening is staged like a cartoon's: an iris in, a camera move, things that drop, squash and settle, and an
@@ -310,7 +314,7 @@ keyboard / gamepad / touch ─► Controls ─► App ──step(input)──►
 | `src/sim/boss.ts` | What every boss shares: health, three phases, the intro, the attack scheduler |
 | `src/sim/bosses/` | One file per boss (`sunny.ts`, `mo.ts`) and the registry of all of them (`index.ts`) |
 | `src/sim/bouncer.ts` | A bounce pad: what a cheered-up Capling leaves. Pip falling onto one is thrown up, higher with the button held (`bounceOff` in `player.ts`). `Springy` is anything that does that, which includes Mo's cap |
-| `src/sim/hazards.ts`, `projectile.ts`, `pickups.ts`, `arena.ts` | Vine, root and pollen, and Mo's shockwave and gloom cloud; seeds and petals; the dewdrop; the leaf platforms of Sunny's arena |
+| `src/sim/hazards.ts`, `projectile.ts`, `pickups.ts`, `arena.ts` | Vine, root and pollen, and Mo's acid smoke and fairy ring; seeds and petals; the dewdrop; the leaf platforms of Sunny's arena |
 | `src/sim/events.ts` | The list of things the simulation announces (`jump`, `bossHit`, `phase`, the opening's `cue`s, ...) |
 | `src/sim/stage/stage.ts` | `Stage`: one scrolling stage, the way `Fight` is one boss fight. Ground in solid boxes with pits between, logs, trunks, thorns, leaf pads, the camera, pickups, the glades that shut until every plant in them is cheered up, and the gate, and the rules that advance it |
 | `src/sim/stage/enemies/` | The small enemies a stage places (Grumbud, Puffball, Pea Pod, Snapper, and the Mushroom Wood's Capling, Burr, Dropcap and Toadlet), one file each, and their registry (`index.ts`). A boss can bring them too: Mo sprouts Caplings and blows spore bubbles (`spore.ts`) |
@@ -326,7 +330,8 @@ keyboard / gamepad / touch ─► Controls ─► App ──step(input)──►
 | `src/game/views/title/` | Pip's yard (`YardView`), the logo in parts (`Logo`), the studio's sting (`Sting`), and their art (`art.ts`) |
 | `src/game/views/Iris.ts` | The round hole that opens on a scene and closes on it, as old cartoons do: the title's, and each stage's start |
 | `src/game/views/stage/` | A stage's world: `StageWorldView` (the sky that stays put, landscape strips that repeat and slide by how far away they are, the ground with its pits, logs, thorns and leaf pads, the sign, the gate, and the flowers cheered-up plants leave), which lays out any theme, and the Garden Path's theme (`gardenTheme.ts`) and parts (`art.ts`) |
-| `src/game/views/wood/` | The Mushroom Wood's theme (`woodTheme.ts`), its world (`art.ts`), its enemies and bounce pad (`enemyArt.ts`), Mo's hollow (`hollow.ts`) and Mo himself (`moArt.ts`, placeholder art for now), baked the first time the chapter is played |
+| `src/game/views/wood/` | The Mushroom Wood's theme (`woodTheme.ts`), its world (`art.ts`), its enemies and bounce pad (`enemyArt.ts`) and Mo's hollow (`hollow.ts`), baked the first time the chapter is played |
+| `src/game/views/mo/` | Mo: his parts and palette (`art.ts`), his layered face (`face.ts`), and the art and views of his two big attacks (`smoke.ts`, `ring.ts`). `bake.ts` bakes all of it on an atlas page of its own. `docs/mo-art/` is the reference art it was drawn from, and `docs/chapter-2-boss-spec.md` the design |
 | `src/game/views/world/` | The arena, one file per layer: `sky.ts`, `air.ts` and `weather.ts` (which blends between the moods: Sunny's four, the title's dawn, and the wood's and Mo's four) are shared; `land.ts` and `ground.ts` are the garden's, handed to `WorldView` by `chapterViews.ts` |
 | `src/game/views/sunny/`, `hazards/` | The bigger views keep their drawing code beside them: Sunny's parts (`art.ts`) and layered face (`face.ts`), the hazards' parts (`art.ts`) |
 | `src/game/scenes/`, `src/game/hud/` | `BootScene` (font, baking), `TitleScene`, `FightScene` and `StageScene` (sync the views every frame; only the one for what is being played runs, and each chapter has a `FightScene` and a `StageScene` of its own; `TitleScene` also stages the opening), `HudScene` (hearts, the boss's bar or the stage's path bar and golden seeds, toasts, the chapter and stage names); `hud/art.ts` bakes the HUD's parts |
@@ -448,7 +453,7 @@ the game says and shows about them. TypeScript then asks for its entry in `CHAPT
 light at its gate. `src/main.ts` gives it scenes of its own, so nothing has to hide anything. Two things still
 assume one chapter: How to play in `index.html` names Sunny, and nothing moves `App.chapter` on from the first
 chapter yet, so a win ends the game with Play again. Chapter 2 is in `CHAPTERS` but isn't live: only
-`?debug&chapter=2` reaches it (see "Tests"), and Mo there is still placeholder art with Sunny's tune.
+`?debug&chapter=2` reaches it (see "Tests").
 
 **Add a stage.** Write its layout as data in `src/sim/stage/stages/<name>.ts`, a `StageData`: its length,
 ground and pits, logs, thorns, leaf pads, enemies, dewdrops, golden seeds and gate. Add it to `STAGES` in

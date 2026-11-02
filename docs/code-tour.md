@@ -42,7 +42,8 @@ A level is one thing being played, and the next one replaces it:
 
 - **`Yard`**: Pip's yard, behind the opening, "Press any key" and the menu.
 - **`Stage`**: a scrolling stage, the Garden Path, with its small enemies, pits and pickups.
-- **`Fight`**: a boss fight, Sunny the sunflower, in three phases.
+- **`Fight`**: a boss fight in three phases: Sunny the sunflower, or Mo the Moody Mushroom in Chapter 2, which
+  isn't live yet.
 
 Play goes Yard → Stage → Fight. All three speak the same small interface, so the loop, the events and the
 drawing work the same for each.
