@@ -137,6 +137,17 @@ describe('jumping', () => {
 });
 
 describe('fight', () => {
+  it("takes its arena from the boss: Sunny's two leaves, and a wall at x 720", () => {
+    const fight = new Fight({ seed: 3 });
+    expect(fight.maxX).toBe(fight.boss.maxX);
+    expect(fight.platforms).toBe(fight.boss.platforms);
+    expect(fight.maxX).toBe(720);
+    expect(fight.platforms.map((p) => [p.x, p.y, p.w])).toEqual([
+      [300, 352, 150],
+      [560, 292, 140],
+    ]);
+  });
+
   it('lets a straight seed from the high leaf hit his face, for players who cannot aim (touch screens)', () => {
     const fight = fighting(),
       pip = fight.player,

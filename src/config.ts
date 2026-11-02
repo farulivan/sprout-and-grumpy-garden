@@ -2,7 +2,7 @@
 export const W = 960;
 export const H = 540;
 export const GROUND = 468;
-// Pip can't walk past this x: stops the player camping behind the boss's stem.
+// In Sunny's arena, Pip can't walk past this x: stops the player camping behind his stem.
 export const ARENA_R = 720;
 export const TAU = Math.PI * 2;
 export const UP = -Math.PI / 2; // straight up, as an angle (y grows downward)

@@ -3,6 +3,7 @@
 // Add an attack by writing another *name() generator that ends with this.endAttack(), then list it in
 // ATTACKS and in POOLS for the phases that should use it.
 import { ARENA_R, GROUND } from '../../config';
+import { platforms } from '../arena';
 import { Boss, type Attack } from '../boss';
 import type { Fight } from '../fight';
 import { PollenDrop, RootSpike, VineSweep } from '../hazards';
@@ -21,6 +22,8 @@ const POOLS: Record<number, readonly SunnyAttack[]> = {
 export class Sunny extends Boss {
   readonly id = 'sunny' as const;
   readonly name = 'Sunny the Sunflower';
+  readonly platforms = platforms;
+  readonly maxX = ARENA_R;
   readonly baseX = 790;
   readonly baseY = 230;
   readonly r = 58;
