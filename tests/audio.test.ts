@@ -113,3 +113,16 @@ it('drops sounds the browser is still holding back, instead of saving them all u
   audio.play('jump');
   expect(starts.length).toBeGreaterThan(0);
 });
+
+it("plays the wood's tune in its own minor key, with a bass from that key too", () => {
+  const { audio, context, starts } = play(() => {});
+  audio.startMusic('wood');
+  const from = starts.length;
+  for (let i = 0; i < 20; i++) {
+    context.currentTime += 0.05;
+    vi.advanceTimersByTime(50);
+  }
+  const wood = melody(starts.slice(from));
+  expect(wood.length).toBeGreaterThan(3);
+  for (let i = 1; i < wood.length; i++) expect(wood[i] - wood[i - 1]).toBeCloseTo(0.25, 6);
+});

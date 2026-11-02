@@ -32,7 +32,13 @@ export type SfxName =
   | 'boing' // the logo stamping down
   | 'menuMove'
   | 'menuPick'
-  | 'menuBack';
+  | 'menuBack'
+  // the Mushroom Wood
+  | 'bounce'
+  | 'pad'
+  | 'brambles'
+  | 'wither'
+  | 'thud';
 
 export type ParticleShape =
   | 'circle'
@@ -94,6 +100,8 @@ const CUE_SOUNDS: Record<TitleCue, SfxName> = {
 const CONFETTI = ['#ffd23f', '#ff8fb1', '#8fd8ff', '#b48cff', '#7ccf63', '#ffffff'];
 const LEAVES = ['#7cc644', '#9ad85f', '#5aa83a'];
 const CHEER = ['#ffd23f', '#ff8fb1', '#fff3b0', '#ffb3c7']; // the petals a cheered-up enemy pops into
+const SPORES = ['#ffe27a', '#8feaff', '#ff9be8', '#fff3b0']; // ...and the glowing spores a mushroom does
+const WOOD_KINDS: readonly string[] = ['capling', 'burr', 'dropcap', 'toadlet'];
 // The puff of dust that anything landing, sliding or digging kicks up. Views reuse it for theirs.
 export const DUST: Burst = {
   n: 5,
@@ -427,7 +435,7 @@ export function present(e: SimEvent, p: Presenter, opts: PresentOptions) {
       p.ring(e.x, e.y, { color: '#fff3b0', from: 8, to: 54, life: 0.35 });
       p.burst(e.x, e.y, {
         n: 12,
-        colors: CHEER,
+        colors: WOOD_KINDS.includes(e.kind) ? SPORES : CHEER,
         speed: 190,
         size: 7,
         life: 0.8,
@@ -531,41 +539,68 @@ export function present(e: SimEvent, p: Presenter, opts: PresentOptions) {
       break;
     case 'stageExit':
       break; // the app moves on to the boss
-    // ---- the Mushroom Wood, with borrowed sounds and simple effects for now ----
+    // ---- the Mushroom Wood ----
     case 'bounce':
-      p.sfx('boing');
-      p.ring(e.x, e.y, { color: '#ffe680', from: 14, to: 64, life: 0.3 });
-      p.burst(e.x, e.y, { ...DUST, n: 6, speed: 130, dir: UP, spread: 2.8 });
+      p.sfx('bounce');
+      p.punch(0.012);
+      p.ring(e.x, e.y, { color: '#ffe27a', from: 14, to: 70, life: 0.3 });
+      p.burst(e.x, e.y, {
+        n: 10,
+        colors: SPORES,
+        speed: 210,
+        size: 5,
+        life: 0.55,
+        gravity: 240,
+        shape: 'star',
+        glow: true,
+        dir: UP,
+        spread: 2.4,
+      });
       break;
     case 'padReady':
-      p.sfx('seed');
-      p.ring(e.x, e.y - 24, { color: '#fff3b0', from: 10, to: 80, life: 0.45 });
+      p.sfx('pad');
+      p.ring(e.x, e.y - 24, { color: '#fff3b0', from: 10, to: 84, life: 0.45 });
       if (e.first && opts.chapter.bounceHint) p.toast(opts.chapter.bounceHint, 4, 'good');
       break;
     case 'thud':
-      p.sfx('land');
+      p.sfx('thud');
       p.shake(3);
-      p.burst(e.x, e.y, { ...DUST, n: 7, speed: 110 });
+      p.burst(e.x, e.y, { ...DUST, n: 7, speed: 110, color: '#cfc6e6' });
       break;
     case 'gladeClose':
-      p.sfx('snap');
-      p.shake(6);
+      p.sfx('brambles');
+      p.shake(7);
+      for (const x of [e.x0, e.x1]) {
+        p.burst(x, GROUND - 6, { ...DUST, n: 10, speed: 150, color: '#cfc6e6' });
+        p.burst(x, GROUND - 40, {
+          n: 8,
+          colors: ['#3f7a5a', '#2f6450'],
+          speed: 170,
+          size: 6,
+          life: 0.6,
+          gravity: 340,
+          shape: 'leaf',
+          dir: UP,
+          spread: 1.8,
+        });
+      }
       break;
     case 'gladeWave':
       p.sfx('telegraph');
       break;
     case 'gladeOpen':
-      p.sfx('clear');
+      p.sfx('wither');
+      p.flash(0.1, '#fff3b0');
       for (const x of [e.x0 + 20, e.x1 - 20])
-        p.burst(x, GROUND - 90, {
-          n: 26,
+        p.burst(x, GROUND - 110, {
+          n: 28,
           colors: CHEER,
-          speed: 240,
+          speed: 250,
           size: 8,
-          life: 1.1,
-          gravity: 260,
+          life: 1.2,
+          gravity: 240,
           shape: 'petal',
-          radius: 70,
+          radius: 80,
         });
       break;
     // The opening's moments are only heard when the browser already lets the game play sound: until the
