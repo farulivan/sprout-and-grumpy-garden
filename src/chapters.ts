@@ -12,6 +12,12 @@ export interface Chapter {
   readonly stage: StageId;
   readonly boss: BossId;
   readonly tunes: { readonly stage: Tune; readonly boss: Tune };
+  // The boss's fight, in toasts: a hint as it starts (a touch screen can't aim, so it has its own), a line for
+  // each new phase, 2 then 3, and one as he is cheered up.
+  readonly fightHint: { readonly aim: string; readonly touch: string };
+  readonly phaseToasts: readonly [string, string];
+  readonly cheeredToast: string;
+  readonly shed: readonly [string, string]; // what he sheds as he leaves phase 1, then phase 2
 }
 
 export const SUNFLOWER = {
@@ -20,6 +26,14 @@ export const SUNFLOWER = {
   stage: 'gardenPath',
   boss: 'sunny',
   tunes: { stage: 'stage', boss: 'boss' },
+  fightHint: {
+    aim: 'Hold ↑ to aim at his face for double damage!',
+    // a touch screen can't aim, but a straight seed from the high leaf reaches his face
+    touch: 'Shoot his face from the high leaf: double damage!',
+  },
+  phaseToasts: ['Sunny is getting grumpier!', 'Sunny is SUPER grumpy!'],
+  cheeredToast: 'Sunny is blooming!',
+  shed: ['#ffc62e', '#ff982c'], // yellow petals, then orange
 } as const satisfies Chapter;
 
 export const CHAPTERS = [SUNFLOWER] as const satisfies readonly Chapter[];

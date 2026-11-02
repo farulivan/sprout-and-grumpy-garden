@@ -266,7 +266,7 @@ export class App {
   }
 
   private handle(e: SimEvent) {
-    present(e, this.o.presenter, { touch: this.o.controls.touch });
+    present(e, this.o.presenter, { touch: this.o.controls.touch, chapter: CHAPTERS[this.chapter] });
     if (e.type === 'win' && this.level instanceof Fight) {
       const boss = this.level.boss.id,
         best = save.best(boss);
