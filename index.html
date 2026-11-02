@@ -343,9 +343,10 @@
           <button class="btn back">Back</button>
         </div>
         <div class="card hidden" id="win-card">
-          <div class="badge">🌻</div>
+          <!-- this badge and line, and the lose card's "who", are the chapter's (src/chapters.ts) -->
+          <div class="badge" id="win-badge"></div>
           <h1>You did it!</h1>
-          <p class="sub">Sunny feels sunny again and the garden path is open. What a hero, Pip!</p>
+          <p class="sub" id="win-line"></p>
           <div class="stars" id="win-stars"></div>
           <div class="stats" id="win-stats"></div>
           <div class="actions">
@@ -358,7 +359,7 @@
           <div class="badge">😴</div>
           <h1 id="lose-title">Pip needs a nap</h1>
           <p class="sub" id="lose-tip">
-            <span id="lose-who">Sunny is</span> still grumpy… but you've got this! Watch for the
+            <span id="lose-who"></span> still grumpy… but you've got this! Watch for the
             <b class="bang">!</b> bubble, then hop or scoot away.
           </p>
           <!-- the last life gone: as in Super Mario Bros., the game starts again from its first level -->

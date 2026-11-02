@@ -266,11 +266,13 @@ export class App {
   }
 
   private handle(e: SimEvent) {
-    present(e, this.o.presenter, { touch: this.o.controls.touch, chapter: CHAPTERS[this.chapter] });
+    const chapter = CHAPTERS[this.chapter];
+    present(e, this.o.presenter, { touch: this.o.controls.touch, chapter });
     if (e.type === 'win' && this.level instanceof Fight) {
       const boss = this.level.boss.id,
-        best = save.best(boss);
-      this.overlay.showWin(e.result, best, save.recordWin(boss, e.result.time), this.path ?? undefined);
+        best = save.best(boss),
+        isBest = save.recordWin(boss, e.result.time);
+      this.overlay.showWin(e.result, best, isBest, chapter.win, this.path ?? undefined);
     } else if (e.type === 'stageClear' && this.level instanceof Stage) {
       save.recordStage(this.level.id, e.result.time);
       this.path = { name: this.level.name, time: e.result.time };
@@ -278,7 +280,8 @@ export class App {
       this.startBoss(this.level.player.hp);
     } else if (e.type === 'lose') {
       this.lives--;
-      this.overlay.showLose(e.progress, this.level instanceof Stage ? 'stage' : 'boss', this.lives);
+      const text = this.level instanceof Stage ? chapter.lose.stage : chapter.lose.boss;
+      this.overlay.showLose(e.progress, text, this.lives);
     }
   }
 }

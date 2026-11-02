@@ -6,6 +6,17 @@ import type { Tune } from './audio';
 import type { BossId } from './sim/bosses';
 import type { StageId } from './sim/stage/stages';
 
+// The lose card, for a level of the chapter: who is still grumpy, and how far Pip got.
+export interface LoseText {
+  readonly who: string; // "<who> still grumpy…"
+  readonly progress: (percent: number) => string;
+}
+// The win card, once the boss is cheered up.
+export interface WinText {
+  readonly badge: string;
+  readonly line: string;
+}
+
 export interface Chapter {
   readonly id: string; // names its scenes and its entry in chapterViews.ts
   readonly title: string; // shown over the stage's name as it begins
@@ -18,6 +29,8 @@ export interface Chapter {
   readonly phaseToasts: readonly [string, string];
   readonly cheeredToast: string;
   readonly shed: readonly [string, string]; // what he sheds as he leaves phase 1, then phase 2
+  readonly lose: { readonly stage: LoseText; readonly boss: LoseText };
+  readonly win: WinText;
 }
 
 export const SUNFLOWER = {
@@ -34,6 +47,17 @@ export const SUNFLOWER = {
   phaseToasts: ['Sunny is getting grumpier!', 'Sunny is SUPER grumpy!'],
   cheeredToast: 'Sunny is blooming!',
   shed: ['#ffc62e', '#ff982c'], // yellow petals, then orange
+  lose: {
+    stage: {
+      who: 'The garden path is',
+      progress: (percent) => `You made it ${percent}% of the way to Sunny!`,
+    },
+    boss: {
+      who: 'Sunny is',
+      progress: (percent) => `You cheered Sunny up ${percent}% of the way!`,
+    },
+  },
+  win: { badge: '🌻', line: 'Sunny feels sunny again and the garden path is open. What a hero, Pip!' },
 } as const satisfies Chapter;
 
 export const CHAPTERS = [SUNFLOWER] as const satisfies readonly Chapter[];
