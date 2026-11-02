@@ -40,24 +40,82 @@ export const LAND_TOP = 236; // nothing in the landscape strips reaches higher t
 export const BLOOMS = 3; // kinds of flower a cheered-up plant leaves behind
 export const HEDGES = 2;
 
-const wave = (x: number, p: number, k: number, phase = 0) => Math.sin((x / p) * TAU * k + phase);
+export const wave = (x: number, p: number, k: number, phase = 0) => Math.sin((x / p) * TAU * k + phase);
 // Draw something again a strip to either side, so a feature near one end carries on across the seam.
-const repeat = (p: number, draw: (dx: number) => void) => {
+export const repeat = (p: number, draw: (dx: number) => void) => {
   for (const dx of [-p, 0, p]) draw(dx);
 };
 
 // ---- the ground ----
 
+// The colours of a stage's ground, so that any stage can have this ground in its own light.
+export interface GroundLook {
+  soil: readonly [string, string, string];
+  seam: string; // the layers in the earth
+  specks: readonly [string, string];
+  stone: readonly [string, string, string];
+  stoneShade: string;
+  root: string;
+  turfShade: string; // the turf's shadow on the soil, at its darkest
+  turfShadeOff: string; // ...and fading to nothing
+  bottomOff: string; // the bottom of the screen, clear...
+  bottom: string; // ...and in shade
+  blades: readonly [string, string, string, string];
+  turf: readonly [string, string, string];
+  turfLit: string;
+  turfDark: string;
+  turfEdge: string;
+  turfTop: string;
+  face: readonly [string, string, string]; // the cut face of the soil at a pit
+  faceShadeOff: string;
+  faceShade: string;
+  faceLine: string;
+  faceRoot: string;
+  lipBlades: readonly [string, string];
+  pit: readonly [string, string, string];
+  pitSpeck: string;
+  pitLip: string;
+  pitLipOff: string;
+}
+const GARDEN_GROUND: GroundLook = {
+  soil: ['#b5733f', '#8f5632', '#663b23'],
+  seam: '#472814',
+  specks: ['rgba(222,165,108,0.45)', 'rgba(72,40,20,0.4)'],
+  stone: ['#e6d8c4', '#a8937d', '#7d6855'],
+  stoneShade: '#2b1608',
+  root: '#ecd3a6',
+  turfShade: 'rgba(52,26,10,0.55)',
+  turfShadeOff: 'rgba(52,26,10,0)',
+  bottomOff: 'rgba(40,20,10,0)',
+  bottom: 'rgba(40,20,10,0.35)',
+  blades: ['#58b947', '#6fcd4c', '#48a640', '#8ade5c'],
+  turf: ['#a6ec6c', '#74d04e', '#4dae3d'],
+  turfLit: 'rgba(200,246,142,0.7)',
+  turfDark: 'rgba(52,140,54,0.55)',
+  turfEdge: '#2a8038',
+  turfTop: '#e0fba2',
+  face: ['#9a6036', '#77472a', '#55321c'],
+  faceShadeOff: 'rgba(40,20,8,0)',
+  faceShade: 'rgba(40,20,8,0.5)',
+  faceLine: EARTH_LINE,
+  faceRoot: '#d9b98a',
+  lipBlades: ['#6fcd4c', '#58b947'],
+  pit: ['#5a3420', '#3a2014', '#1d1009'],
+  pitSpeck: 'rgba(140,90,55,0.35)',
+  pitLip: 'rgba(20,10,4,0.6)',
+  pitLipOff: 'rgba(20,10,4,0)',
+};
+
 const capTop = (x: number) => GROUND - 5 + wave(x, TILE, 7) * 1.6 + wave(x, TILE, 20, 1) * 1.1;
 
-function drawSoil(c: Ctx, x0: number, x1: number, rand: () => number, specks: number) {
-  c.fillStyle = linear(c, 0, GROUND, 0, H, ['#b5733f', '#8f5632', '#663b23']);
+function drawSoil(c: Ctx, x0: number, x1: number, rand: () => number, specks: number, look: GroundLook) {
+  c.fillStyle = linear(c, 0, GROUND, 0, H, look.soil);
   c.fillRect(x0, GROUND + 2, x1 - x0, GROUND_BOTTOM - GROUND);
   // layers in the earth
   for (let i = 0; i < 4; i++) {
     c.beginPath();
     for (let x = x0; x <= x1; x += 12) c.lineTo(x, GROUND + 30 + i * 11 + wave(x, TILE, 8, i * 1.7) * 4);
-    line(c, '#472814', 2 + (i % 2), 0.2);
+    line(c, look.seam, 2 + (i % 2), 0.2);
   }
   for (let i = 0; i < specks; i++) {
     const x = x0 + rand() * (x1 - x0),
@@ -65,7 +123,7 @@ function drawSoil(c: Ctx, x0: number, x1: number, rand: () => number, specks: nu
       rx = 1 + rand() * 2.4,
       ry = 0.7 + rand() * 1.1,
       rot = rand() * 3,
-      fill = i % 2 ? 'rgba(222,165,108,0.45)' : 'rgba(72,40,20,0.4)';
+      fill = look.specks[i % 2 ? 0 : 1];
     repeat(TILE, (dx) => {
       ellipse(c, x + dx, y, rx, ry, rot);
       c.fillStyle = fill;
@@ -74,26 +132,31 @@ function drawSoil(c: Ctx, x0: number, x1: number, rand: () => number, specks: nu
   }
 }
 
-function pebble(c: Ctx, x: number, y: number, rx: number, ry: number, rot: number) {
-  glow(c, x + 1, y + ry * 0.9, rx * 1.3, '#2b1608', 0.4, ry * 0.7);
+function pebble(c: Ctx, x: number, y: number, rx: number, ry: number, rot: number, look: GroundLook) {
+  glow(c, x + 1, y + ry * 0.9, rx * 1.3, look.stoneShade, 0.4, ry * 0.7);
   ellipse(c, x, y, rx, ry, rot);
-  c.fillStyle = radial(c, x, y, rx * 1.3, ['#e6d8c4', '#a8937d', '#7d6855'], x - rx * 0.4, y - ry * 0.5);
+  c.fillStyle = radial(c, x, y, rx * 1.3, look.stone, x - rx * 0.4, y - ry * 0.5);
   c.fill();
 }
 
-function root(c: Ctx, x: number, top: number, len: number, sway: number) {
+function root(c: Ctx, x: number, top: number, len: number, sway: number, look: GroundLook) {
   c.beginPath();
   c.moveTo(x, top);
   c.quadraticCurveTo(x + sway, top + len * 0.6, x + sway * 0.4, top + len);
   c.moveTo(x + sway * 0.5, top + len * 0.5);
   c.lineTo(x + sway * 0.5 + 5, top + len * 0.8);
-  line(c, '#ecd3a6', 1.5, 0.55);
+  line(c, look.root, 1.5, 0.55);
 }
 
 // The grass on top of the ground, hanging over the soil in scallops. `edge` is the list of scallops, right
 // to left; each is [width, y at its end, how deep it hangs].
-function drawTurf(c: Ctx, edge: readonly (readonly [number, number, number])[], rand: () => number) {
-  const greens = ['#58b947', '#6fcd4c', '#48a640', '#8ade5c'];
+function drawTurf(
+  c: Ctx,
+  edge: readonly (readonly [number, number, number])[],
+  rand: () => number,
+  look: GroundLook,
+) {
+  const greens = look.blades;
   // blades standing behind the edge of the turf
   for (let x = 0; x < TILE; x += 3 + rand() * 3) {
     const h = 5 + rand() * 12,
@@ -124,7 +187,7 @@ function drawTurf(c: Ctx, edge: readonly (readonly [number, number, number])[], 
     c.closePath();
   };
   turf();
-  c.fillStyle = linear(c, 0, GROUND - 6, 0, GROUND + 22, ['#a6ec6c', '#74d04e', '#4dae3d']);
+  c.fillStyle = linear(c, 0, GROUND - 6, 0, GROUND + 22, look.turf);
   c.fill();
   inside(c, turf, () => {
     c.lineWidth = 1.3;
@@ -133,7 +196,7 @@ function drawTurf(c: Ctx, edge: readonly (readonly [number, number, number])[], 
         y = capTop(x) + 3 + rand() * 16,
         h = 2.5 + rand() * 4,
         tip = (rand() - 0.5) * 3;
-      c.strokeStyle = i % 3 ? 'rgba(200,246,142,0.7)' : 'rgba(52,140,54,0.55)';
+      c.strokeStyle = i % 3 ? look.turfLit : look.turfDark;
       repeat(TILE, (dx) => {
         c.beginPath();
         c.moveTo(x + dx, y);
@@ -145,33 +208,33 @@ function drawTurf(c: Ctx, edge: readonly (readonly [number, number, number])[], 
   c.beginPath();
   c.moveTo(2 * TILE, edge[edge.length - 1][1]);
   scallops();
-  line(c, '#2a8038', 2.6);
+  line(c, look.turfEdge, 2.6);
   c.beginPath();
   for (let x = -TILE; x <= 2 * TILE; x += 6) c.lineTo(x, capTop(x) + 1);
-  line(c, '#e0fba2', 2, 0.9);
+  line(c, look.turfTop, 2, 0.9);
 }
 
-function drawGroundStrip(c: Ctx) {
+export function drawGroundStrip(c: Ctx, look: GroundLook = GARDEN_GROUND) {
   const rand = seeded(3);
-  drawSoil(c, 0, TILE, rand, 280);
+  drawSoil(c, 0, TILE, rand, 280, look);
   for (let i = 0; i < 18; i++) {
     const x = 10 + i * 53 + rand() * 30,
       y = GROUND + 28 + rand() * 36,
       rx = 5 + rand() * 7,
       ry = rx * (0.55 + rand() * 0.2),
       rot = (rand() - 0.5) * 0.5;
-    repeat(TILE, (dx) => pebble(c, x + dx, y, rx, ry, rot));
+    repeat(TILE, (dx) => pebble(c, x + dx, y, rx, ry, rot, look));
   }
   for (let i = 0; i < 14; i++) {
     const x = 20 + i * 68 + rand() * 40,
       len = 12 + rand() * 20,
       sway = (rand() - 0.5) * 12;
-    repeat(TILE, (dx) => root(c, x + dx, GROUND + 12, len, sway));
+    repeat(TILE, (dx) => root(c, x + dx, GROUND + 12, len, sway, look));
   }
   // the turf's shadow on the soil, and the screen's bottom edge falling into shade
-  c.fillStyle = linear(c, 0, GROUND + 8, 0, GROUND + 36, ['rgba(52,26,10,0.55)', 'rgba(52,26,10,0)']);
+  c.fillStyle = linear(c, 0, GROUND + 8, 0, GROUND + 36, [look.turfShade, look.turfShadeOff]);
   c.fillRect(0, GROUND + 8, TILE, 28);
-  c.fillStyle = linear(c, 0, H - 26, 0, H, ['rgba(40,20,10,0)', 'rgba(40,20,10,0.35)']);
+  c.fillStyle = linear(c, 0, H - 26, 0, H, [look.bottomOff, look.bottom]);
   c.fillRect(0, H - 26, TILE, GROUND_BOTTOM - H + 26);
   // scallops whose widths add up to exactly one strip, so the strip meets itself at both ends
   const widths: number[] = [];
@@ -182,7 +245,7 @@ function drawGroundStrip(c: Ctx) {
   }
   const stretch = TILE / widths.reduce((a, b) => a + b, 0);
   const edge = widths.map((w) => [w * stretch, GROUND + 9 + rand() * 2, 5 + rand() * 7] as const);
-  drawTurf(c, edge, rand);
+  drawTurf(c, edge, rand, look);
 }
 
 // The right-hand end of a stretch of ground, where a pit begins; (0, 0) is the corner of the ground there.
@@ -191,7 +254,7 @@ function drawGroundStrip(c: Ctx) {
 const edgeX = (y: number) =>
   3.5 + 2.5 * Math.sin((y - GROUND) * 0.11) + 1.2 * Math.sin((y - GROUND) * 0.29 + 1);
 
-function drawGroundEnd(c: Ctx) {
+export function drawGroundEnd(c: Ctx, look: GroundLook = GARDEN_GROUND) {
   const face = () => {
     c.beginPath();
     c.moveTo(-1, GROUND + 4);
@@ -200,15 +263,15 @@ function drawGroundEnd(c: Ctx) {
     c.closePath();
   };
   face();
-  c.fillStyle = linear(c, 0, GROUND, 0, H, ['#9a6036', '#77472a', '#55321c']);
+  c.fillStyle = linear(c, 0, GROUND, 0, H, look.face);
   c.fill();
   // the soil near the edge falls into shade
-  c.fillStyle = linear(c, -16, 0, 7, 0, ['rgba(40,20,8,0)', 'rgba(40,20,8,0.5)']);
+  c.fillStyle = linear(c, -16, 0, 7, 0, [look.faceShadeOff, look.faceShade]);
   c.fillRect(-16, GROUND + 4, 24, GROUND_BOTTOM - GROUND - 4);
   c.beginPath();
   for (let y = GROUND + 6; y <= GROUND_BOTTOM; y += 4) c.lineTo(edgeX(y), y);
-  line(c, EARTH_LINE, 2.4);
-  pebble(c, 3, GROUND + 44, 4.5, 3, 0.3);
+  line(c, look.faceLine, 2.4);
+  pebble(c, 3, GROUND + 44, 4.5, 3, 0.3, look);
   // roots poking out of the cut and hanging down into the pit
   for (const [y, len, sway] of [
     [GROUND + 18, 26, 6],
@@ -218,7 +281,7 @@ function drawGroundEnd(c: Ctx) {
     c.beginPath();
     c.moveTo(edgeX(y), y);
     c.quadraticCurveTo(edgeX(y) + 8 + sway, y + len * 0.5, edgeX(y) + 4 + sway * 0.5, y + len);
-    line(c, '#d9b98a', 2, 0.8);
+    line(c, look.faceRoot, 2, 0.8);
   }
   // the turf rounds the corner
   const top = capTop(0);
@@ -233,46 +296,46 @@ function drawGroundEnd(c: Ctx) {
     c.closePath();
   };
   lip();
-  c.fillStyle = linear(c, 0, GROUND - 6, 0, GROUND + 22, ['#a6ec6c', '#74d04e', '#4dae3d']);
+  c.fillStyle = linear(c, 0, GROUND - 6, 0, GROUND + 22, look.turf);
   c.fill();
   c.beginPath();
   c.moveTo(-6, top);
   c.quadraticCurveTo(5, top + 1, 7, GROUND + 3);
   c.quadraticCurveTo(8, GROUND + 12, 1, GROUND + 15);
   c.quadraticCurveTo(-6, GROUND + 17, -11, GROUND + 12);
-  line(c, '#2a8038', 2.6);
+  line(c, look.turfEdge, 2.6);
   c.beginPath();
   c.moveTo(-16, top + 1);
   c.lineTo(-6, top + 1);
   c.quadraticCurveTo(4, top + 2, 5, GROUND + 2);
-  line(c, '#e0fba2', 2, 0.9);
+  line(c, look.turfTop, 2, 0.9);
   const rand = seeded(31);
   for (let i = 0; i < 4; i++) {
     blade(c, -3 + i * 2.4, top + 3, 6 + rand() * 6, 3, 3 + i * 2);
-    c.fillStyle = i % 2 ? '#6fcd4c' : '#58b947';
+    c.fillStyle = look.lipBlades[i % 2 ? 0 : 1];
     c.fill();
   }
 }
 
 // Looking down into a pit: the far wall in shade, darkening to nothing. It is stretched across the gap.
-function drawPit(c: Ctx, w: number) {
-  c.fillStyle = linear(c, 0, GROUND, 0, GROUND_BOTTOM, ['#5a3420', '#3a2014', '#1d1009']);
+export function drawPit(c: Ctx, w: number, look: GroundLook = GARDEN_GROUND) {
+  c.fillStyle = linear(c, 0, GROUND, 0, GROUND_BOTTOM, look.pit);
   c.fillRect(0, GROUND - 2, w, GROUND_BOTTOM - GROUND + 2);
   const rand = seeded(33);
   for (let i = 0; i < 26; i++) {
     ellipse(c, rand() * w, GROUND + 8 + rand() * 50, 1 + rand() * 2, 0.7 + rand(), rand() * 3);
-    c.fillStyle = 'rgba(140,90,55,0.35)';
+    c.fillStyle = look.pitSpeck;
     c.fill();
   }
   // the lips of the pit cast shade into it
-  c.fillStyle = linear(c, 0, GROUND, 0, GROUND + 30, ['rgba(20,10,4,0.6)', 'rgba(20,10,4,0)']);
+  c.fillStyle = linear(c, 0, GROUND, 0, GROUND + 30, [look.pitLip, look.pitLipOff]);
   c.fillRect(0, GROUND - 2, w, 32);
 }
 
 // ---- things on the ground ----
 
 // A log lying on the ground, the cut end toward the viewer's right; (0, 0) is its bottom-left corner.
-function drawLog(c: Ctx, w: number, h: number) {
+export function drawLog(c: Ctx, w: number, h: number) {
   const r = h / 2,
     body = () => roundRect(c, 0, -h, w, h, r);
   glow(c, w / 2, 1, w * 0.62, '#173d1f', 0.35, 5);
@@ -324,7 +387,7 @@ function drawLog(c: Ctx, w: number, h: number) {
 
 // A patch of brambles: a low tangle of thorny stems that hurts to touch, dark and spiky so it reads as
 // danger at a glance; (0, 0) is its bottom-left corner.
-function drawThorns(c: Ctx, w: number) {
+export function drawThorns(c: Ctx, w: number) {
   const rand = seeded(41);
   glow(c, w / 2, 1, w * 0.62, '#173d1f', 0.4, 5);
   const stems: [number, number, number][] = []; // [x where it starts, x where it ends, height]
@@ -839,7 +902,7 @@ export function bakeStage(scene: Scene) {
     drawGroundStrip(c);
     c.clearRect(0, GROUND_BOTTOM - 2, TILE, 2);
   });
-  bake(scene, 'stage-ground-end', 40, GROUND_BOTTOM - GROUND_TOP, 22, -GROUND_TOP, drawGroundEnd);
+  bake(scene, 'stage-ground-end', 40, GROUND_BOTTOM - GROUND_TOP, 22, -GROUND_TOP, (c) => drawGroundEnd(c));
   bake(scene, 'stage-pit', 100, GROUND_BOTTOM - GROUND + 2, 0, -(GROUND - 2), (c) => drawPit(c, 100));
   bake(scene, 'stage-log', 80, 50, 4, 44, (c) => drawLog(c, 70, 30));
   bake(scene, 'stage-thorns', 84, 40, 6, 36, (c) => drawThorns(c, 72));
