@@ -27,6 +27,9 @@ export type SimEvent =
   | { type: 'playerHurt'; x: number; y: number }
   | { type: 'bossHit'; x: number; y: number; weak: boolean } // weak = the double-damage spot
   | { type: 'bossBlock'; x: number; y: number } // a seed hit him while he can't be hurt, and bounced off
+  | { type: 'ringSeek' } // a Fairy Ring's root sets off through the soil
+  | { type: 'ringWarn' } // ...its toadstools come up
+  | { type: 'ringErupt'; x: number } // ...and it erupts
   | { type: 'bossLand'; x: number; y: number; acid: boolean } // a boss's whole weight came down, with his poison?
   | { type: 'telegraph' }
   | { type: 'spit' }

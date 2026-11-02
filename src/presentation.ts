@@ -589,6 +589,25 @@ export function present(e: SimEvent, p: Presenter, opts: PresentOptions) {
         p.burst(e.x, e.y, { ...DUST, n: 8, speed: 140, color: '#3f9a3c' });
       } else p.burst(e.x, e.y, { ...DUST, n: 9, speed: 140, color: '#cfc6e6' });
       break;
+    case 'ringSeek':
+      break; // for now
+    case 'ringWarn':
+      break; // for now
+    case 'ringErupt':
+      p.shake(5);
+      p.ring(e.x, GROUND - 4, { color: '#8fd832', from: 20, to: 110, life: 0.4 });
+      p.burst(e.x, GROUND - 2, {
+        n: 10,
+        shape: 'clod',
+        colors: ['#3d2f5c', '#5a4a70', '#2b2342'],
+        speed: 300,
+        size: 4,
+        life: 0.7,
+        gravity: 800,
+        dir: UP,
+        spread: 1.6,
+      });
+      break;
     case 'gladeClose':
       p.sfx('brambles');
       p.shake(7);

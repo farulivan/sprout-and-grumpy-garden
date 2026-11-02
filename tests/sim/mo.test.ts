@@ -232,6 +232,26 @@ describe("Mo's attacks", () => {
     expect(box.x + box.w / 2).toBeCloseTo(smoke.x);
   });
 
+  it('says when the Fairy Ring sets off, warns and erupts, and hurts from the frame it says it erupts', () => {
+    const { fight, mo } = fightMo();
+    fight.player.x = fight.player.px = 300;
+    fight.player.inv = 999;
+    mo.startAttack('fairyRing');
+    const said: string[] = [];
+    let hurting = false;
+    for (let i = 0; i < 60 * 6; i++) {
+      fight.step(NO_INPUT);
+      for (const e of fight.drainEvents())
+        if (e.type.startsWith('ring')) {
+          said.push(e.type);
+          if (e.type === 'ringErupt')
+            hurting = fight.hazards.some((h) => h.kind === 'ring' && h.shape() !== null);
+        }
+    }
+    expect(said).toEqual(['ringSeek', 'ringWarn', 'ringErupt']);
+    expect(hurting).toBe(true);
+  });
+
   it('erupts through a shelf: the Fairy Ring reaches Pip on one', () => {
     const shelf = MO_PLATFORMS[0],
       { fight, mo } = fightMo();

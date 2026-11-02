@@ -1,6 +1,7 @@
 // Boss hazards. Each one shows a warning before it can hurt: a kids' game should never hurt without warning.
 // shape() is the area that hurts right now, or null while the hazard is still harmless.
 import { GROUND, W } from '../config';
+import type { SimEvent } from './events';
 import { circleHit, rectCircleHit, type Circle, type Rect } from './math';
 
 export const VINE_WARN = 0.7;
@@ -202,10 +203,13 @@ export class FairyRing implements Hazard {
     private readonly target: { readonly x: number },
     public x: number,
     private readonly speed: number,
-    delay = 0,
+    delay: number,
+    readonly from: number, // where the root sets off from; only drives how it is drawn
+    private readonly fight: { emit(e: SimEvent): void },
   ) {
     this.px = x;
     this.timer = RING_SEEK + delay;
+    fight.emit({ type: 'ringSeek' });
   }
 
   update(dt: number) {
@@ -218,11 +222,13 @@ export class FairyRing implements Hazard {
       if (this.timer <= 0) {
         this.state = 'warn';
         this.timer = RING_WARN;
+        this.fight.emit({ type: 'ringWarn' });
       }
     } else if (this.timer <= 0) {
       if (this.state === 'warn') {
         this.state = 'erupt';
         this.timer = RING_ERUPT;
+        this.fight.emit({ type: 'ringErupt', x: this.x });
       } else this.dead = true;
     }
   }

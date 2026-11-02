@@ -277,14 +277,23 @@ export class Mo extends Boss {
   // shelf. He sulks while it does.
   *fairyRing(): Attack {
     this.rearUp(0.5);
-    yield 0.5;
+    yield 0.35;
+    this.fight.emit({ type: 'thud', x: this.x, y: GROUND }); // he stamps
+    yield 0.15;
     const p = this.fight.player,
       n = this.phase === 3 ? 2 : 1;
     // it starts off to one side of Pip, wherever he is, so nowhere is out of its reach
     for (let i = 0; i < n; i++) {
       const side = this.fight.rng.next() < 0.5 ? -1 : 1;
       this.fight.hazards.push(
-        new FairyRing(p, p.x + side * this.fight.rng.range(90, 170), i === 0 ? 170 : 110, i * 0.5),
+        new FairyRing(
+          p,
+          p.x + side * this.fight.rng.range(90, 170),
+          i === 0 ? 170 : 110,
+          i * 0.5,
+          this.x,
+          this.fight,
+        ),
       );
     }
     this.puff = 0.8;

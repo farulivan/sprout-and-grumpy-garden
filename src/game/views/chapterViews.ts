@@ -23,7 +23,7 @@ export interface ChapterViews {
   // The light at the stage's gate: the stage fades out into it, and the boss's arena fades in from it.
   readonly gateLight: readonly [red: number, green: number, blue: number];
   // What the boss's attacks leave behind them, if they leave anything.
-  trail?(scene: Scene, depth: number): AcidTrail;
+  trail?(scene: Scene, depth: number, soilDepth: number): AcidTrail;
 }
 
 const gardenArena = (scene: Scene, depth: WorldDepths) =>
@@ -52,6 +52,6 @@ export const CHAPTER_VIEWS: Record<ChapterId, ChapterViews> = {
         mood: (fight) => (fight.boss.alive ? MO_MOODS[Math.min(fight.boss.phase, 3) - 1] : 'glow'),
       }),
     gateLight: [206, 220, 255], // moonlight, through the hollow
-    trail: (scene, depth) => new AcidTrail(scene, depth),
+    trail: (scene, depth, soilDepth) => new AcidTrail(scene, depth, soilDepth),
   },
 };

@@ -4,6 +4,7 @@ import type { Scene } from 'phaser';
 import { bakeApart } from '../../art/bake';
 import { bakeMoParts } from './art';
 import { bakeMoFaces } from './face';
+import { bakeRing } from './ring';
 import { bakeSmoke } from './smoke';
 
 export function bakeMo(scene: Scene) {
@@ -11,5 +12,6 @@ export function bakeMo(scene: Scene) {
     bakeMoParts(scene);
     bakeMoFaces(scene);
     bakeSmoke(scene);
+    bakeRing(scene);
   });
 }

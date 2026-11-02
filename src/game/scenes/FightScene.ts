@@ -62,7 +62,7 @@ export class FightScene extends Scene {
     fitCamera(this);
     this.fx = new Fx(this, DEPTH.particles, DEPTH.flash);
     this.world = this.views.arena(this, DEPTH);
-    this.trail = this.views.trail?.(this, DEPTH.boss - 0.12); // smoke goes behind him: he stays the boldest thing there
+    this.trail = this.views.trail?.(this, DEPTH.boss - 0.12, DEPTH.ground + 0.02); // smoke goes behind him: he stays the boldest thing there
     this.hazards = new HazardViews(this, DEPTH.hazards, DEPTH.marks, this.fx, this.trail);
     this.pickups = new PickupViews(this, DEPTH.pickups, this.fx);
     this.enemies = new EnemyViews(this, DEPTH.enemies, DEPTH.marks);

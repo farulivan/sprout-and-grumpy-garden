@@ -286,6 +286,7 @@ export class AcidTrail {
   constructor(
     scene: Scene,
     readonly depth: number,
+    readonly soilDepth: number, // on the soil, in front of the ground: where roots run
   ) {
     this.hazeUnit = unit('acid-haze');
     this.curlUnit = unit('gas-curl');
