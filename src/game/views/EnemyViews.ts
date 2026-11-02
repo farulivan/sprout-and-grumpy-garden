@@ -2,7 +2,7 @@
 // its root feet, a Puffball bobs and fluffs, a Pea Pod swells under its "!" and gapes as it spits, a Snapper
 // rumbles in its mound, snaps up chomping and ducks back down. Every hit flashes white. Their parts are baked
 // in enemies/art.ts; the "!" is the same badge the boss's hazards use. The Mushroom Wood's four (a Capling, a
-// Burr, a Dropcap and a Toadlet) and the bounce pad are simple placeholders so far, baked in wood/art.ts.
+// Burr, a Dropcap and a Toadlet) and the bounce pad have theirs in wood/enemyArt.ts.
 import { TintModes, type GameObjects, type Scene } from 'phaser';
 import { GROUND } from '../../config';
 import { lerp } from '../../sim/math';
@@ -239,47 +239,61 @@ class SnapperView implements EnemyView {
   }
 }
 
-// ---- the Mushroom Wood's, as placeholders: one body and a face, moved around ----
+// ---- the Mushroom Wood's ----
 
 class CaplingView implements EnemyView {
+  private shadow: GameObjects.Image;
   private body: GameObjects.Image;
   private face: GameObjects.Image;
   private flash: Flash;
   private blink = new Blink();
+  private squash = 0;
+  private lastFlash = 0;
 
   constructor(scene: Scene, depth: number) {
+    this.shadow = part(scene, 'dew-shadow').setDepth(depth - 0.1);
     this.body = part(scene, 'capling-body').setDepth(depth);
     this.face = part(scene, faceKey('capling', 'angry')).setDepth(depth);
     this.flash = new Flash([this.body, this.face]);
   }
   setVisible(visible: boolean) {
-    this.body.setVisible(visible);
-    this.face.setVisible(visible);
+    for (const img of [this.shadow, this.body, this.face]) img.setVisible(visible);
   }
   sync(e: Enemy, _alpha: number, dt: number) {
-    const breathe = Math.sin(e.t * 2.4) * 0.03;
-    this.body.setPosition(e.x, e.y).setScale(INV * (1 + breathe), INV * (1 - breathe));
+    if (e.flash > this.lastFlash) this.squash = 1;
+    this.lastFlash = e.flash;
+    this.squash = Math.max(0, this.squash - dt * 6);
+    // it sulks: a slow breath, and a flinch at each seed
+    const breathe = Math.sin(e.t * 2.1) * 0.035,
+      wide = 1 + breathe + this.squash * 0.16,
+      tall = 1 - breathe - this.squash * 0.14;
+    this.shadow.setPosition(e.x, e.y + 2).setScale(0.95, 0.8);
+    this.body.setPosition(e.x, e.y).setScale(INV * wide, INV * tall);
     show(this.face, faceKey('capling', 'angry', this.blink.closed(dt)));
-    this.face.setPosition(e.x, e.y - 15);
+    this.face.setPosition(e.x, e.y - 14 * tall);
     this.flash.sync(e.flash);
   }
 }
 
 class BurrView implements EnemyView {
+  private shadow: GameObjects.Image;
   private body: GameObjects.Image;
+  private face: GameObjects.Image;
   private stars: GameObjects.Image[];
   private mark: GameObjects.Image;
   private flash: Flash;
   private spin = 0;
 
   constructor(scene: Scene, depth: number, markDepth: number) {
+    this.shadow = part(scene, 'dew-shadow').setDepth(depth - 0.1);
     this.body = part(scene, 'burr-body').setDepth(depth);
+    this.face = part(scene, faceKey('burr', 'angry')).setDepth(depth);
     this.stars = [0, 1, 2].map(() => part(scene, 'burr-star').setDepth(depth + 0.01));
     this.mark = part(scene, 'warn-mark').setDepth(markDepth).setVisible(false);
-    this.flash = new Flash([this.body]);
+    this.flash = new Flash([this.body, this.face]);
   }
   setVisible(visible: boolean) {
-    this.body.setVisible(visible);
+    for (const img of [this.shadow, this.body, this.face]) img.setVisible(visible);
     if (!visible) {
       this.mark.setVisible(false);
       for (const s of this.stars) s.setVisible(false);
@@ -289,19 +303,26 @@ class BurrView implements EnemyView {
     const b = e as Burr,
       x = lerp(e.px, e.x, alpha),
       warning = b.state === 'warn',
+      rolling = b.state === 'roll',
       dizzy = b.state === 'dizzy';
-    if (b.state === 'roll') this.spin += dt * 16 * b.facing;
-    else if (warning) this.spin += dt * 7 * b.facing * (1 - b.timer / BURR_WARN);
-    // shut tight while it can't be hurt, open and drooping once it is dizzy
-    const size = dizzy ? 1.08 : warning ? 0.86 : 1;
+    // it winds up under the "!", then spins as it rolls; it can only be hurt once it has come to rest
+    if (rolling) this.spin += (dt * 380 * b.facing) / 22;
+    else if (warning) this.spin -= dt * 16 * b.facing * (1 - b.timer / BURR_WARN);
+    else this.spin *= 1 - Math.min(1, dt * 8);
+    const size = dizzy ? 1.06 : warning ? 0.82 + 0.05 * Math.sin(e.t * 40) : rolling ? 0.9 : 1,
+      lean = dizzy ? Math.sin(e.t * 7) * 0.22 : this.spin;
+    this.shadow.setPosition(x, e.y + 2).setScale(0.9, 0.8);
     this.body
       .setPosition(x, e.y - 20)
-      .setRotation(dizzy ? Math.sin(e.t * 9) * 0.2 : this.spin)
+      .setRotation(lean)
       .setScale(INV * size);
+    // while it is curled up tight there is no face to see
+    this.face.setVisible(!rolling && !warning).setPosition(x + (dizzy ? Math.sin(e.t * 7) * 3 : 0), e.y - 19);
+    show(this.face, faceKey('burr', dizzy ? 'worried' : 'angry'));
     this.stars.forEach((s, i) => {
       const a = e.t * 5 + (i * Math.PI * 2) / 3;
       s.setVisible(dizzy)
-        .setPosition(x + Math.cos(a) * 24, e.y - 48 + Math.sin(a) * 6)
+        .setPosition(x + Math.cos(a) * 24, e.y - 50 + Math.sin(a) * 6)
         .setAlpha(dizzy ? Math.min(1, b.timer / 0.3) : 0);
     });
     if (warning) showMark(this.mark, x, e.y - 60, BURR_WARN - b.timer);
@@ -311,13 +332,16 @@ class BurrView implements EnemyView {
 }
 
 class DropcapView implements EnemyView {
+  private shadow: GameObjects.Image;
   private thread: GameObjects.Image;
   private body: GameObjects.Image;
   private face: GameObjects.Image;
   private mark: GameObjects.Image;
   private flash: Flash;
+  private fell = 0; // the squash as it lands
 
   constructor(scene: Scene, depth: number, markDepth: number) {
+    this.shadow = part(scene, 'dew-shadow').setDepth(depth - 0.1);
     this.thread = part(scene, 'dropcap-thread').setDepth(depth - 0.01);
     this.body = part(scene, 'dropcap-body').setDepth(depth);
     this.face = part(scene, faceKey('dropcap', 'angry')).setDepth(depth);
@@ -325,19 +349,33 @@ class DropcapView implements EnemyView {
     this.flash = new Flash([this.body, this.face]);
   }
   setVisible(visible: boolean) {
-    for (const img of [this.thread, this.body, this.face]) img.setVisible(visible);
+    for (const img of [this.shadow, this.thread, this.body, this.face]) img.setVisible(visible);
     if (!visible) this.mark.setVisible(false);
   }
-  sync(e: Enemy, alpha: number) {
+  sync(e: Enemy, alpha: number, dt: number) {
     const d = e as Dropcap,
       y = lerp(e.py, e.y, alpha),
       warning = d.state === 'warn',
       high = d.state === 'hang' || warning,
-      shaken = warning ? Math.sin(e.t * 50) * 2 : 0;
-    this.thread.setVisible(high).setPosition(e.x, y);
-    this.body.setPosition(e.x + shaken, y).setRotation(high ? Math.sin(e.t * 1.6) * 0.08 : 0);
+      down = d.state === 'down',
+      shaken = warning ? Math.sin(e.t * 50) * 2 : 0,
+      sway = high ? Math.sin(e.t * 1.5) * 0.09 : 0;
+    this.fell = down ? Math.min(1, this.fell + dt * 7) : 0;
+    const splat = down ? Math.sin(this.fell * Math.PI) * 0.3 : 0,
+      stretch = d.state === 'fall' ? 0.14 : 0;
+    this.thread.setVisible(high).setPosition(e.x, y - 8);
+    this.body
+      .setPosition(e.x + shaken, y)
+      .setRotation(sway)
+      .setScale(INV * (1 + splat - stretch), INV * (1 - splat + stretch));
     show(this.face, faceKey('dropcap', warning || d.state === 'fall' ? 'surprised' : 'angry'));
-    this.face.setPosition(e.x + shaken, y + 2);
+    this.face.setPosition(e.x + shaken, y + 5);
+    // its shadow on the ground under it, so it's easy to see where it will land
+    const lift = Math.min(1, (GROUND - y) / 320);
+    this.shadow
+      .setPosition(e.x, GROUND + 3)
+      .setScale(0.9 - lift * 0.4, 0.8 - lift * 0.3)
+      .setAlpha(0.8 - lift * 0.35);
     if (warning) showMark(this.mark, e.x, y - 38, DROP_WARN - d.timer);
     else this.mark.setVisible(false);
     this.flash.sync(e.flash);
@@ -351,35 +389,42 @@ class ToadletView implements EnemyView {
   private spot: GameObjects.Image;
   private flash: Flash;
   private blink = new Blink();
+  private landed = 1; // 1 -> 0 after it comes down
 
   constructor(scene: Scene, depth: number) {
-    this.spot = part(scene, 'toadlet-spot').setDepth(depth - 0.02);
+    this.spot = part(scene, 'toadlet-spot').setDepth(depth - 0.2);
     this.shadow = part(scene, 'dew-shadow').setDepth(depth - 0.1);
     this.body = part(scene, 'toadlet-body').setDepth(depth);
     this.face = part(scene, faceKey('toadlet', 'angry')).setDepth(depth);
     this.flash = new Flash([this.body, this.face]);
   }
   setVisible(visible: boolean) {
-    this.body.setVisible(visible);
-    this.face.setVisible(visible);
-    this.shadow.setVisible(visible);
+    for (const img of [this.shadow, this.body, this.face]) img.setVisible(visible);
     if (!visible) this.spot.setVisible(false);
   }
   sync(e: Enemy, alpha: number, dt: number) {
     const a = e as Toadlet,
       x = lerp(e.px, e.x, alpha),
       y = lerp(e.py, e.y, alpha),
-      hop = a.state === 'hop',
-      crouch = hop ? 0 : 0.14 * (1 - Math.min(1, a.timer / 0.3));
-    this.body.setPosition(x, y).setScale(INV * (1 + crouch), INV * (hop ? 1.08 : 1 - crouch));
+      hop = a.state === 'hop';
+    this.landed = hop ? 1 : Math.max(0, this.landed - dt * 6);
+    // stretched in the air, squashed where it lands, crouching lower as the next hop comes
+    const crouch = hop ? 0 : 0.2 * (1 - Math.min(1, a.timer / 0.3)) + Math.sin(this.landed * Math.PI) * 0.16,
+      wide = hop ? 0.9 : 1 + crouch,
+      tall = hop ? 1.14 : 1 - crouch;
+    this.body.setPosition(x, y).setScale(INV * wide * e.facing * -1, INV * tall);
     show(this.face, faceKey('toadlet', hop ? 'surprised' : 'angry', !hop && this.blink.closed(dt)));
-    this.face.setPosition(x, y - 16 * (hop ? 1.08 : 1 - crouch));
-    this.shadow.setPosition(x, GROUND + 3).setAlpha(hop ? 0.35 : 0.7);
+    this.face.setPosition(x, y - 13 * tall);
+    const lift = Math.min(1, (GROUND - y) / 110);
+    this.shadow
+      .setPosition(x, GROUND + 3)
+      .setScale(0.85 - lift * 0.3, 0.75 - lift * 0.25)
+      .setAlpha(0.8 - lift * 0.3);
     // an orange ring on the ground where it will come down, as for anything that lands
     this.spot
       .setVisible(hop)
-      .setPosition(a.landX, GROUND)
-      .setAlpha(0.6 + Math.sin(e.t * 18) * 0.25);
+      .setPosition(a.landX, GROUND + 1)
+      .setAlpha(0.65 + Math.sin(e.t * 18) * 0.25);
     this.flash.sync(e.flash);
   }
 }
@@ -395,11 +440,14 @@ class BouncerView implements PooledView {
     this.body.setVisible(visible);
   }
   sync(b: Bouncer) {
-    const squash = Math.sin(b.sprung * Math.PI) * 0.34,
-      grow = easeOutBack(Math.min(1, b.t / 0.25));
+    // it pops up as it cheers up, and each time Pip lands it squashes flat and springs back past its size
+    const u = 1 - b.sprung,
+      spring = b.sprung > 0 ? Math.sin(u * Math.PI * 2.5) * (1 - u) * 0.42 : 0,
+      grow = easeOutBack(Math.min(1, b.t / 0.28)),
+      idle = Math.sin(b.t * 2.4) * 0.02;
     this.body
       .setPosition(b.x, b.y)
-      .setScale(INV * grow * (1 + squash * 0.7), INV * grow * (1 - squash + Math.sin(b.t * 2.4) * 0.02));
+      .setScale(INV * grow * (1 + spring * 0.6 - idle), INV * grow * (1 - spring + idle));
   }
 }
 

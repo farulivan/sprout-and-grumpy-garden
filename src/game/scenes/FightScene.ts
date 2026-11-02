@@ -52,6 +52,7 @@ export class FightScene extends Scene {
   }
 
   create() {
+    this.views.prepare?.(this);
     fitCamera(this);
     this.fx = new Fx(this, DEPTH.particles, DEPTH.flash);
     this.world = this.views.arena(this, DEPTH);
