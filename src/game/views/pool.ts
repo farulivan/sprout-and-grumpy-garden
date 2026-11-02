@@ -14,6 +14,17 @@ export class ViewPool<E extends object, V extends PooledView> {
     private make: (e: E) => V,
   ) {}
 
+  // Make some views of a kind ready ahead of time, so that the first of them costs nothing when it appears.
+  prepare(kind: string, n: number, make: () => V) {
+    const spare = this.free.get(kind) ?? [];
+    for (let i = 0; i < n; i++) {
+      const view = make();
+      view.setVisible(false);
+      spare.push(view);
+    }
+    this.free.set(kind, spare);
+  }
+
   // update(e, view, fresh): fresh is true the first frame this view shows this object.
   sync(objects: readonly E[], update: (e: E, view: V, fresh: boolean) => void) {
     const frame = ++this.frame;

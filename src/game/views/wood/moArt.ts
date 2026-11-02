@@ -3,18 +3,6 @@ import type { Scene } from 'phaser';
 import { bake, SOFT } from '../../art/bake';
 import { circle, ellipse, glow, line, radial, seeded, type Ctx } from '../../art/draw';
 
-function drawWave(c: Ctx) {
-  const rand = seeded(401);
-  for (let i = 0; i < 9; i++) {
-    const x = -20 + i * 5 + rand() * 3,
-      r = 7 + rand() * 7;
-    circle(c, x, -r * 0.8, r);
-    c.fillStyle = i % 2 ? '#cfc6e6' : '#efe6ff';
-    c.fill();
-    line(c, '#4a3a70', 1.6);
-  }
-}
-
 function drawCloud(c: Ctx) {
   for (const [x, y, r] of [
     [-30, -4, 18],
@@ -64,7 +52,6 @@ function drawBubble(c: Ctx) {
 }
 
 export function bakeMoAttacks(scene: Scene) {
-  bake(scene, 'mo-wave', 70, 40, 35, 36, drawWave);
   bake(scene, 'gloom-cloud', 130, 70, 65, 40, drawCloud);
   bake(scene, 'gloom-rain', 62, 372, 31, 0, drawRain, SOFT);
   bake(scene, 'spore-bubble', 40, 40, 20, 20, drawBubble);

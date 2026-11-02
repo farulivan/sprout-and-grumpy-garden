@@ -9,6 +9,7 @@ import { Fx } from '../fx';
 import type { GamePresenter } from '../presenter';
 import { BOSS_VIEWS, type BossView } from '../views/bossViews';
 import type { ChapterViews } from '../views/chapterViews';
+import type { AcidTrail } from '../views/mo/smoke';
 import { BouncerViews, EnemyViews } from '../views/EnemyViews';
 import { HazardViews } from '../views/HazardViews';
 import { PickupViews } from '../views/PickupViews';
@@ -40,6 +41,7 @@ export class FightScene extends Scene {
   private boss: BossView | null = null; // made as his fight is first drawn
   private player!: PlayerView;
   private projectiles!: ProjectileViews;
+  private trail?: AcidTrail; // what his attacks leave behind, in a chapter whose boss's do
   private hazards!: HazardViews;
   private pickups!: PickupViews;
   private enemies!: EnemyViews;
@@ -60,7 +62,8 @@ export class FightScene extends Scene {
     fitCamera(this);
     this.fx = new Fx(this, DEPTH.particles, DEPTH.flash);
     this.world = this.views.arena(this, DEPTH);
-    this.hazards = new HazardViews(this, DEPTH.hazards, DEPTH.marks, this.fx);
+    this.trail = this.views.trail?.(this, DEPTH.boss - 0.12); // smoke goes behind him: he stays the boldest thing there
+    this.hazards = new HazardViews(this, DEPTH.hazards, DEPTH.marks, this.fx, this.trail);
     this.pickups = new PickupViews(this, DEPTH.pickups, this.fx);
     this.enemies = new EnemyViews(this, DEPTH.enemies, DEPTH.marks);
     this.bouncers = new BouncerViews(this, DEPTH.enemies);
@@ -90,6 +93,7 @@ export class FightScene extends Scene {
     this.boss ??= BOSS_VIEWS[fight.boss.id].create(this, DEPTH.boss, this.fx);
     this.boss.sync(fight, alpha, dt);
     this.hazards.sync(fight.hazards, alpha, dt);
+    this.trail?.update(dt * fight.timeScale);
     this.pickups.sync(fight.pickups, alpha, dt);
     this.enemies.sync(fight.enemies, alpha, dt);
     this.bouncers.sync(fight.pads);

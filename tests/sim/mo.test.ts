@@ -214,8 +214,11 @@ describe("Mo's attacks", () => {
       fight.player.x = fight.player.px = 300;
       fight.player.inv = 999;
       mo.startAttack(name);
-      const events = run(fight, 6);
-      expect(has(events, 'bossLand')).toBe(true);
+      const events = run(fight, 6),
+        lands = events.filter((e) => e.type === 'bossLand');
+      expect(lands.length).toBeGreaterThan(0);
+      // only a hop brings his poison with it, because only a hop lets smoke out
+      for (const land of lands) expect(land.acid).toBe(name === 'bigHop');
       expect(has(events, 'thud')).toBe(false);
     }
   });

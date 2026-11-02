@@ -57,6 +57,7 @@ const SMOKE_SPEED = 365,
   SPIN_WALL = 60, // how near a wall he spins to: no hiding beside one
   DIZZY = 2.6, // seconds he sits dizzy after a Cap Spin, face open
   SMOKE_AT = 62, // how far from his middle each smoke front starts
+  SMOKE_OFF = 160, // how far past a wall it rolls: right off the screen, the whole of its long tail
   SPORE_FROM = 40; // how far above his cap the spores come from
 
 // An oval hit by a circle.
@@ -187,10 +188,12 @@ export class Mo extends Boss {
     this.airborne = false;
     this.landX = null;
     if (!this.alive || this.state !== 'fight') return;
-    f.emit({ type: 'bossLand', x: this.x, y: GROUND });
+    f.emit({ type: 'bossLand', x: this.x, y: GROUND, acid: true });
     const speed = SMOKE_SPEED * this.speedMul;
     for (const dir of [-1, 1] as const)
-      f.hazards.push(new AcidSmoke(this.x + dir * SMOKE_AT, dir, speed, f.minX - 40, f.maxX + 40));
+      f.hazards.push(
+        new AcidSmoke(this.x + dir * SMOKE_AT, dir, speed, f.minX - SMOKE_OFF, f.maxX + SMOKE_OFF),
+      );
   }
 
   // He stops whatever he is doing: a new phase, the end of the fight.
@@ -343,7 +346,7 @@ export class Mo extends Boss {
     }
     this.spinning = false;
     this.x = clamp(this.x, MO_LEFT, MO_RIGHT);
-    f.emit({ type: 'bossLand', x: this.x, y: GROUND });
+    f.emit({ type: 'bossLand', x: this.x, y: GROUND, acid: false });
     this.open = true;
     this.dizzy = DIZZY;
     yield DIZZY;

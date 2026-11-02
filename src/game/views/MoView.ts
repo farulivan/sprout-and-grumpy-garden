@@ -12,7 +12,7 @@ import { hex, INV, part, Ribbon, show, unit } from '../art/bake';
 import { rand } from '../motion';
 import type { FxTarget } from '../presenter';
 import type { BossView } from './bossViews';
-import { showMark } from './HazardViews';
+import { showMark } from './marks';
 import { MO_PALETTE } from './mo/art';
 import {
   EYE_X,
@@ -338,7 +338,7 @@ export class MoView implements BossView {
     if (landing) {
       this.ring
         .setPosition(b.landX ?? 0, GROUND + 1)
-        .setScale(INV * 2.6, INV * 1.6)
+        .setScale(INV * 3.1, INV * 2.6)
         .setAlpha(0.7 + Math.sin(b.t * 16) * 0.25);
       if (warning) showMark(this.ringMark, b.landX ?? 0, GROUND - 40, this.warnT);
       else this.ringMark.setVisible(false);

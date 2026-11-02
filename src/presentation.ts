@@ -572,7 +572,22 @@ export function present(e: SimEvent, p: Presenter, opts: PresentOptions) {
       p.shake(7);
       p.punch(0.025);
       p.hitStop(0.05);
-      p.burst(e.x, e.y, { ...DUST, n: 7, speed: 110, color: '#cfc6e6' });
+      if (e.acid) {
+        p.ring(e.x, e.y, { color: '#b6e84c', from: 40, to: 170, life: 0.45 });
+        // a crown of drops thrown up, and dust
+        p.burst(e.x, e.y - 6, {
+          n: 14,
+          colors: ['#8fd832', '#e6fb86'],
+          speed: 340,
+          size: 5,
+          life: 0.7,
+          gravity: 500,
+          shape: 'circle',
+          dir: UP,
+          spread: 2,
+        });
+        p.burst(e.x, e.y, { ...DUST, n: 8, speed: 140, color: '#3f9a3c' });
+      } else p.burst(e.x, e.y, { ...DUST, n: 9, speed: 140, color: '#cfc6e6' });
       break;
     case 'gladeClose':
       p.sfx('brambles');

@@ -5,17 +5,20 @@
 import { BlendModes, type GameObjects, type Scene } from 'phaser';
 import { GROUND, TAU, UP, W } from '../../config';
 import { POLLEN_CLOUD, POLLEN_WARN, RING_WARN, ROOT_WARN, VINE_WARN, type Hazard } from '../../sim/hazards';
-import type { AcidSmoke, FairyRing, PollenDrop, RootSpike, VineSweep } from '../../sim/hazards';
+import type { FairyRing, PollenDrop, RootSpike, VineSweep } from '../../sim/hazards';
 import { clamp, lerp } from '../../sim/math';
 import { DUST, type Burst } from '../../presentation';
 import { INV, part, Ribbon } from '../art/bake';
-import { easeOutBack, rand } from '../motion';
+import { rand } from '../motion';
 import type { FxTarget } from '../presenter';
 import { bakeHazards, VINE_LEN, VINE_POINTS } from './hazards/art';
+import { showMark } from './marks';
+import { AcidTrail, SmokeView } from './mo/smoke';
 import { ViewPool, type PooledView } from './pool';
 
 export { bakeHazards };
 
+const SMOKE_FRONTS = 6;
 const POLLEN_FALL = (GROUND - 14 + 30) / 520; // seconds a pollen ball takes to reach the ground
 const DUST_PUFF: Burst = { ...DUST, n: 1 };
 const DUST_KICKED: Burst = { ...DUST, n: 1, dir: UP - 0.6 }; // thrown back by something sliding left
@@ -31,15 +34,6 @@ const CLODS: Burst = {
   dir: UP,
   spread: 1.5,
 };
-
-// The "!" badge pops in, then bounces. Every badge is drawn on the marks layer, in front of Pip, so a
-// warning can never hide behind the hero. A stage's small enemies use it too (EnemyViews.ts).
-export function showMark(mark: GameObjects.Image, x: number, y: number, t: number) {
-  mark
-    .setVisible(true)
-    .setPosition(x, y - Math.abs(Math.sin(t * 8.5)) * 7)
-    .setScale(INV * 1.3 * easeOutBack(Math.min(1, t / 0.18)));
-}
 
 interface HazardView extends PooledView {
   // fresh = the first frame this view shows this hazard.
@@ -302,25 +296,6 @@ class PollenView implements HazardView {
   }
 }
 
-// Smoke running along the ground from where Mo landed. A placeholder.
-class SmokeView implements HazardView {
-  private body: GameObjects.Image;
-
-  constructor(scene: Scene, depth: number) {
-    this.body = part(scene, 'mo-wave').setDepth(depth);
-  }
-  setVisible(visible: boolean) {
-    this.body.setVisible(visible);
-  }
-  sync(h: Hazard, alpha: number) {
-    const wave = h as AcidSmoke,
-      grow = Math.min(1, wave.t / 0.12);
-    this.body
-      .setPosition(lerp(wave.px, wave.x, alpha), GROUND + 2)
-      .setScale(wave.dir * INV * (0.9 + Math.sin(wave.t * 24) * 0.08), INV * grow);
-  }
-}
-
 // Still the old cloud and rain, until the Fairy Ring's art arrives. A placeholder.
 class RingView implements HazardView {
   private cloud: GameObjects.Image;
@@ -360,8 +335,8 @@ class RingView implements HazardView {
 export class HazardViews {
   private pool: ViewPool<Hazard, HazardView>;
 
-  // markDepth = in front of Pip, where the "!" badges go.
-  constructor(scene: Scene, depth: number, markDepth: number, fx: FxTarget) {
+  // markDepth = in front of Pip, where the "!" badges go. trail = what a boss's smoke leaves behind, if he has any.
+  constructor(scene: Scene, depth: number, markDepth: number, fx: FxTarget, trail?: AcidTrail) {
     this.pool = new ViewPool<Hazard, HazardView>(
       (h) => h.kind,
       (h) =>
@@ -372,9 +347,11 @@ export class HazardViews {
             : h.kind === 'pollen'
               ? new PollenView(scene, depth, fx)
               : h.kind === 'smoke'
-                ? new SmokeView(scene, depth)
+                ? new SmokeView(scene, trail!)
                 : new RingView(scene, depth, markDepth),
     );
+    // Up to six fronts in a triple hop: ready now, so that none has to be made during the fight.
+    if (trail) this.pool.prepare('smoke', SMOKE_FRONTS, () => new SmokeView(scene, trail));
   }
   sync(hazards: readonly Hazard[], alpha: number, dt: number) {
     this.pool.sync(hazards, (h, view, fresh) => view.sync(h, alpha, dt, fresh));

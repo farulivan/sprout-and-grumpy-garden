@@ -16,7 +16,7 @@ import type { Toadlet } from '../../sim/stage/enemies/toadlet';
 import { INV, part, show } from '../art/bake';
 import { easeOutBack } from '../motion';
 import { faceKey } from './faces';
-import { showMark } from './HazardViews';
+import { showMark } from './marks';
 import { ViewPool, type PooledView } from './pool';
 
 export { bakeEnemies } from './enemies/art';

@@ -3,10 +3,9 @@
 // Chapter 2 is played.
 import type { Scene } from 'phaser';
 import { TAU } from '../../../config';
-import { bake, bakeApart, SOFT } from '../../art/bake';
+import { bake, SOFT } from '../../art/bake';
 import { rgba } from '../../art/color';
 import { ellipse, glow, inside, line, linear, radial, seeded, type Ctx } from '../../art/draw';
-import { bakeMoFaces } from './face';
 
 export const MO_PALETTE = {
   ink: '#1c1238', // the same as the wood's outlines
@@ -409,12 +408,7 @@ function drawWhirlArc(c: Ctx, frame: number) {
   line(c, '#f0d8ff', 3.4, 0.75);
 }
 
-// On atlas pages of his own, inside the wood's late bake: his art would otherwise push the stage's off its page.
-export function bakeMo(scene: Scene) {
-  bakeApart('mo', () => bakeParts(scene));
-}
-
-function bakeParts(scene: Scene) {
+export function bakeMoParts(scene: Scene) {
   MO_PALETTE.caps.forEach((p, i) => {
     bake(scene, `mo-cap-${i}`, 224, 124, 112, 72, (c) => drawCap(c, p));
     bake(scene, `mo-cap-glow-${i}`, 250, 140, 125, 80, (c) => drawCapGlow(c, p), SOFT);
@@ -430,5 +424,4 @@ function bakeParts(scene: Scene) {
   }
   bake(scene, 'mo-pool', 240, 40, 120, 20, (c) => glow(c, 0, 0, 118, '#ffffff', 1, 19), SOFT);
   bake(scene, 'mo-shadow', 200, 30, 100, 15, (c) => glow(c, 0, 0, 98, INK, 0.75, 14), SOFT);
-  bakeMoFaces(scene);
 }

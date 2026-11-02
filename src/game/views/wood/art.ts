@@ -41,7 +41,7 @@ import {
 } from '../stage/art';
 import { MO_PLATFORMS } from '../../../sim/bosses/mo';
 import { bakeWoodEnemies } from './enemyArt';
-import { bakeMo } from '../mo/art';
+import { bakeMo } from '../mo/bake';
 import { bakeMoAttacks } from './moArt';
 
 export const FOREST_P = 1920; // the far and middle trees repeat every this many pixels
