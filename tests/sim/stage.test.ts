@@ -1,10 +1,11 @@
-// The rules of a stage (src/sim/stage/): the ground and its pits, the camera, the four small enemies, the
-// pickups and the gate. The last tests check that the Garden Path can be played to its end and that every
-// jump in it can be made.
+// The rules of a stage (src/sim/stage/): the ground and its pits, the camera, the small enemies, the pickups
+// and the gate, bounce pads and glades. The last tests check that each stage can be played to its end, that
+// every jump in it can be made, and that the Mushroom Wood's bounces can't be done without.
 import { describe, expect, it } from 'vitest';
 import { GROUND, W } from '../../src/config';
 import type { SimEvent } from '../../src/sim/events';
 import { NO_INPUT, type InputFrame } from '../../src/sim/input';
+import { Bouncer } from '../../src/sim/bouncer';
 import { BODY_HALF, Player, type PlayerWorld } from '../../src/sim/player';
 import { PEA_WARN } from '../../src/sim/stage/enemies/peaPod';
 import { SNAP_WARN } from '../../src/sim/stage/enemies/snapper';
@@ -365,5 +366,60 @@ describe('the Garden Path', () => {
   it('hides three golden seeds and two dewdrops', () => {
     expect(data.seeds.length).toBe(3);
     expect(data.dewdrops.length).toBe(2);
+  });
+});
+
+// ---- the Mushroom Wood's new rules ----
+
+// Pip's best bounce off a pad on flat ground: how high above the ground, and how far across.
+function bounceFrom(hold: boolean) {
+  const pad = new Bouncer(0, GROUND),
+    world: PlayerWorld = {
+      minX: -1e6,
+      maxX: 1e6,
+      platforms: [],
+      bouncers: [pad],
+      projectiles: [],
+      emit() {},
+    };
+  const pip = new Player(world);
+  pip.x = 0;
+  pip.y = pad.top - 1;
+  pip.vy = 10;
+  pip.vx = 290;
+  const input = { ...RIGHT, jump: hold };
+  pip.update(1 / 60, input); // comes down on it
+  const x0 = pip.x;
+  let apex = 0;
+  for (let i = 0; i < 300 && !pip.onGround; i++) {
+    pip.update(1 / 60, input);
+    apex = Math.max(apex, GROUND - pip.y);
+  }
+  return { apex, distance: pip.x - x0 };
+}
+
+describe('bounce pads', () => {
+  it('throw Pip higher than a jump, and higher still with the button held', () => {
+    const held = bounceFrom(true),
+      let_go = bounceFrom(false),
+      jump = longestJump();
+    // measured from the pad's top, about the plan's figures (a stepped arc tops out a few px under the formula)
+    expect(held.apex - 36).toBeGreaterThan(245);
+    expect(held.apex - 36).toBeLessThan(265);
+    expect(let_go.apex - 36).toBeGreaterThan(140);
+    expect(let_go.apex - 36).toBeLessThan(160);
+    expect(held.distance).toBeGreaterThan(jump.distance + 60);
+    expect(held.apex).toBeGreaterThan(jump.apex + 100);
+  });
+
+  it('leave a Pip who is down alone', () => {
+    const stage = stageWith({});
+    stage.bouncers.push(new Bouncer(300, GROUND));
+    stage.player.x = stage.player.px = 300;
+    stage.player.y = stage.player.py = 300;
+    stage.player.hp = 1;
+    stage.player.hurt();
+    expect(stage.player.alive).toBe(false);
+    expect(has(run(stage, 1), 'bounce')).toBe(false);
   });
 });

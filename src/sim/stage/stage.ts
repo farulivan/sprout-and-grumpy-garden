@@ -3,6 +3,7 @@
 // States: play -> clear (Pip walks through the gate) -> exit (on to the boss)
 //              | play -> down (Pip naps) -> lose
 import { GROUND, H, STEP, W } from '../../config';
+import type { Bouncer } from '../bouncer';
 import type { SimEvent, StageResult } from '../events';
 import { NO_INPUT, type InputFrame } from '../input';
 import type { Level } from '../level';
@@ -66,6 +67,7 @@ export class Stage implements PlayerWorld, EnemyWorld, Level {
   enemies: Enemy[];
   projectiles: Projectile[] = [];
   pickups: Placed[];
+  bouncers: Bouncer[] = [];
   goldenSeeds = 0; // golden seeds found toward the next heart
   camX = 0; // the world x of the view's left edge
   pcamX = 0; // ...one step ago, for smooth drawing between steps
@@ -140,6 +142,7 @@ export class Stage implements PlayerWorld, EnemyWorld, Level {
     }
     this.follow(sdt);
     if (this.state !== 'down') for (const e of this.enemies) if (this.wakes(e)) e.update(sdt, this);
+    for (const b of this.bouncers) b.update(sdt);
     for (const pr of this.projectiles) pr.update(sdt, this.camX);
     if (this.state === 'play') this.collide();
     prune(this.enemies);

@@ -21,6 +21,7 @@ export interface StageResult {
 
 export type SimEvent =
   | { type: 'jump'; x: number; y: number }
+  | { type: 'bounce'; x: number; y: number } // Pip came down on a bounce pad
   | { type: 'land'; x: number; y: number }
   | { type: 'shoot' }
   | { type: 'playerHurt'; x: number; y: number }
