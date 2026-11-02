@@ -56,7 +56,7 @@ it('ends up in the same weather however long each frame is', () => {
 it('comes to rest once it has turned, and stirs again when the mood changes', () => {
   const weather = new Weather();
   for (let i = 0; i < 900; i++) weather.update('stormy', 1 / 60); // fifteen seconds: long settled
-  expect(weather.weight).toEqual({ calm: 0, grumpy: 0, stormy: 1, bloom: 0, dawn: 0 }); // exactly, not nearly
+  for (const mood of MOODS) expect(weather.weight[mood]).toBe(mood === 'stormy' ? 1 : 0); // exactly, not nearly
   expect(weather.look.ceiling).toBe(1);
 
   const resting = { ...weather.look };
@@ -77,4 +77,30 @@ it('dawns: snaps straight to a look, then blends from it to a clear morning', ()
   for (let i = 0; i < 60; i++) weather.update('calm', 1 / 60);
   expect(weather.weight.calm).toBeGreaterThan(0.8);
   expect(MOODS.reduce((sum, mood) => sum + weather.weight[mood], 0)).toBeCloseTo(1);
+});
+
+it('adds the wood and Mo after the older moods, which have no moon and float pollen', () => {
+  expect(MOODS.slice(0, 5)).toEqual(['calm', 'grumpy', 'stormy', 'bloom', 'dawn']);
+  const weather = new Weather();
+  for (const mood of MOODS.slice(0, 5)) {
+    weather.snap(mood);
+    expect(weather.look.moon).toBe(0);
+    expect(weather.look.moteTint).toBe(0xfff3c4);
+  }
+  weather.snap('gloom');
+  expect(weather.look.moon).toBe(1);
+  expect(weather.look.moteTint).not.toBe(0xfff3c4); // fireflies
+});
+
+it('can turn more slowly, as a night falling along a stage does', () => {
+  const quick = new Weather(),
+    slow = new Weather();
+  for (const w of [quick, slow]) w.snap('dusk');
+  for (let i = 0; i < 60; i++) {
+    quick.update('gloom', 1 / 60);
+    slow.update('gloom', 1 / 60, 0.16);
+  }
+  expect(quick.weight.gloom).toBeGreaterThan(0.8);
+  expect(slow.weight.gloom).toBeLessThan(0.2);
+  expect(slow.weight.gloom).toBeGreaterThan(0.1);
 });
