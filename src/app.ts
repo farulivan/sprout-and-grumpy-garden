@@ -30,6 +30,7 @@ export interface AppOptions {
   presenter: Presenter;
   skipIntro?: boolean; // open on the main menu (?skipintro), for working on the game
   firstChapter?: number; // where a new game starts, if not at the beginning (?debug&chapter=2)
+  startAtBoss?: boolean; // ...and straight at its boss (?debug&boss), for working on the fight
   onLevel?: (level: Played) => void; // a new level replaced the old one
   onPause?: (paused: boolean) => void;
   onMute?: (muted: boolean) => void;
@@ -95,7 +96,8 @@ export class App {
   start() {
     this.chapter = this.o.firstChapter ?? 0;
     this.lives = LIVES;
-    this.startStage();
+    if (this.o.startAtBoss) this.startBoss();
+    else this.startStage();
   }
 
   // Try again on the lose card: the level that was lost, from its start. A boss fight starts with full

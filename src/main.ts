@@ -43,6 +43,7 @@ const app = new App({
   presenter,
   skipIntro: params.has('skipintro'),
   firstChapter: CHAPTERS[firstChapter] ? firstChapter : 0,
+  startAtBoss: params.has('debug') && params.has('boss'),
   onLevel: (level) => {
     presenter.reset();
     showSceneFor(level);
