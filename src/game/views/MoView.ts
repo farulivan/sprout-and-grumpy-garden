@@ -1,12 +1,15 @@
 // Mo the Moody Mushroom. His parts are baked in mo/art.ts and mo/face.ts; this file moves them.
-// The simulation says where he stands, how far he has reared up, and when he attacks or gets hit. A sulking kid in a
-// hood at rest, and an outburst when he attacks: most of who he is comes from how different the two look.
+// The simulation says where he stands, how far he has reared up, and when he attacks or gets hit. Everything else
+// here is acting. He is a sulking kid in a hood at rest and an outburst when he attacks, and most of who he is comes
+// from how different the two look. Everything big has an anticipation, an action and a settle.
 import { BlendModes, TintModes, type GameObjects, type Scene } from 'phaser';
-import { GROUND } from '../../config';
+import { GROUND, STEP, UP } from '../../config';
+import { DUST } from '../../presentation';
 import { CAP_HIGH, CAP_LOW, MID, type Mo } from '../../sim/bosses/mo';
 import type { Fight } from '../../sim/fight';
 import { clamp, lerp } from '../../sim/math';
 import { hex, INV, part, Ribbon, show, unit } from '../art/bake';
+import { rand } from '../motion';
 import type { FxTarget } from '../presenter';
 import type { BossView } from './bossViews';
 import { showMark } from './HazardViews';
@@ -27,7 +30,11 @@ const MARKS = 6.5; // the depth of warnings: in front of Pip, so they can't hide
 const STALK_POINTS = 10;
 const STALK_FOOT = 30; // his stalk's ribbon starts this far above his feet, inside the foot
 const SHOULDER = 44; // how far out from his middle his arms are
-const HIT_LIGHT = 0x707070; // a hit lights him up for a moment, and he stays himself: this much is added to his colours
+const HIT_LIGHT = 0x3c3c3c; // a hit lights him up for a moment, and he stays himself: this much is added to his colours
+const CAP_FADE = 0.5; // seconds his cap takes to turn a new colour
+const LANDED = 0.25; // seconds he looks winded after coming down
+const RAGE = 1.3; // seconds of tantrum at each new phase
+const CROUCH = 0.18; // over the last of a Big Hop's warning, he crouches
 // What his arms are doing, as an angle for one side; the other side mirrors it.
 const ARMS = { droop: 1.05, up: -1, out: -0.25, flail: -1.35 } as const;
 type Arms = keyof typeof ARMS;
@@ -44,30 +51,52 @@ export class MoView implements BossView {
   private eyes: GameObjects.Image;
   private pupils: GameObjects.Image[];
   private face: GameObjects.Image;
+  private capWas: GameObjects.Image; // the colour he is turning from, under the new one
   private cap: GameObjects.Image;
   private capGlow: GameObjects.Image;
-  private capGlowUnit: number;
-  private poolUnit: number;
-  private shadowUnit: number;
   private ring: GameObjects.Image;
   private ringMark: GameObjects.Image;
   private mark: GameObjects.Image;
+  private units: { glow: number; pool: number; shadow: number };
+
+  private seen: Mo | null = null;
+  private clock = 0; // keeps going when the fight is in slow motion
   private lit = false;
   private warnT = 0;
   private armAngle: number = ARMS.droop;
   private look = 0;
+  private blink = 1 + Math.random() * 3;
+  private sq = 0; // squash: positive squashes, negative stretches
+  private sqV = 0;
+  private capLag = 0;
+  private lean = 0;
+  private kick = 0; // how far the last hit has knocked him back
+  private kickV = 0;
+  private rage = 0; // 1 -> 0 during the tantrum at each new phase
+  private set = 0; // which cap he is wearing
+  private capFade = 1;
+  private pose = 0; // 0 -> 1 as he goes into a pose that is for show only: the roar, the tantrum, the ending
+  private wasAir = false;
+  private airT = 0;
+  private landedT = 0;
+  private prevFlash = 0;
+  private prevPhase = 1;
+  private sighT = 4 + Math.random() * 2;
+  private sigh = 0;
 
-  constructor(scene: Scene, depth: number, _fx: FxTarget) {
-    this.poolUnit = unit('mo-pool');
-    this.shadowUnit = unit('mo-shadow');
-    this.capGlowUnit = unit('mo-cap-glow-0');
+  constructor(
+    scene: Scene,
+    depth: number,
+    private fx: FxTarget,
+  ) {
+    this.units = { glow: unit('mo-cap-glow-0'), pool: unit('mo-pool'), shadow: unit('mo-shadow') };
     this.shadow = part(scene, 'mo-shadow').setDepth(depth - 0.04);
-    this.pool = part(scene, 'mo-pool')
-      .setBlendMode(BlendModes.ADD)
-      .setDepth(depth - 0.02);
     this.ring = part(scene, 'toadlet-spot')
       .setDepth(depth - 0.03)
       .setVisible(false);
+    this.pool = part(scene, 'mo-pool')
+      .setBlendMode(BlendModes.ADD)
+      .setDepth(depth - 0.02);
     this.gills = part(scene, 'mo-gills');
     this.stalk = new Ribbon(scene, 'mo-stalk', STALK_POINTS);
     this.foot = part(scene, 'mo-foot');
@@ -76,6 +105,7 @@ export class MoView implements BossView {
     this.eyes = part(scene, 'mo-eye');
     this.pupils = [-1, 1].map(() => part(scene, 'mo-pupil'));
     this.face = part(scene, moFaceKey('sleepy'));
+    this.capWas = part(scene, 'mo-cap-0').setVisible(false);
     this.cap = part(scene, 'mo-cap-0');
     this.capGlow = part(scene, 'mo-cap-glow-0').setBlendMode(BlendModes.ADD);
     this.rig = scene.add
@@ -88,6 +118,7 @@ export class MoView implements BossView {
         this.eyes,
         ...this.pupils,
         this.face,
+        this.capWas,
         this.cap,
         this.capGlow,
       ])
@@ -98,91 +129,209 @@ export class MoView implements BossView {
 
   sync(fight: Fight, alpha: number, dt: number) {
     const b = fight.boss as Mo,
-      p = fight.player,
-      x = lerp(b.px, b.x, alpha),
+      p = fight.player;
+    if (b !== this.seen) this.reset(b); // a new fight
+    this.clock += dt;
+    const x = lerp(b.px, b.x, alpha),
       feet = lerp(b.py, b.y, alpha) + MID,
       t = b.t,
+      clock = this.clock,
       phase = Math.min(b.phase, 3) - 1,
       roaring = b.state === 'intro' && b.introT >= 0.9,
-      asleep = b.state === 'sleep' || (b.state === 'intro' && !roaring);
+      asleep = b.state === 'sleep' || (b.state === 'intro' && !roaring),
+      vx = (b.x - b.px) / STEP,
+      vy = (b.y - b.py) / STEP;
+
+    // ---- reactions the simulation doesn't model ----
+    if (b.flash > this.prevFlash) this.kickV += 120 * (x < p.x ? -1 : 1);
+    this.prevFlash = b.flash;
+    if (b.phase > this.prevPhase) this.rage = 1;
+    this.prevPhase = b.phase;
+    this.rage = Math.max(0, this.rage - dt / RAGE);
+    this.kickV += (-this.kick * 260 - this.kickV * 16) * dt;
+    this.kick += this.kickV * dt;
+    this.landedT = Math.max(0, this.landedT - dt);
+    if (b.airborne && !this.wasAir) {
+      this.sq = 0.22;
+      this.sqV = -7; // he stretches up as he leaves the ground
+      this.airT = 0;
+      this.fx.burst(x, GROUND, { ...DUST, n: 8, speed: 130, color: '#cfc6e6' });
+    }
+    if (!b.airborne && this.wasAir) {
+      this.sqV = 9;
+      this.landedT = LANDED;
+    }
+    this.wasAir = b.airborne;
+    this.airT += dt;
+    this.sqV += (-this.sq * 320 - this.sqV * 18) * dt;
+    this.sq += this.sqV * dt;
+    this.capLag += (vy * 0.018 - this.capLag) * Math.min(1, dt * 12);
+    this.lean += (clamp(-vx * 0.022, -14, 14) - this.lean) * Math.min(1, dt * 10);
+    const crouching = b.attackName === 'bigHop' && b.telegraph > 0 && b.telegraph < CROUCH,
+      crouch = crouching ? (1 - b.telegraph / CROUCH) * 0.22 : 0,
+      bounce = Math.sin(b.spring.sprung * Math.PI) * 0.2,
+      sq = this.sq + crouch + bounce;
+
+    // a sigh, now and then, while he sulks in his first mood
+    const sulking = b.alive && b.state === 'fight' && !b.attacking && phase === 0;
+    this.sighT -= dt;
+    if (this.sighT <= 0) {
+      this.sighT = 4 + Math.random() * 2;
+      if (sulking) {
+        this.sigh = 1;
+        this.fx.burst(x + 2, feet - 22, {
+          n: 1,
+          shape: 'puff',
+          color: '#cdb8ff',
+          speed: 34,
+          dir: UP,
+          spread: 0.5,
+          gravity: -30,
+          life: 0.8,
+          size: 7,
+          alpha: 0.7,
+        });
+      }
+    }
+    this.sigh = Math.max(0, this.sigh - dt / 0.8);
 
     // ---- what he is doing: the first of these that matches ----
+    const named = (['shout', 'cross', 'furious'] as const)[phase],
+      posed = this.posed(b);
     let face: MoFace, arms: Arms;
     if (!b.alive) [face, arms] = ['joy', 'up'];
     else if (asleep) [face, arms] = ['sleepy', 'droop'];
     else if (roaring) [face, arms] = ['shout', 'up'];
     else if (b.dizzy > 0) [face, arms] = ['dizzy', 'droop'];
-    else if (b.flash > 0 && b.faceOpen) [face, arms] = ['ouch', this.posed(b)];
-    else if (b.open || b.airborne)
-      [face, arms] = [(['shout', 'cross', 'furious'] as const)[phase], this.posed(b)];
+    else if (b.flash > 0 && b.faceOpen) [face, arms] = ['ouch', posed];
+    else if (this.rage > 0.3) [face, arms] = [named === 'shout' ? 'cross' : named, 'flail'];
+    else if (this.landedT > 0) [face, arms] = ['ouch', 'out'];
+    else if (b.open || b.airborne) [face, arms] = [named, posed];
     else [face, arms] = [(['sulk', 'cross', 'cross'] as const)[phase], 'droop'];
 
-    // ---- his shape, measured up from his feet ----
-    const rear = !b.alive ? 0.9 : roaring ? 1 : b.dizzy > 0 ? Math.min(b.rear, 0.72) : b.rear,
-      capH = lerp(CAP_LOW, CAP_HIGH, rear),
+    // ---- his shape, measured up from his feet. What the simulation says, but for the poses that are only for show ----
+    const dizzyRear = Math.min(b.rear, 0.72),
+      shown = !b.alive ? 0.9 : roaring || this.rage > 0.3 ? 1 : null;
+    this.pose += ((shown === null ? 0 : 1) - this.pose) * Math.min(1, dt * 11);
+    const breath = Math.sin(clock * (asleep ? 0.9 : 1.6)) * (asleep ? 0.022 : 0.012),
+      rear = lerp(b.dizzy > 0 ? dizzyRear : b.rear, shown ?? 1, this.pose),
+      capH =
+        lerp(CAP_LOW, CAP_HIGH, rear) * (1 - sq * 0.75) * (1 + breath) +
+        this.capLag -
+        Math.sin(this.sigh * Math.PI) * 4,
       faceH = capH - lerp(46, 63, rear);
-    this.rig.setPosition(x, feet);
 
-    const capTilt = b.dizzy > 0 ? 0.2 : Math.sin(t * 1.5) * 0.015,
-      capPos = (image: GameObjects.Image) => image.setPosition(0, -capH).setRotation(capTilt);
-    capPos(this.gills)
+    // ---- all of him ----
+    const tremble =
+        this.rage * 3 + (roaring ? 3 : 0) + (b.alive && b.state === 'fight' && phase === 2 ? 0.6 : 0),
+      hop = !b.alive ? Math.abs(Math.sin(clock * 7.5)) * 14 : 0;
+    this.rig
+      .setPosition(x + rand(-tremble, tremble), feet - hop + rand(-tremble, tremble))
+      .setScale(1 + sq * 0.42, 1)
+      .setRotation((b.dizzy > 0 ? 0.05 + Math.sin(t * 3.4) * 0.012 : 0) + this.lean * 0.004);
+
+    // the top of him: his cap takes the whole of a hit and his stalk's top half of it
+    const lean = this.lean + this.kick,
+      wobble = Math.sin(b.spring.sprung * 20) * 0.03 * b.spring.sprung,
+      capTilt =
+        (b.dizzy > 0
+          ? 0.2 + Math.sin(t * 7) * 0.12
+          : !b.alive
+            ? Math.sin(clock * 7.5) * 0.05
+            : Math.sin(t * 1.5) * 0.015) +
+        this.kick * 0.004 +
+        wobble,
+      swell = 1 + b.puff * 0.08 + this.rage * 0.05,
+      capX = (image: GameObjects.Image) => image.setPosition(lean, -capH).setRotation(capTilt);
+
+    capX(this.gills)
       .setVisible(rear > 0.25)
       .setAlpha(clamp((rear - 0.25) / 0.12, 0, 1));
-    const top = capH - 6,
+    const stalkLean = this.lean + this.kick * 0.5,
+      top = capH - 6,
       span = top - STALK_FOOT;
     for (let i = 0; i < STALK_POINTS; i++) {
-      this.stalk.set(i, 0, -(STALK_FOOT + (span * i) / (STALK_POINTS - 1)));
+      const u = i / (STALK_POINTS - 1);
+      this.stalk.set(i, stalkLean * u * u, -(STALK_FOOT + span * u));
     }
     this.stalk.bend();
     this.skirt
-      .setPosition(0, -capH + 42)
+      .setPosition(stalkLean * 0.9, -capH + 42)
       .setVisible(rear > 0.4)
       .setAlpha(clamp((rear - 0.4) / 0.1, 0, 1));
 
     // ---- his arms ----
-    const armY = -Math.max(30, faceH - 44);
+    const armY = -Math.max(30, faceH - 44),
+      wave = !b.alive ? Math.sin(clock * 9) * 0.14 : 0;
     this.armAngle += (ARMS[arms] - this.armAngle) * Math.min(1, dt * 14);
     this.arms.forEach((arm, i) => {
       const side = i ? 1 : -1,
-        flail = arms === 'flail' ? side * 0.25 : 0;
-      arm.setPosition(side * SHOULDER, armY).setRotation(side * (this.armAngle + flail));
+        flail = arms === 'flail' ? Math.sin(clock * 22 + i * 2) * 0.25 : 0;
+      arm.setPosition(side * SHOULDER, armY).setRotation(side * (this.armAngle + flail + wave));
     });
 
-    // ---- his face, and his eyes watching Pip ----
-    const open = eyesOpen(face);
-    show(this.face, moFaceKey(face));
-    this.face.setPosition(0, -faceH);
+    // ---- his face, and his eyes watching Pip from under the brim ----
+    this.blink -= dt;
+    if (this.blink < -0.12) this.blink = 2.2 + Math.random() * 2.8;
+    const faceX = stalkLean * 0.6,
+      open = eyesOpen(face),
+      blink = open && this.blink < 0,
+      seeing = open && !blink;
+    show(this.face, moFaceKey(face, blink));
+    this.face.setPosition(faceX, -faceH);
     this.eyes
-      .setVisible(open)
-      .setPosition(0, -faceH)
+      .setVisible(seeing)
+      .setPosition(faceX, -faceH)
       .setTint(face === 'furious' ? FURIOUS_EYE : 0xffffff);
     this.look += (clamp((p.x - x) / 200, -1, 1) - this.look) * Math.min(1, dt * 10);
     this.pupils.forEach((pupil, i) =>
       pupil
-        .setVisible(open)
-        .setPosition((i ? 1 : -1) * EYE_X + this.look * LOOK, -faceH + EYE_Y + PUPIL_DOWN)
+        .setVisible(seeing)
+        .setPosition(faceX + (i ? 1 : -1) * EYE_X + this.look * LOOK, -faceH + EYE_Y + PUPIL_DOWN)
         .setScale(INV * pupilSize(face)),
     );
 
-    // ---- his cap ----
+    // ---- his cap, turning a new colour if his mood has changed ----
     const set = b.alive ? phase : 3;
+    if (set !== this.set) {
+      show(this.capWas, `mo-cap-${this.set}`);
+      this.set = set;
+      this.capFade = 0;
+    }
+    this.capFade = Math.min(1, this.capFade + dt / CAP_FADE);
     show(this.cap, `mo-cap-${set}`);
-    capPos(this.cap);
     show(this.capGlow, `mo-cap-glow-${set}`);
-    capPos(this.capGlow).setScale(this.capGlowUnit).setAlpha(0.5);
+    const capScaleX = INV * swell,
+      capScaleY = INV * swell * (1 - sq * 0.25);
+    capX(this.capWas)
+      .setVisible(this.capFade < 1)
+      .setScale(capScaleX, capScaleY);
+    capX(this.cap).setAlpha(this.capFade).setScale(capScaleX, capScaleY);
+    const pulse = !b.alive ? 1 : set === 2 ? 0.9 + Math.sin(t * 1.6) * 0.1 : 0.5 + Math.sin(t * 1.6) * 0.15;
+    capX(this.capGlow)
+      .setAlpha(pulse)
+      .setScale(this.units.glow * swell, this.units.glow * swell * (1 - sq * 0.25));
 
     // ---- light and shadow on the ground under him ----
+    const height = GROUND - feet + hop,
+      air = clamp(height / 110, 0, 1),
+      tumbling = b.airborne && b.landX !== null;
     this.pool
       .setPosition(x, GROUND + 2)
       .setTint(hex(MO_PALETTE.caps[set].glow))
-      .setAlpha(0.35)
-      .setScale(this.poolUnit);
-    this.shadow.setPosition(x, GROUND + 3).setScale(this.shadowUnit);
+      .setAlpha(0.35 * (1 - air))
+      .setScale(this.units.pool);
+    // in a hop, his shadow is where he will come down, and grows until he does
+    const grow = tumbling ? clamp(this.airT / 0.8, 0, 1) : 1 - air * 0.7;
+    this.shadow
+      .setPosition(tumbling ? (b.landX ?? x) : x, GROUND + 3)
+      .setScale(this.units.shadow * (0.35 + 0.65 * grow), this.units.shadow * (0.35 + 0.65 * grow))
+      .setAlpha(tumbling ? 0.35 + 0.65 * grow : 1);
 
     // ---- warnings ----
     const warning = b.telegraph > 0;
     this.warnT = warning ? this.warnT + dt : 0;
-    if (warning) showMark(this.mark, x, feet - capH - 92, this.warnT);
+    if (warning) showMark(this.mark, x, feet - capH - 84, this.warnT);
     else this.mark.setVisible(false);
     const landing = b.landX !== null;
     this.ring.setVisible(landing);
@@ -191,25 +340,37 @@ export class MoView implements BossView {
         .setPosition(b.landX ?? 0, GROUND + 1)
         .setScale(INV * 2.6, INV * 1.6)
         .setAlpha(0.7 + Math.sin(b.t * 16) * 0.25);
-      showMark(this.ringMark, b.landX ?? 0, GROUND - 40, this.warnT);
+      if (warning) showMark(this.ringMark, b.landX ?? 0, GROUND - 40, this.warnT);
+      else this.ringMark.setVisible(false);
     } else this.ringMark.setVisible(false);
     this.showHit(b.flash > 0);
+  }
+
+  private reset(b: Mo) {
+    this.seen = b;
+    this.sq = this.sqV = this.capLag = this.lean = this.kick = this.kickV = this.rage = this.pose = 0;
+    this.prevFlash = this.landedT = this.sigh = this.warnT = 0;
+    this.prevPhase = b.phase;
+    this.wasAir = false;
+    this.set = Math.min(b.phase, 3) - 1;
+    this.capFade = 1;
+    this.armAngle = ARMS.droop;
+  }
+
+  // How he throws his arms about when he is up to something, by how cross he is.
+  private posed(b: Mo): Arms {
+    return b.airborne ? 'flail' : (['up', 'out', 'flail'] as const)[Math.min(b.phase, 3) - 1];
   }
 
   private showHit(hit: boolean) {
     if (hit === this.lit) return;
     this.lit = hit;
-    const parts = [this.cap, this.foot, this.skirt, this.gills, ...this.arms];
+    const parts = [this.cap, this.capWas, this.foot, this.skirt, this.gills, ...this.arms];
     for (const image of parts)
       if (hit) image.setTint(HIT_LIGHT).setTintMode(TintModes.ADD);
       else image.clearTint();
     this.stalk.rope
       .setTintMode(hit ? TintModes.ADD : TintModes.MULTIPLY)
       .setColors(hit ? HIT_LIGHT : 0xffffff);
-  }
-
-  // How he throws his arms about when he is up to something, by how cross he is.
-  private posed(b: Mo): Arms {
-    return b.airborne ? 'flail' : (['up', 'out', 'flail'] as const)[Math.min(b.phase, 3) - 1];
   }
 }
