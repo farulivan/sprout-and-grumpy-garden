@@ -1,5 +1,15 @@
 # Changelog
 
+## [3.0.2](https://github.com/farulivan/sprout-and-grumpy-garden/compare/v3.0.1...v3.0.2) (2026-11-03)
+
+
+### Bug Fixes
+
+* stop Safari zooming when a touch button is double-tapped ([#36](https://github.com/farulivan/sprout-and-grumpy-garden/issues/36)) ([27ce66a](https://github.com/farulivan/sprout-and-grumpy-garden/commit/27ce66a94727e755fba0bb5bcc0a7cbb3a69b0a1))
+* **touch:** ignore a quick second tap on the same spot ([0ac56b9](https://github.com/farulivan/sprout-and-grumpy-garden/commit/0ac56b928981f841a786cb4b302d6cdf7d8a67cb))
+* **touch:** stop Safari zooming when a touch button is double-tapped ([de18ce3](https://github.com/farulivan/sprout-and-grumpy-garden/commit/de18ce3436acaccfb995b2947cf763888970efce))
+* **ui:** no zoom from a double tap beside the game ([9389f06](https://github.com/farulivan/sprout-and-grumpy-garden/commit/9389f06561090cea43525c62a85f53ee93cb7e28))
+
 ## [3.0.1](https://github.com/farulivan/sprout-and-grumpy-garden/compare/v3.0.0...v3.0.1) (2026-11-03)
 
 
