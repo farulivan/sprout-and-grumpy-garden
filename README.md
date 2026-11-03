@@ -40,6 +40,42 @@ Needs Node 22 (22.12 or newer) or Node 24, and [pnpm](https://pnpm.io). The pnpm
 manager for this project: `pnpm-lock.yaml` is the one lockfile, npm refuses to install here, and other
 managers' lockfiles are ignored by git so a second one can never be committed.
 
+## Versions
+
+The version you're playing is in **Credits**. It lives in one place, `version` in `package.json`, and follows the
+usual `MAJOR.MINOR.PATCH` of [Semantic Versioning](https://semver.org), read for a game rather than a library:
+
+| Number              | Goes up when                                             | For example                         |
+| ------------------- | -------------------------------------------------------- | ----------------------------------- |
+| **Major** (`3`.0.0) | A new chapter, or a change so big it's a different game  | Chapter 2                           |
+| **Minor** (3.`1`.0) | Something new in the chapters there are                  | A new option, enemy or attack       |
+| **Patch** (3.0.`1`) | A fix or a small adjustment                              | A bug, a balance tweak, better words |
+
+When a number goes up, the ones after it go back to 0. So after 3.0.0 comes 3.0.1 for a fix, 3.1.0 for something
+new, and 4.0.0 for the next chapter.
+
+A released version is a tag on a commit, and it never changes. The `v*` tags are protected, so they can't be moved
+or deleted: a correction is a new version.
+
+| Version  | What it is                                                 | Where to play it          |
+| -------- | ---------------------------------------------------------- | ------------------------- |
+| `v1.0.0` | The first version, before the visual overhaul              | `sprout-v1.farulivan.com` |
+| `v2.0.0` | The visual overhaul                                        | Not online on its own     |
+| `v2.1.0` | The last of version 2: all of Chapter 1, before Chapter 2  | `sprout-v2.farulivan.com` |
+| `v3.0.0` | Chapter 2: the Mushroom Wood and Mo                        | `sprout.farulivan.com`    |
+
+**To release a version:**
+
+1. In the pull request that finishes it, set `version` in `package.json` and add it to the table above. A test
+   fails if the table doesn't list it.
+2. Merging to `main` puts it online by itself (see "On Cloudflare").
+3. Tag the commit that was merged, checking it first, because a tag can't be moved afterwards:
+
+   ```bash
+   git fetch origin && git log -1 origin/main
+   git tag -a v3.1.0 -m "Sprout & the Grumpy Garden 3.1.0" origin/main && git push origin v3.1.0
+   ```
+
 ## Putting it online
 
 `pnpm build` writes a static site to `dist/`: an `index.html` and an `assets/` folder. Any static host
@@ -74,12 +110,13 @@ version to 22 or 24.
 
 ### On Cloudflare
 
-The game is hosted on Cloudflare as two Workers that serve only files, which is free with no limit on
+The game is hosted on Cloudflare as three Workers that serve only files, which is free with no limit on
 visits. Each has a subdomain of its own, so their saves stay apart:
 
 | Address                   | Worker      | What                             | How it gets there                         |
 | ------------------------- | ----------- | -------------------------------- | ----------------------------------------- |
 | `sprout.farulivan.com`    | `sprout`    | the game, from `main`            | Cloudflare builds and deploys every merge |
+| `sprout-v2.farulivan.com` | `sprout-v2` | the last of version 2, tag `v2.1.0` | uploaded once by hand                     |
 | `sprout-v1.farulivan.com` | `sprout-v1` | the first version, tag `v1.0.0`  | uploaded once by hand                     |
 
 **The game.** `wrangler.jsonc` says what the site is (the `dist/` folder), what the Worker is called and
@@ -114,8 +151,21 @@ npx wrangler@4 deploy --name sprout-v1 --assets ./dist --compatibility-date 2026
   --domain sprout-v1.farulivan.com
 ```
 
+**The last of version 2** never changes either. It lives on the `release/v2` branch: `main` as it was just before
+Chapter 2 (`5e8bf3c`), plus the version in Credits. On that branch, `wrangler.jsonc` is v2's own and names only
+`sprout-v2` and its address, so deploying from it can't reach the live game. To upload it:
+
+```bash
+git worktree add ../sprout-v2 release/v2 && cd ../sprout-v2
+pnpm install --frozen-lockfile && pnpm build
+pnpm exec wrangler deploy
+```
+
+To keep a later major version online the same way, branch `release/v<major>` from its last tag and make that
+branch's `wrangler.jsonc` the version's own.
+
 **What the domain adds.** Two settings of `farulivan.com` each put a small script on every page it serves,
-on both sites. They are Cloudflare's, not the game's, and nothing in this repo switches them on or off:
+on all of the sites. They are Cloudflare's, not the game's, and nothing in this repo switches them on or off:
 
 - **Web Analytics** counts visits and measures loading. Its script comes from
   `static.cloudflareinsights.com` and reports each page view to `/cdn-cgi/rum` on the same domain: the
@@ -126,7 +176,7 @@ on both sites. They are Cloudflare's, not the game's, and nothing in this repo s
   short test from `/cdn-cgi/challenge-platform/` to tell browsers from bots, and keeps the result in a
   `cf_clearance` cookie on `.farulivan.com`. The check itself never blocks or challenges a visitor. It is
   set for the whole domain, under **Security Settings → Bot traffic**, and cannot be left out for these
-  two addresses alone.
+  addresses alone.
 
 Both were checked on the live site in October 2026 and deliberately left on: the first shows how many
 people play each version, and the second guards the rest of the domain.
