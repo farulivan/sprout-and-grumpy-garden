@@ -327,6 +327,7 @@ export class Overlay {
     byId('lose-tip').hidden = over;
     byId('lose-over').hidden = !over;
     byId('lose-who').textContent = text.who;
+    byId('lose-mood').textContent = text.mood;
     byId('btn-retry').textContent = over ? 'Start again' : 'Try again';
     byId('btn-lose-menu').hidden = !over; // the game is over: a way back to the menu too
     byId('lose-progress').replaceChildren(

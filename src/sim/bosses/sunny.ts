@@ -1,4 +1,4 @@
-// Sunny the Grumpy Sunflower. Rooted on the right; the head (x, y, r) is the 2x-damage hurtbox,
+// Sunny the Angry Sunflower. Rooted on the right; the head (x, y, r) is the 2x-damage hurtbox,
 // stemBox is the 1x-damage hurtbox reachable from the ground.
 // Add an attack by writing another *name() generator that ends with this.endAttack(), then list it in
 // ATTACKS and in POOLS for the phases that should use it.
@@ -21,7 +21,7 @@ const POOLS: Record<number, readonly SunnyAttack[]> = {
 
 export class Sunny extends Boss {
   readonly id = 'sunny' as const;
-  readonly name = 'Sunny the Sunflower';
+  readonly name = 'Sunny the Angry Sunflower';
   readonly platforms = platforms;
   readonly maxX = ARENA_R;
   readonly baseX = 790;
