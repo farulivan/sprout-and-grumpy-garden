@@ -25,6 +25,8 @@ body {
   margin: 0;
   height: 100%;
   overflow: hidden;
+  /* nothing to scroll or zoom: a double tap beside the game (above or below it on a tablet) must not zoom */
+  touch-action: none;
   font-family: 'Fredoka', 'Nunito', 'Segoe UI', system-ui, sans-serif;
   /* a dark garden-green surround, so the bright game sits in it like a picture in a frame */
   background:
