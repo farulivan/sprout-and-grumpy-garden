@@ -432,7 +432,7 @@ The dusk forest from PR 3 is good, and it stays. Only make it stop competing wit
 
 ## 8. HUD, words and sound
 
-**Portrait.** Add `drawPortrait` (from `reference.html`) to `src/game/hud/art.ts`, and bake `bar-icon-mo-0`..`2` (one
+**Portrait.** `drawPortrait` in `reference.html` hid his eyes under his cap, and Farul asked for one that looks like the new Mo. So `drawMoPortrait` in `src/game/hud/art.ts` is the one to follow, not the reference. Bake `bar-icon-mo-0`..`2` (one
 per phase) and `bar-icon-mo-joy` beside Sunny's, at 64 × 64. **Bake them in `bakeHud`, not in `bakeMo`.** The HUD shows
 one before `prepare` is certain to have run, and `show()` throws on a part that isn't baked. Add
 `portraitPhases?: readonly [string, string, string]` to `Chapter`, so that the bar's icon follows his cap. The stage's

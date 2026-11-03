@@ -140,7 +140,7 @@ function drawCapGlow(c: Ctx, p: CapColors) {
 }
 
 // The underside, seen from a little below as he rears up.
-function drawGills(c: Ctx) {
+export function drawGills(c: Ctx) {
   ellipse(c, 0, 22, 92, 25);
   c.fillStyle = linear(c, 0, 0, 0, 48, [...MO_PALETTE.gills]);
   c.fill();

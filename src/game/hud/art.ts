@@ -3,9 +3,10 @@
 import type { Scene } from 'phaser';
 import { TAU } from '../../config';
 import { bake, HAZY, SOFT } from '../art/bake';
+import { rgba } from '../art/color';
 import { circle, glow, heart, inside, leaf, line, linear, radial, roundRect } from '../art/draw';
 import { drawFace } from '../art/face';
-import { drawCap, MO_PALETTE, stalkPath, type CapColors } from '../views/mo/art';
+import { capPath, drawCap, drawGills, MO_PALETTE, type CapColors } from '../views/mo/art';
 import { drawWholeFace, type MoFace } from '../views/mo/face';
 
 export const BAR_W = 380,
@@ -14,26 +15,61 @@ export const BAR_W = 380,
 export const FILL_W = BAR_W - 5,
   FILL_H = BAR_H - 5;
 
-// Mo's portrait: what reads at this size is his cap, its spots and his eyes.
-function drawMoPortrait(c: CanvasRenderingContext2D, cap: CapColors, mood: MoFace) {
-  glow(c, 0, 3, 30, '#120826', 0.45);
+// Mo's portrait: the head and shoulders of the real Mo reared up, with his eyes and brows clear of his brim, because at
+// this size they are who he is. His outlines are drawn again heavier, since his own would all but vanish scaled down.
+const PORTRAIT_CAP = 0.28, // his cap's size here, against his own...
+  PORTRAIT_FACE = 0.38, // ...and his face's, a little larger so that it reads
+  PORTRAIT_CAP_Y = -12,
+  PORTRAIT_FACE_Y = 10,
+  PORTRAIT_INK = 2.4;
+function drawMoPortrait(c: CanvasRenderingContext2D, cap: CapColors, mood: MoFace, look = 0) {
+  const { stalk, ink } = MO_PALETTE,
+    bust = () => {
+      c.beginPath();
+      c.moveTo(-15, -6);
+      c.bezierCurveTo(-16, 8, -21, 15, -19.5, 24);
+      c.bezierCurveTo(-18.5, 31.5, 18.5, 31.5, 19.5, 24);
+      c.bezierCurveTo(21, 15, 16, 8, 15, -6);
+      c.closePath();
+    };
+  glow(c, 0, 1.5, 30, '#120826', 0.5);
+  // a little in from the box's edges, because the bar sits close to the top of the screen
+  c.translate(0, 1.5);
+  c.scale(0.94, 0.94);
   c.save();
-  c.translate(0, 14);
-  c.scale(0.42, 0.42);
-  stalkPath(c, 20);
-  c.fillStyle = MO_PALETTE.stalk.lit;
+  c.translate(0, PORTRAIT_CAP_Y);
+  c.scale(PORTRAIT_CAP, PORTRAIT_CAP);
+  drawGills(c);
+  c.restore();
+  bust();
+  c.fillStyle = linear(c, -21, 0, 21, 0, [
+    [0, stalk.lit],
+    [0.28, stalk.hi],
+    [0.62, stalk.lit],
+    [0.86, stalk.mid],
+    [1, stalk.low],
+  ]);
   c.fill();
-  line(c, MO_PALETTE.ink, 6);
+  inside(c, bust, () => {
+    // the cap's shadow, and the dusk's cool light low down
+    c.fillStyle = linear(c, 0, -6, 0, 6, [rgba(stalk.deep, 0.85), rgba(stalk.deep, 0)]);
+    c.fillRect(-22, -6, 44, 12);
+    c.fillStyle = linear(c, 0, 31, 0, 22, [rgba(stalk.deep, 0.7), rgba(stalk.deep, 0)]);
+    c.fillRect(-22, 22, 44, 10);
+  });
+  bust();
+  line(c, ink, PORTRAIT_INK);
+  c.save();
+  c.translate(0, PORTRAIT_FACE_Y);
+  c.scale(PORTRAIT_FACE, PORTRAIT_FACE);
+  drawWholeFace(c, mood, look);
   c.restore();
   c.save();
-  c.translate(0, 4);
-  c.scale(0.27, 0.27);
-  drawWholeFace(c, mood);
-  c.restore();
-  c.save();
-  c.translate(0, -6);
-  c.scale(0.29, 0.29);
+  c.translate(0, PORTRAIT_CAP_Y);
+  c.scale(PORTRAIT_CAP, PORTRAIT_CAP);
   drawCap(c, cap);
+  capPath(c);
+  line(c, ink, PORTRAIT_INK / PORTRAIT_CAP);
   c.restore();
 }
 
@@ -41,9 +77,10 @@ function drawMoPortrait(c: CanvasRenderingContext2D, cap: CapColors, mood: MoFac
 // chapter's art is ready. They come after the atlas is packed, so each has a texture of its own: on the shared page they
 // would move everything else on it, and Chapter 1 should not change for a boss it never shows.
 export function bakeMoPortraits(scene: Scene) {
-  (['cross', 'cross', 'furious'] as const).forEach((mood, i) =>
-    bake(scene, `bar-icon-mo-${i}`, 64, 64, 32, 32, (c) => drawMoPortrait(c, MO_PALETTE.caps[i], mood)),
-  );
+  // sulking in his first mood, and watching Pip come along the path out of the corner of his eye
+  bake(scene, 'bar-icon-mo-0', 64, 64, 32, 32, (c) => drawMoPortrait(c, MO_PALETTE.caps[0], 'sulk', -0.8));
+  bake(scene, 'bar-icon-mo-1', 64, 64, 32, 32, (c) => drawMoPortrait(c, MO_PALETTE.caps[1], 'cross', -0.3));
+  bake(scene, 'bar-icon-mo-2', 64, 64, 32, 32, (c) => drawMoPortrait(c, MO_PALETTE.caps[2], 'furious'));
   bake(scene, 'bar-icon-mo-joy', 64, 64, 32, 32, (c) => drawMoPortrait(c, MO_PALETTE.caps[3], 'joy'));
 }
 
