@@ -42,39 +42,48 @@ managers' lockfiles are ignored by git so a second one can never be committed.
 
 ## Versions
 
-The version you're playing is in **Credits**. It lives in one place, `version` in `package.json`, and follows the
-usual `MAJOR.MINOR.PATCH` of [Semantic Versioning](https://semver.org), read for a game rather than a library:
+The version you're playing is in **Credits**. It comes from `version` in `package.json` and follows the usual
+`MAJOR.MINOR.PATCH` of [Semantic Versioning](https://semver.org), read for a game rather than a library:
 
-| Number              | Goes up when                                             | For example                         |
-| ------------------- | -------------------------------------------------------- | ----------------------------------- |
-| **Major** (`3`.0.0) | A new chapter, or a change so big it's a different game  | Chapter 2                           |
-| **Minor** (3.`1`.0) | Something new in the chapters there are                  | A new option, enemy or attack       |
-| **Patch** (3.0.`1`) | A fix or a small adjustment                              | A bug, a balance tweak, better words |
+| Number              | Goes up when                                            | For example                          |
+| ------------------- | ------------------------------------------------------- | ------------------------------------ |
+| **Major** (`3`.0.0) | A new chapter, or a change so big it's a different game | Chapter 2                            |
+| **Minor** (3.`1`.0) | Something new in the chapters there are                 | A new option, enemy or attack        |
+| **Patch** (3.0.`1`) | A fix or a small adjustment                             | A bug, a balance tweak, better words |
 
-When a number goes up, the ones after it go back to 0. So after 3.0.0 comes 3.0.1 for a fix, 3.1.0 for something
-new, and 4.0.0 for the next chapter.
+When a number goes up, the ones after it go back to 0. What changed in each version is in
+[`CHANGELOG.md`](CHANGELOG.md).
 
-A released version is a tag on a commit, and it never changes. The `v*` tags are protected, so they can't be moved
-or deleted: a correction is a new version.
+**Nobody edits the version by hand.** On every merge to `main`, the Release workflow (`.github/workflows/release.yml`)
+runs [release-please](https://github.com/googleapis/release-please). It keeps one pull request open for the next
+release, titled with its version, which it works out from the commit messages since the last release: a `fix:` makes
+a patch and a `feat:` a minor. That pull request sets `version` in `package.json` and adds the release's entry to
+`CHANGELOG.md`. It grows as more is merged, and nothing is released until you merge it.
 
-| Version  | What it is                                                 | Where to play it          |
-| -------- | ---------------------------------------------------------- | ------------------------- |
-| `v1.0.0` | The first version, before the visual overhaul              | `sprout-v1.farulivan.com` |
-| `v2.0.0` | The visual overhaul                                        | Not online on its own     |
-| `v2.1.0` | The last of version 2: all of Chapter 1, before Chapter 2  | `sprout-v2.farulivan.com` |
-| `v3.0.0` | Chapter 2: the Mushroom Wood and Mo                        | `sprout.farulivan.com`    |
+**Merging it is the release.** release-please tags the commit `vX.Y.Z` and publishes a GitHub Release with the same
+notes, and the workflow then moves the `production` branch to it. Cloudflare builds that branch and puts it online, so
+the live game is always a release and shows its own number. Every merge to `main` can still be tried before that, on
+its preview address (see "On Cloudflare").
 
-**To release a version:**
+**A new chapter is a major version**, which a commit message can't say on its own. Put `Release-As: 4.0.0` in the body
+of a commit in the chapter's pull request, or merge an empty one:
+`git commit --allow-empty -m "chore: release 4.0.0" -m "Release-As: 4.0.0"`. The release pull request then proposes
+4.0.0. A commit marked `feat!:` does the same.
 
-1. In the pull request that finishes it, set `version` in `package.json` and add it to the table above. A test
-   fails if the table doesn't list it.
-2. Merging to `main` puts it online by itself (see "On Cloudflare").
-3. Tag the commit that was merged, checking it first, because a tag can't be moved afterwards:
+A released version never changes. The `v*` tags are protected, so they can't be moved or deleted: a correction is a
+new version.
 
-   ```bash
-   git fetch origin && git log -1 origin/main
-   git tag -a v3.1.0 -m "Sprout & the Grumpy Garden 3.1.0" origin/main && git push origin v3.1.0
-   ```
+| Where                     | Which version                                              |
+| ------------------------- | ---------------------------------------------------------- |
+| `sprout.farulivan.com`    | The latest release                                         |
+| `sprout-v2.farulivan.com` | `v2.1.0`, the last of version 2: all of Chapter 1, before Chapter 2 |
+| `sprout-v1.farulivan.com` | `v1.0.0`, the first version, before the visual overhaul    |
+
+**Set up once:** the workflow works with a token of its own, because a pull request opened by the workflow's built-in
+token never runs the checks `main` requires. It is a fine-grained personal access token for this repository only,
+with **Contents**, **Pull requests** and **Issues** set to read and write, saved as the Actions secret
+`RELEASE_PLEASE_TOKEN`. Release pull requests are opened in its owner's name. Until the secret exists, the workflow
+only leaves a notice. The token expires, at most a year after it was made: make a new one then and replace the secret.
 
 ## Putting it online
 
@@ -115,7 +124,7 @@ visits. Each has a subdomain of its own, so their saves stay apart:
 
 | Address                   | Worker      | What                             | How it gets there                         |
 | ------------------------- | ----------- | -------------------------------- | ----------------------------------------- |
-| `sprout.farulivan.com`    | `sprout`    | the game, from `main`            | Cloudflare builds and deploys every merge |
+| `sprout.farulivan.com`    | `sprout`    | the game's latest release        | Cloudflare builds the `production` branch |
 | `sprout-v2.farulivan.com` | `sprout-v2` | the last of version 2, tag `v2.1.0` | uploaded once by hand                     |
 | `sprout-v1.farulivan.com` | `sprout-v1` | the first version, tag `v1.0.0`  | uploaded once by hand                     |
 
@@ -126,7 +135,7 @@ there:
 
 | Setting         | Value                                                            |
 | --------------- | ---------------------------------------------------------------- |
-| Git branch      | `main`                                                           |
+| Git branch      | `production`                                                     |
 | Build command   | `corepack pnpm install --frozen-lockfile && corepack pnpm build` |
 | Deploy command  | `./node_modules/.bin/wrangler deploy`                            |
 | Preview command | `./node_modules/.bin/wrangler preview`                           |
@@ -137,8 +146,10 @@ pinned here and would install with that, so the variable turns its own install o
 fetches the pinned pnpm through Corepack instead. And its default commands start with `npx`, which this
 project refuses (see "Run it"), so they call the installed wrangler directly.
 
-With **Enable Preview Builds** ticked there, every pull request is built too and gets an address of its
-own to try the change at. Those addresses are public.
+Only the `production` branch goes online, and only the Release workflow moves it, to each new release (see
+"Versions"). With **Enable Preview Builds** ticked, every other branch is built too and gets an address of its own:
+each pull request, and `main` itself at `main-sprout.farulivan.workers.dev`, which is the game as it will be in the
+next release. Those addresses are public.
 
 To serve a build locally the way Cloudflare will, headers included: `pnpm build && pnpm exec wrangler dev`.
 
