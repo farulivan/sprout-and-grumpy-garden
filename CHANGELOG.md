@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.0.1](https://github.com/farulivan/sprout-and-grumpy-garden/compare/v3.0.0...v3.0.1) (2026-11-03)
+
+
+### Bug Fixes
+
+* give each boss a feeling of his own, used everywhere ([7402280](https://github.com/farulivan/sprout-and-grumpy-garden/commit/7402280f0950beedeb2c4bb39df2cfa632f128df))
+* give each boss a feeling of his own, used everywhere ([#33](https://github.com/farulivan/sprout-and-grumpy-garden/issues/33)) ([f8f6ef2](https://github.com/farulivan/sprout-and-grumpy-garden/commit/f8f6ef2319a68041b40316615a4ecf7291ccb3a6))
+
 ## [3.0.0](https://github.com/farulivan/sprout-and-grumpy-garden/compare/v2.1.0...v3.0.0) (2026-11-03)
 
 ### Features
