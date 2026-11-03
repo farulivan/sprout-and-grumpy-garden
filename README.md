@@ -61,9 +61,10 @@ a patch and a `feat:` a minor. That pull request sets `version` in `package.json
 `CHANGELOG.md`. It grows as more is merged, and nothing is released until you merge it.
 
 **Merging it is the release.** release-please tags the commit `vX.Y.Z` and publishes a GitHub Release with the same
-notes, and the workflow then moves the `production` branch to it. Cloudflare builds that branch and puts it online, so
-the live game is always a release and shows its own number. Every merge to `main` can still be tried before that, on
-its preview address (see "On Cloudflare").
+notes, and Cloudflare puts that merge online. Cloudflare builds every merge to `main`, but its deploy command,
+`scripts/deploy.sh`, only deploys a commit titled `chore(main): release …`, which only a release pull request's merge is.
+Anything else is uploaded without going online, to try at `main-sprout.farulivan.workers.dev`. So the live game is
+always a release and shows its own number.
 
 **A new chapter is a major version**, which a commit message can't say on its own. Put `Release-As: 4.0.0` in the body
 of a commit in the chapter's pull request, or merge an empty one:
@@ -80,10 +81,12 @@ new version.
 | `sprout-v1.farulivan.com` | `v1.0.0`, the first version, before the visual overhaul    |
 
 **Set up once:** the workflow works with a token of its own, because a pull request opened by the workflow's built-in
-token never runs the checks `main` requires. It is a fine-grained personal access token for this repository only,
-with **Contents**, **Pull requests** and **Issues** set to read and write, saved as the Actions secret
-`RELEASE_PLEASE_TOKEN`. Release pull requests are opened in its owner's name. Until the secret exists, the workflow
-only leaves a notice. The token expires, at most a year after it was made: make a new one then and replace the secret.
+token never runs the checks `main` requires. It is a fine-grained personal access token for this repository only, with
+**Contents** and **Pull requests** set to read and write and nothing else, saved as the Actions secret
+`RELEASE_PLEASE_TOKEN`. Release pull requests are opened in its owner's name. Only the Release workflow uses it, which
+runs on `main` and never on a pull request, and runs nothing but the pinned release-please action. Until the secret
+exists, the workflow only leaves a notice. When the token expires, the Release workflow fails: make a new one and
+replace the secret. If release-please ever can't label its pull request, give the token **Issues** as well.
 
 ## Putting it online
 
@@ -124,7 +127,7 @@ visits. Each has a subdomain of its own, so their saves stay apart:
 
 | Address                   | Worker      | What                             | How it gets there                         |
 | ------------------------- | ----------- | -------------------------------- | ----------------------------------------- |
-| `sprout.farulivan.com`    | `sprout`    | the game's latest release        | Cloudflare builds the `production` branch |
+| `sprout.farulivan.com`    | `sprout`    | the game's latest release        | Cloudflare deploys each release           |
 | `sprout-v2.farulivan.com` | `sprout-v2` | the last of version 2, tag `v2.1.0` | uploaded once by hand                     |
 | `sprout-v1.farulivan.com` | `sprout-v1` | the first version, tag `v1.0.0`  | uploaded once by hand                     |
 
@@ -135,9 +138,9 @@ there:
 
 | Setting         | Value                                                            |
 | --------------- | ---------------------------------------------------------------- |
-| Git branch      | `production`                                                     |
+| Git branch      | `main`                                                           |
 | Build command   | `corepack pnpm install --frozen-lockfile && corepack pnpm build` |
-| Deploy command  | `./node_modules/.bin/wrangler deploy`                            |
+| Deploy command  | `sh scripts/deploy.sh`                                           |
 | Preview command | `./node_modules/.bin/wrangler preview`                           |
 | Build variable  | `SKIP_DEPENDENCY_INSTALL` = `1`                                  |
 
@@ -146,10 +149,11 @@ pinned here and would install with that, so the variable turns its own install o
 fetches the pinned pnpm through Corepack instead. And its default commands start with `npx`, which this
 project refuses (see "Run it"), so they call the installed wrangler directly.
 
-Only the `production` branch goes online, and only the Release workflow moves it, to each new release (see
-"Versions"). With **Enable Preview Builds** ticked, every other branch is built too and gets an address of its own:
-each pull request, and `main` itself at `main-sprout.farulivan.workers.dev`, which is the game as it will be in the
-next release. Those addresses are public.
+Only a release goes online: the deploy command, `scripts/deploy.sh`, runs `wrangler deploy` for the merge of a
+release pull request, and otherwise `wrangler versions upload`, which builds the game without deploying it (see
+"Versions"). The latest of those is at `main-sprout.farulivan.workers.dev`: the game as it will be in the next release.
+With **Enable Preview Builds** ticked, every pull request is built too and gets an address of its own. Those addresses
+are public.
 
 To serve a build locally the way Cloudflare will, headers included: `pnpm build && pnpm exec wrangler dev`.
 
