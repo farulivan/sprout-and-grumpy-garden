@@ -7,9 +7,12 @@ import type { ParticleShape } from './presentation';
 import type { BossId } from './sim/bosses';
 import type { StageId } from './sim/stage/stages';
 
-// The lose card, for a level of the chapter: who is still grumpy, and how far Pip got.
+// The lose card, for a level of the chapter: who is still in a mood, and how far Pip got. The garden's mood is
+// "grumpy"; each boss has a feeling of his own, the one in his name ("Mo the Moody Mushroom"), and every line about him
+// uses it (tests/chapters.test.ts checks).
 export interface LoseText {
-  readonly who: string; // "<who> still grumpy…"
+  readonly who: string; // "<who> still <mood>…"
+  readonly mood: string;
   readonly progress: (percent: number) => string;
 }
 // The win card, once the boss is cheered up.
@@ -50,7 +53,7 @@ export interface Chapter {
 
 export const SUNFLOWER = {
   id: 'sunflower',
-  title: 'Chapter 1 · The Grumpy Sunflower',
+  title: 'Chapter 1 · The Angry Sunflower',
   sign: 'Garden Path',
   gate: "Sunny's Meadow",
   stage: 'gardenPath',
@@ -61,7 +64,7 @@ export const SUNFLOWER = {
     // a touch screen can't aim, but a straight seed from the high leaf reaches his face
     touch: 'Shoot his face from the high leaf: double damage!',
   },
-  phaseToasts: ['Sunny is getting grumpier!', 'Sunny is SUPER grumpy!'],
+  phaseToasts: ['Sunny is getting angrier!', 'Sunny is SUPER angry!'],
   cheeredToast: 'Sunny is blooming!',
   shed: ['#ffc62e', '#ff982c'], // yellow petals, then orange
   shedShape: 'petal',
@@ -69,10 +72,12 @@ export const SUNFLOWER = {
   lose: {
     stage: {
       who: 'The garden path is',
+      mood: 'grumpy',
       progress: (percent) => `You made it ${percent}% of the way to Sunny!`,
     },
     boss: {
       who: 'Sunny is',
+      mood: 'angry',
       progress: (percent) => `You cheered Sunny up ${percent}% of the way!`,
     },
   },
@@ -96,7 +101,7 @@ export const WOOD = {
     // a touch screen can't aim, but a straight seed in the air reaches his face
     touch: 'He rears up to attack: jump and hit his face for double damage!',
   },
-  phaseToasts: ['Mo is getting cross!', 'Mo is FURIOUS!'],
+  phaseToasts: ['Mo is getting moodier!', 'Mo is SUPER moody!'],
   cheeredToast: 'Mo is beaming!',
   shed: ['#6a8cff', '#ff7a3c'], // the blue of his cap, then the orange
   shedShape: 'spot',
@@ -105,10 +110,12 @@ export const WOOD = {
   lose: {
     stage: {
       who: 'The Mushroom Wood is',
+      mood: 'grumpy',
       progress: (percent) => `You made it ${percent}% of the way to Mo!`,
     },
     boss: {
       who: 'Mo is',
+      mood: 'moody',
       progress: (percent) => `You cheered Mo up ${percent}% of the way!`,
     },
   },

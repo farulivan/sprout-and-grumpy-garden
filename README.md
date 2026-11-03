@@ -4,7 +4,7 @@ A cute, kid-friendly run 'n gun game in the style of Cuphead and Mega Man, theme
 **Pip** the sprout cheers up the garden's grumpy plants by showering them with seeds: the small ones along a
 scrolling stage, then its boss.
 
-The game is named after the garden and each chapter after its boss. There are two so far. In **The Grumpy
+The game is named after the garden and each chapter after its boss. There are two so far. In **The Angry
 Sunflower**, walk the Garden Path to Sunny's meadow, then win by emptying **Sunny**'s bar without losing all
 your hearts. In **The Moody Mushroom**, do the same through the Mushroom Wood for **Mo**. Cheering up a boss earns
 a life and opens the next chapter.

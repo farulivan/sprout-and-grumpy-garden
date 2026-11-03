@@ -5,7 +5,9 @@ import { CHAPTERS, SUNFLOWER, WOOD, type Chapter } from '../src/chapters';
 import { present, type Burst, type Presenter, type Ring, type SfxName } from '../src/presentation';
 import { BOSSES } from '../src/sim/bosses';
 import type { SimEvent } from '../src/sim/events';
+import { Fight } from '../src/sim/fight';
 import { STAGES } from '../src/sim/stage/stages';
+import howToPlay from '../index.html?raw';
 
 // Another chapter, with different words and colours in every place the game shows them.
 const OTHER: Chapter = {
@@ -46,6 +48,29 @@ describe('chapters', () => {
       expect(BOSSES).toHaveProperty(c.boss);
     }
     expect(new Set(CHAPTERS.map((c) => c.id)).size).toBe(CHAPTERS.length);
+  });
+
+  it("gives each boss a feeling of his own, and uses it everywhere he's mentioned", () => {
+    const feelings = new Set<string>();
+    for (const c of CHAPTERS) {
+      const name = new Fight({ seed: 1, boss: c.boss }).boss.name,
+        // "<Name> the <Feeling> <Plant>"
+        [, short, feeling, plant] = /^(\w+) the (\w+) (\w+)$/.exec(name) ?? [];
+      expect(short, name).toBeDefined();
+      const mood = feeling.toLowerCase();
+      expect(c.title).toMatch(new RegExp(`· The ${feeling} ${plant}$`));
+      expect(c.lose.boss).toMatchObject({ who: `${short} is`, mood });
+      expect(c.phaseToasts).toEqual([
+        `${short} is getting ${mood.replace(/y$/, 'i')}er!`,
+        `${short} is SUPER ${mood}!`,
+      ]);
+      expect(howToPlay).toContain(name);
+      feelings.add(mood);
+    }
+    // ...and no two bosses share one, nor with the garden, whose word is "grumpy"
+    expect(feelings.size).toBe(CHAPTERS.length);
+    expect(feelings.has('grumpy')).toBe(false);
+    for (const c of CHAPTERS) expect(c.lose.stage.mood).toBe('grumpy');
   });
 
   it('starts with the Garden Path and Sunny', () => {
