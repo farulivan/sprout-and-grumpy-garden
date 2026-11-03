@@ -20,6 +20,7 @@ const newSeed = () => Math.floor(Math.random() * 2 ** 32);
 // Pip's lives in a game, as in Super Mario Bros.: losing a level, or giving it up with Start over, costs one,
 // and with none left the game starts again from its first level.
 export const LIVES = 3;
+const LIVES_PER_BOSS = 1; // ...and every boss cheered up earns another
 
 // What is being played: a boss fight, a stage, or Pip's yard behind the title and the menu.
 export type Played = Fight | Stage | Yard;
@@ -53,7 +54,7 @@ export class App {
     this.overlay = new Overlay(
       {
         play: () => this.play(),
-        start: () => this.start(),
+        onward: () => this.onward(),
         retry: () => this.retry(),
         restart: () => this.startOver(),
         resume: () => this.setPaused(false),
@@ -91,11 +92,26 @@ export class App {
     this.overlay.show(null);
   }
 
-  // Play again, and Start again once the lives are gone: a new game from the first chapter, with all of
+  // Play, Play again and Start again once the lives are gone: a new game from the first chapter, with all of
   // Pip's lives.
   start() {
     this.chapter = this.o.firstChapter ?? 0;
     this.lives = LIVES;
+    this.startChapter();
+  }
+
+  // The win card's main button: on to the next chapter, or after the last one a new game.
+  onward() {
+    if (!this.hasNextChapter) return this.start();
+    this.chapter++;
+    this.startChapter();
+  }
+
+  private get hasNextChapter() {
+    return this.chapter + 1 < CHAPTERS.length;
+  }
+
+  private startChapter() {
     if (this.o.startAtBoss) this.startBoss();
     else this.startStage();
   }
@@ -275,8 +291,10 @@ export class App {
     if (e.type === 'win' && this.level instanceof Fight) {
       const boss = this.level.boss.id,
         best = save.best(boss),
-        isBest = save.recordWin(boss, e.result.time);
-      this.overlay.showWin(e.result, best, isBest, chapter.win, this.path ?? undefined);
+        isBest = save.recordWin(boss, e.result.time),
+        next = this.hasNextChapter;
+      if (next) this.lives += LIVES_PER_BOSS; // past the last boss there's nothing left to spend it on
+      this.overlay.showWin(e.result, best, isBest, chapter.win, next, this.path ?? undefined);
     } else if (e.type === 'stageClear' && this.level instanceof Stage) {
       save.recordStage(this.level.id, e.result.time);
       this.path = { name: this.level.name, time: e.result.time };

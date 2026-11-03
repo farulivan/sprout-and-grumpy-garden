@@ -16,7 +16,7 @@ export interface StagePath {
 
 export interface OverlayHandlers {
   play(): void; // Play on the main menu: Pip sets off down the garden path
-  start(): void; // a new game, from its first level, straight away
+  onward(): void; // the win card's main button: the next chapter, or after the last one a new game
   retry(): void; // the level that was lost, again; with no lives left, a new game
   restart(): void; // Start over: gives up this life for the level again
   resume(): void;
@@ -120,7 +120,7 @@ export class Overlay {
       });
     }
     byId('btn-play').addEventListener('click', handlers.play);
-    byId('btn-again').addEventListener('click', handlers.start);
+    byId('btn-again').addEventListener('click', handlers.onward);
     byId('btn-retry').addEventListener('click', handlers.retry);
     byId('btn-restart').addEventListener('click', handlers.restart);
     byId('btn-resume').addEventListener('click', handlers.resume);
@@ -280,7 +280,15 @@ export class Overlay {
 
   // text: what the chapter says about the win. path: how the stage before the boss went, if this run came
   // that way.
-  showWin(r: FightResult, best: number | null, isBest: boolean, text: WinText, path?: StagePath) {
+  // next: there is another chapter to go on to, and the win has earned a life for it.
+  showWin(
+    r: FightResult,
+    best: number | null,
+    isBest: boolean,
+    text: WinText,
+    next: boolean,
+    path?: StagePath,
+  ) {
     byId('win-badge').textContent = text.badge;
     byId('win-line').textContent = text.line;
     // Each star earned pops in, one after another (see .star.on in style.css).
@@ -293,9 +301,11 @@ export class Overlay {
       el('span', '', `Bonks ${r.hits}`),
     ];
     if (r.easy) stats.push(el('span', '', 'Easy mode'));
+    if (next) stats.push(el('span', 'lives', '+1 life'));
     // the stage's own row under the boss's
     if (path) stats.push(el('i', 'break'), el('span', '', `${path.name} ${path.time.toFixed(1)}s`));
     byId('win-stats').replaceChildren(...stats);
+    byId('btn-again').textContent = next ? 'Next chapter' : 'Play again';
     this.show('win');
   }
 
