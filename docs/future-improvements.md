@@ -10,8 +10,7 @@ running in headless Chrome (see "About the numbers").
 
 ## Suggested order
 
-1. One chapter profile (#17), then a second chapter: a harder stage and a new boss. This is the work now in
-   hand.
+1. ~~One chapter profile (#17), then a second chapter: a harder stage and a new boss.~~ Done.
 2. The quick fixes (#18, #20, #25) and a browser smoke test (#15). They are small and safe, and none of them
    changes how the game plays.
 3. Sound (#13), the biggest gap left against the look of the game.
@@ -109,14 +108,12 @@ the cards' buttons bigger on touch screens (or give them bigger hit areas).
 
 ### #17 One chapter profile, before a second chapter
 
-Mostly done. `CHAPTERS` in `src/chapters.ts` holds each chapter's stage and boss, its title and tunes, its
-messages, its win and lose texts, the sign and the gate, and the boss's colours and portrait, and the cards,
-the HUD and the presentation read them. `src/game/views/chapterViews.ts` says how its world looks, and each
-chapter has scenes of its own.
+Done. `CHAPTERS` in `src/chapters.ts` holds each chapter's stage and boss, its title and tunes, its messages, its
+win and lose texts, the sign and the gate, and the boss's colours and portrait, and the cards, the HUD and the
+presentation read them. `src/game/views/chapterViews.ts` says how its world looks, and each chapter has scenes of
+its own. A win goes on to the next chapter by itself.
 
-**What's left**, in the last pull request of `docs/chapter-2-plan.md`: How to play in `index.html` still names
-Sunny, and nothing moves on to a next chapter yet. Separately, `Boss.mood` in `src/sim/boss.ts` is set but never
-read: use it or remove it.
+**What's left** is small: `Boss.mood` in `src/sim/boss.ts` is set but never read, so use it or remove it.
 
 ## Game design
 
@@ -139,8 +136,7 @@ through unhurt. Add a route worth finding for a player who is replaying it.
 - The stage's best time is saved but never shown (`stageBest`).
 - The boss's best time shows only on the win card.
 - Golden seeds pay out only when Pip is hurt, so the cleanest play gets "Hearts already full".
-- The yard looks the same after a win as before the first game, and the win card offers only Play again or
-  the menu.
+- The yard looks the same after a win as before the first game.
 
 **Fix:** save the stars, show them and the best times on the menu, and let the yard change after a win (a
 cheered-up Sunny in it, say). None of this makes the game easier.
@@ -150,6 +146,9 @@ cheered-up Sunny in it, say). None of this makes the game easier.
 Pip moves, jumps, shoots and aims. Cuphead has its parry, and Mega Man takes each boss's power. Here,
 "cheering up" is only a health bar and the flowers left behind are decoration. A move of its own is what
 players would describe to a friend.
+
+Chapter 2 partly answers this: cheering up a Capling turns it into a bounce pad that Pip can use, so a plant cheered
+up now gives something back. It isn't a move of his own yet, and the Garden Path doesn't have it.
 
 **Fix:** one that needs no new key, to keep to one key per action. Make it part of a chapter's design, because
 a chapter's stage is where a new move can be taught.

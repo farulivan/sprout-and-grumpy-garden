@@ -16,7 +16,7 @@ export interface StagePath {
 
 export interface OverlayHandlers {
   play(): void; // Play on the main menu: Pip sets off down the garden path
-  start(): void; // a new game, from its first level, straight away
+  onward(): void; // the win card's main button: the next chapter, or after the last one a new game
   retry(): void; // the level that was lost, again; with no lives left, a new game
   restart(): void; // Start over: gives up this life for the level again
   resume(): void;
@@ -76,11 +76,14 @@ const trim = (b: Box): Box => {
 };
 
 // Where a card's main button is among its controls: the one pressed when the player hasn't moved to another
-// (Play, Try again, Play again, Keep playing). It is the first button (the Easy mode checkbox comes before it
-// on the lose card), except on a menu page, where it is Back.
+// (Play, Try again, Next chapter, Keep playing). On a menu page it is Back. Otherwise it is the button marked
+// data-main (the win card's, which sits on the right), or else the first button (the Easy mode checkbox comes
+// before it on the lose card).
 const main = (controls: readonly HTMLElement[]) => {
   const back = controls.findIndex((c) => c.classList.contains('back'));
-  return back >= 0 ? back : controls.findIndex((c) => c instanceof HTMLButtonElement);
+  if (back >= 0) return back;
+  const marked = controls.findIndex((c) => c.hasAttribute('data-main'));
+  return marked >= 0 ? marked : controls.findIndex((c) => c instanceof HTMLButtonElement);
 };
 
 const byId = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -120,7 +123,7 @@ export class Overlay {
       });
     }
     byId('btn-play').addEventListener('click', handlers.play);
-    byId('btn-again').addEventListener('click', handlers.start);
+    byId('btn-again').addEventListener('click', handlers.onward);
     byId('btn-retry').addEventListener('click', handlers.retry);
     byId('btn-restart').addEventListener('click', handlers.restart);
     byId('btn-resume').addEventListener('click', handlers.resume);
@@ -280,7 +283,15 @@ export class Overlay {
 
   // text: what the chapter says about the win. path: how the stage before the boss went, if this run came
   // that way.
-  showWin(r: FightResult, best: number | null, isBest: boolean, text: WinText, path?: StagePath) {
+  // next: there is another chapter to go on to, and the win has earned a life for it.
+  showWin(
+    r: FightResult,
+    best: number | null,
+    isBest: boolean,
+    text: WinText,
+    next: boolean,
+    path?: StagePath,
+  ) {
     byId('win-badge').textContent = text.badge;
     byId('win-line').textContent = text.line;
     // Each star earned pops in, one after another (see .star.on in style.css).
@@ -293,9 +304,11 @@ export class Overlay {
       el('span', '', `Bonks ${r.hits}`),
     ];
     if (r.easy) stats.push(el('span', '', 'Easy mode'));
+    if (next) stats.push(el('span', 'lives', '+1 life'));
     // the stage's own row under the boss's
     if (path) stats.push(el('i', 'break'), el('span', '', `${path.name} ${path.time.toFixed(1)}s`));
     byId('win-stats').replaceChildren(...stats);
+    byId('btn-again').textContent = next ? 'Next chapter' : 'Play again';
     this.show('win');
   }
 
