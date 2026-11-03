@@ -1,8 +1,10 @@
-// One boss fight: the whole game state plus the rules that advance it.
+// One boss fight: the whole game state plus the rules that advance it. A boss can also bring small enemies and
+// bounce pads with him; in a fight without any, those lists stay empty and change nothing.
 // States: play -> ending (boss blooms) -> win
 //         play -> down (Pip naps) -> lose
-import { STEP } from '../config';
+import { GROUND, STEP, W } from '../config';
 import type { Boss } from './boss';
+import { Bouncer, type Springy } from './bouncer';
 import { BOSSES, type BossId } from './bosses';
 import type { FightResult, SimEvent } from './events';
 import type { Hazard } from './hazards';
@@ -13,8 +15,10 @@ import type { Dewdrop } from './pickups';
 import { PIP_LOWEST, Player, type PlayerWorld } from './player';
 import type { Projectile } from './projectile';
 import { Rng } from './rng';
+import type { Enemy, EnemyWorld } from './stage/enemies/enemy';
 
 export type FightState = 'play' | 'ending' | 'win' | 'down' | 'lose';
+const PAD_LIFE = 8; // seconds a bounce pad lasts in a fight, before it wilts
 
 export interface FightOptions {
   seed: number;
@@ -35,12 +39,16 @@ export class Fight implements PlayerWorld, Level {
   projectiles: Projectile[] = [];
   hazards: Hazard[] = [];
   pickups: Dewdrop[] = [];
+  enemies: Enemy[] = [];
+  pads: Bouncer[] = []; // bounce pads, which wilt
+  readonly bouncers: Springy[] = []; // everything that throws Pip up: the pads, and a boss's bouncy cap
   t = 0;
   fightTime = 0;
   faceHits = 0;
   endT = 0; // seconds since the fight was decided
   timeScale = 1; // below 1 = slow motion
   private events: SimEvent[] = [];
+  private readonly enemyWorld: EnemyWorld;
 
   constructor(opts: FightOptions) {
     this.rng = new Rng(opts.seed);
@@ -49,6 +57,16 @@ export class Fight implements PlayerWorld, Level {
     this.boss = BOSSES[opts.boss ?? 'sunny'](this);
     this.maxX = this.boss.maxX;
     this.platforms = this.boss.platforms;
+    this.enemyWorld = {
+      player: this.player,
+      minX: this.minX,
+      maxX: this.maxX,
+      closed: true, // nowhere for Pip to run past them to
+      solids: [{ x: -100, y: GROUND, w: W + 200, h: 300 }],
+      platforms: this.platforms,
+      projectiles: this.projectiles,
+      emit: (e) => this.emit(e),
+    };
     if (this.easy) this.player.hp = this.player.maxHp = 8;
     if (opts.hearts !== undefined) this.player.hp = clamp(Math.round(opts.hearts), 1, this.player.maxHp);
     this.boss.state = 'intro';
@@ -60,6 +78,10 @@ export class Fight implements PlayerWorld, Level {
 
   emit(e: SimEvent) {
     this.events.push(e);
+  }
+  addEnemy(e: Enemy) {
+    e.awake = true;
+    this.enemies.push(e);
   }
   // Everything that happened since the last call.
   drainEvents(): SimEvent[] {
@@ -90,10 +112,15 @@ export class Fight implements PlayerWorld, Level {
     }
     for (const h of this.hazards) h.update(sdt);
     for (const d of this.pickups) d.update(sdt);
+    if (this.state !== 'down') for (const e of this.enemies) e.update(sdt, this.enemyWorld);
+    for (const b of this.pads) b.update(sdt);
     if (this.state === 'play') this.collide();
     prune(this.projectiles);
     prune(this.hazards);
     prune(this.pickups);
+    prune(this.enemies);
+    prune(this.pads);
+    prune(this.bouncers);
 
     if (this.state === 'ending') {
       this.endT += dt;
@@ -125,6 +152,7 @@ export class Fight implements PlayerWorld, Level {
     this.timeScale = 0.25;
     for (const p of this.projectiles) if (p.owner !== 'player') p.dead = true;
     for (const h of this.hazards) h.dead = true;
+    for (const e of this.enemies) e.dead = true;
     this.emit({ type: 'bossDefeated', x: this.boss.x, y: this.boss.y });
   }
 
@@ -134,16 +162,46 @@ export class Fight implements PlayerWorld, Level {
     this.boss.halt();
     for (const p of this.projectiles) p.dead = true;
     for (const h of this.hazards) h.dead = true;
+    for (const e of this.enemies) e.dead = true;
     this.emit({ type: 'playerDown' });
   }
 
   // Keep each position from before this step, so drawing can blend between two steps.
   private remember() {
-    const all = [this.player, this.boss, ...this.projectiles, ...this.hazards, ...this.pickups];
+    const all = [
+      this.player,
+      this.boss,
+      ...this.projectiles,
+      ...this.hazards,
+      ...this.pickups,
+      ...this.enemies,
+    ];
     for (const e of all) {
       e.px = e.x;
       e.py = e.y;
     }
+  }
+
+  // One of Pip's seeds on a small enemy, if it touched one. Whether it did.
+  private seedHitsEnemy(pr: Projectile) {
+    for (const e of this.enemies) {
+      if (e.dead || e.entering > 0) continue;
+      const box = e.hurtbox();
+      if (!box || !circleHit(pr, box)) continue;
+      pr.dead = true;
+      if (!e.hit()) this.emit({ type: 'enemyHit', x: pr.x, y: pr.y });
+      else {
+        this.emit({ type: 'enemyCheered', kind: e.kind, x: box.x, y: box.y, baseY: e.y });
+        if (e.kind === 'capling') {
+          const pad = new Bouncer(e.x, e.y, PAD_LIFE);
+          this.pads.push(pad);
+          this.bouncers.push(pad);
+          this.emit({ type: 'padReady', x: e.x, y: e.y, first: false });
+        }
+      }
+      return true;
+    }
+    return false;
   }
 
   private collide() {
@@ -153,9 +211,16 @@ export class Fight implements PlayerWorld, Level {
     for (const pr of this.projectiles) {
       if (pr.dead) continue;
       if (pr.owner === 'player') {
+        if (this.seedHitsEnemy(pr)) continue;
         if (!b.alive) continue;
         const mult = b.hitTest(pr);
-        if (!mult) continue;
+        if (!mult) {
+          if (b.blocks(pr)) {
+            pr.dead = true;
+            this.emit({ type: 'bossBlock', x: pr.x, y: pr.y });
+          }
+          continue;
+        }
         pr.dead = true;
         if (b.hit(mult)) {
           if (mult > 1) this.faceHits++;
@@ -167,6 +232,16 @@ export class Fight implements PlayerWorld, Level {
       }
     }
     for (const h of this.hazards) if (!h.dead && p.alive && h.hits(hb)) p.hurt();
+    if (p.alive && b.alive && b.touches(hb)) p.hurt(b.x);
+    for (const e of this.enemies) {
+      const box = e.entering <= 0 ? e.hurtbox() : null;
+      if (!box || !p.alive || !circleHit(box, hb)) continue;
+      p.hurt(e.x);
+      if (e.spentOnTouch) {
+        e.dead = true;
+        this.emit({ type: 'enemyBurst', x: e.x, y: e.y, kind: e.kind });
+      }
+    }
     for (const d of this.pickups) {
       if (d.dead || !circleHit(d, hb)) continue;
       d.dead = true;

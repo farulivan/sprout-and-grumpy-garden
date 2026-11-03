@@ -7,8 +7,8 @@ import type { Scene } from 'phaser';
 import { WOOD } from '../../../chapters';
 import { GROUND, TAU } from '../../../config';
 import { STAGES } from '../../../sim/stage/stages';
-import { bake, SOFT } from '../../art/bake';
-import { mix } from '../../art/color';
+import { bake, HAZY, SOFT } from '../../art/bake';
+import { mix, rgba } from '../../art/color';
 import {
   blade,
   circle,
@@ -39,7 +39,11 @@ import {
   wave,
   type GroundLook,
 } from '../stage/art';
+import { MO_PLATFORMS } from '../../../sim/bosses/mo';
 import { bakeWoodEnemies } from './enemyArt';
+import { drawCap, MO_PALETTE, stalkPath } from '../mo/art';
+import { bakeMo } from '../mo/bake';
+import { drawWholeFace } from '../mo/face';
 
 export const FOREST_P = 1920; // the far and middle trees repeat every this many pixels
 export const NEAR_P = 1024; // ...the near ones
@@ -300,8 +304,17 @@ function drawMidTrees(c: Ctx) {
   }
 }
 
+const nearGround = (x: number) => 426 - 10 * wave(x, NEAR_P, 2, 1) - 4 * wave(x, NEAR_P, 5, 2.4);
+const NEAR_MOSS = 90;
+// Where the near strip's big mushrooms stand, the same every time: after the moss, in the same stream of numbers.
+function nearMushrooms(rand: () => number) {
+  return Array.from({ length: 7 }, (_, i) => {
+    const x = ((i + 0.2 + rand() * 0.6) / 7) * NEAR_P;
+    return { x, y: nearGround(x) + 10, h: 58 + rand() * 62, kind: i + 1 };
+  });
+}
 function drawNearTrees(c: Ctx) {
-  const ground = (x: number) => 426 - 10 * wave(x, NEAR_P, 2, 1) - 4 * wave(x, NEAR_P, 5, 2.4);
+  const ground = nearGround;
   forest(c, NEAR_P, 221, {
     trees: 6,
     width: [34, 58],
@@ -317,7 +330,7 @@ function drawNearTrees(c: Ctx) {
   });
   const rand = seeded(222);
   // bark lit along one side, and moss where the trunks meet the ground
-  for (let i = 0; i < 90; i++) {
+  for (let i = 0; i < NEAR_MOSS; i++) {
     const x = rand() * NEAR_P,
       y = ground(x) + 2 + rand() * 10,
       r = 3 + rand() * 7;
@@ -327,12 +340,31 @@ function drawNearTrees(c: Ctx) {
       c.fill();
     });
   }
-  for (let i = 0; i < 7; i++) {
-    const x = ((i + 0.2 + rand() * 0.6) / 7) * NEAR_P,
-      h = 58 + rand() * 62,
-      kind = i + 1;
-    repeat(NEAR_P, (dx) => glowShroom(c, x + dx, ground(x) + 10, h, kind, 0.46));
-  }
+  for (const { x, y, h, kind } of nearMushrooms(rand))
+    repeat(NEAR_P, (dx) => glowShroom(c, x + dx, y, h, kind, 0.46));
+}
+
+// The near strip's mushrooms alight, to be drawn as light: the wood's reward for cheering Mo up.
+function drawHollowLights(c: Ctx) {
+  const rand = seeded(222);
+  for (let i = 0; i < NEAR_MOSS * 3; i++) rand();
+  for (const { x, y, h, kind } of nearMushrooms(rand))
+    repeat(NEAR_P, (dx) => {
+      const color = kind % 2 ? '#fff0a0' : '#8feaff';
+      glow(c, x + dx, y - h * 0.7, h * 1.15, color, 0.85, h * 0.85);
+      glow(c, x + dx, y - h * 0.7, h * 0.5, '#fffbe0', 0.6, h * 0.36);
+    });
+}
+
+// The mist the far mushrooms sit behind, so that Mo stands out from them. It is the same all the way across, so one
+// narrow part stretches to fit: see-through at the top, thick near the ground.
+function drawHollowMist(c: Ctx) {
+  c.fillStyle = linear(c, 0, -170, 0, 0, [
+    [0, rgba('#2a2a6c', 0)],
+    [0.7, rgba('#2a2a6c', 0.3)],
+    [1, rgba('#2a2a6c', 0.38)],
+  ]);
+  c.fillRect(0, -170, 64, 170);
 }
 
 // A great tree standing behind the fight; its foot at (0, 0), running off the top of the screen.
@@ -793,21 +825,30 @@ function drawWoodGate(c: Ctx) {
   c.fillText(WOOD.gate, 0, top + 57.5);
 }
 
-// Mo far away over the trees, still sulking: hazy like everything that far, but his own blue, and glowing.
+// Mo far away over the trees, still sulking: the same mushroom you will meet, hazy like everything that far, but his
+// own blue, and glowing.
 function drawFarMo(c: Ctx) {
-  const haze = (col: string) => mix(col, '#7a6aa8', 0.32);
-  glow(c, 0, -140, 110, '#7feaff', 0.5, 86);
+  const k = 0.9, // a size down, and standing a little taller than he does close up, to read over the trees
+    capH = 120,
+    faceH = capH - 50;
   c.save();
-  drawMushroom(c, 140, 200, [haze('#a8d4ff'), haze('#4a7fd8'), haze('#27408f')], {
-    stalk: [haze('#e8e4f0'), haze('#8e88b0')],
-    outline: null,
-    spots: 5,
-    spotAlpha: 0.5,
-  });
+  c.scale(k, k);
+  stalkPath(c, capH - 10);
+  c.fillStyle = linear(c, -60, 0, 60, 0, [MO_PALETTE.stalk.hi, MO_PALETTE.stalk.lit, MO_PALETTE.stalk.low]);
+  c.fill();
+  line(c, MO_PALETTE.ink, 3.6);
+  c.translate(0, -faceH);
+  drawWholeFace(c, 'sulk');
+  c.translate(0, faceH - capH);
+  drawCap(c, MO_PALETTE.caps[0]);
   c.restore();
-  c.globalAlpha = 0.8;
-  drawFace(c, 0, -62, 0.9, 'angry');
-  c.globalAlpha = 1;
+  // the haze over all of him, and his glow behind him
+  c.globalCompositeOperation = 'source-atop';
+  c.fillStyle = rgba('#7a6aa8', 0.34);
+  c.fillRect(-135, -262, 270, 270);
+  c.globalCompositeOperation = 'destination-over';
+  glow(c, 0, -120, 124, '#7feaff', 0.5, 100);
+  c.globalCompositeOperation = 'source-over';
 }
 
 // The small mushroom that grows where a plant was cheered up, glowing and smiling; (0, 0) is where it stands.
@@ -857,6 +898,7 @@ function drawDressing(c: Ctx, kind: number) {
 
 export function bakeWood(scene: Scene) {
   bakeWoodEnemies(scene);
+  bakeMo(scene);
   // the sky's own: the moon, with its glow on the same part so that the two cost one draw
   bake(
     scene,
@@ -901,6 +943,8 @@ export function bakeWood(scene: Scene) {
   // the landscape, far to near
   bake(scene, 'wood-far', FOREST_P, GROUND + 4, 0, 0, drawFarTrees, SOFT);
   bake(scene, 'wood-far-mo', 270, 270, 135, 262, drawFarMo, SOFT);
+  bake(scene, 'hollow-mist', 64, 170, 0, 170, drawHollowMist, SOFT);
+  bake(scene, 'hollow-lights', NEAR_P, GROUND + 4, 0, 0, drawHollowLights, HAZY);
   bake(scene, 'wood-mid', FOREST_P, GROUND + 4, 0, 0, drawMidTrees, SOFT);
   bake(scene, 'wood-near', NEAR_P, GROUND + 4, 0, 0, drawNearTrees, SOFT);
   for (let i = 0; i < WOOD_TREES; i++)
@@ -945,7 +989,7 @@ export function bakeWood(scene: Scene) {
     bake(scene, `wood-bloom-${i}`, 84, 84, 42, 78, (c) => drawGlowBloom(c, i));
   const widths = new Set<number>(),
     drops = new Set<number>();
-  for (const p of STAGES[WOOD.stage].platforms) {
+  for (const p of [...STAGES[WOOD.stage].platforms, ...MO_PLATFORMS]) {
     widths.add(p.w);
     drops.add(GROUND - p.y - 8);
   }

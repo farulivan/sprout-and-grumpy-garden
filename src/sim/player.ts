@@ -1,6 +1,6 @@
 // Pip, the little sprout hero. Feet are at (x, y).
 import { GROUND } from '../config';
-import type { Bouncer } from './bouncer';
+import type { Springy } from './bouncer';
 import type { SimEvent } from './events';
 import type { InputFrame } from './input';
 import { clamp, type Circle, type Rect } from './math';
@@ -37,7 +37,7 @@ export interface PlayerWorld {
   // Boxes he stands on and walks into: on a stage, the ground in stretches (the gaps are pits) and logs.
   // Without them, the floor is a boss arena's: flat, everywhere, at GROUND.
   readonly solids?: readonly Rect[];
-  readonly bouncers?: readonly Bouncer[]; // bounce pads, where a level has them
+  readonly bouncers?: readonly Springy[]; // what throws him up, where a level has any
   readonly projectiles: Projectile[];
   emit(e: SimEvent): void;
 }
@@ -160,7 +160,7 @@ export class Player {
   }
 
   // Falling onto a bounce pad throws him back up, however he got there. Rising, he passes through it.
-  private bounceOff(bouncers: readonly Bouncer[], prevY: number, input: InputFrame) {
+  private bounceOff(bouncers: readonly Springy[], prevY: number, input: InputFrame) {
     for (const b of bouncers) {
       if (!b.catches(this.x, prevY, this.y)) continue;
       this.y = b.top;

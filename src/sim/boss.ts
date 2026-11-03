@@ -53,8 +53,16 @@ export abstract class Boss {
   abstract attack(name: string): Attack;
   // Damage multiplier for a shot at this spot: 2 = weak spot, 1 = body, 0 = miss.
   abstract hitTest(c: Circle): number;
+  // Whether a seed that missed bounces off here instead of flying on. Sunny has nowhere like that.
+  blocks(_c: Circle): boolean {
+    return false;
+  }
+  // Whether this circle is touching him, which hurts. Sunny's roots keep Pip away from him.
+  touches(_c: Circle): boolean {
+    return false;
+  }
   // The same hurtboxes as shapes, for the debug overlay.
-  abstract hurtboxes(): { weak: Circle[]; body: Rect[] };
+  abstract hurtboxes(): { weak: Circle[]; body: Rect[]; shield?: Circle[] };
 
   get speedMul() {
     return this.speedMuls[this.phase - 1];

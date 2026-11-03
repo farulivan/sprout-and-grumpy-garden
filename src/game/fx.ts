@@ -34,7 +34,8 @@ const READY = { plain: 128, glow: 48, rings: 4, bigRings: 2 };
 let BIG_RING_UNIT = 1; // set when the big ring is baked
 
 // Shapes are grey where they should take the tint a little darker, white where they should stay bright.
-const SHAPES: Record<ParticleShape, [w: number, h: number, draw: (c: Ctx) => void]> = {
+// ('spot' is a shape too, but only Mo sheds it, so it is baked with him: see mo/art.ts.)
+const SHAPES: Record<Exclude<ParticleShape, 'spot'>, [w: number, h: number, draw: (c: Ctx) => void]> = {
   circle: [
     18,
     18,
@@ -230,7 +231,7 @@ export class Fx {
     const { n = 8, color = '#fff', colors, speed = 120, size = 4, life = 0.5, gravity = 300 } = b;
     const { shape = 'circle', spread = TAU, dir = 0, glow = false, alpha = 1, drag = 0, radius = 0 } = b;
     const key = `fx-${shape}`,
-      flutters = shape === 'leaf' || shape === 'petal' || shape === 'confetti',
+      flutters = shape === 'leaf' || shape === 'petal' || shape === 'spot' || shape === 'confetti',
       spare = glow ? this.spare.glow : this.spare.plain;
     for (let i = 0; i < n && this.particles.length < MAX_PARTICLES; i++) {
       const a = dir + (Math.random() - 0.5) * spread,

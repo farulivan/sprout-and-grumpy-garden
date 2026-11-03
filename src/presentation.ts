@@ -1,6 +1,7 @@
 // What each simulation event looks and sounds like. This is the one place that turns "the boss was hit"
 // into a sound, a puff of particles, a screen shake or a line of text. Whatever draws the game (the
 // Phaser scenes in src/game) supplies a Presenter, and this table knows nothing about how it works.
+import type { Tune } from './audio';
 import type { Chapter } from './chapters';
 import { GROUND, UP, W } from './config';
 import type { SimEvent } from './sim/events';
@@ -38,13 +39,21 @@ export type SfxName =
   | 'pad'
   | 'brambles'
   | 'wither'
-  | 'thud';
+  | 'thud'
+  // Mo's fight
+  | 'acid'
+  | 'rumble' // a root creeping through the soil
+  | 'ringUp'
+  | 'erupt'
+  | 'pop'
+  | 'whirl';
 
 export type ParticleShape =
   | 'circle'
   | 'soft' // a blurry dot
   | 'leaf'
   | 'petal'
+  | 'spot' // a pale oval off a mushroom's cap
   | 'heart'
   | 'star'
   | 'spark' // a streak, stretched along the way it flies
@@ -80,6 +89,7 @@ export type ToastTone = 'info' | 'alert' | 'good';
 export interface Presenter {
   sfx(name: SfxName): void;
   music(on: boolean): void;
+  tune(name: Tune): void; // another tune takes over
   burst(x: number, y: number, burst: Burst): void;
   ring(x: number, y: number, ring: Ring): void;
   shake(px: number): void;
@@ -101,7 +111,7 @@ const CONFETTI = ['#ffd23f', '#ff8fb1', '#8fd8ff', '#b48cff', '#7ccf63', '#fffff
 const LEAVES = ['#7cc644', '#9ad85f', '#5aa83a'];
 const CHEER = ['#ffd23f', '#ff8fb1', '#fff3b0', '#ffb3c7']; // the petals a cheered-up enemy pops into
 const SPORES = ['#ffe27a', '#8feaff', '#ff9be8', '#fff3b0']; // ...and the glowing spores a mushroom does
-const WOOD_KINDS: readonly string[] = ['capling', 'burr', 'dropcap', 'toadlet'];
+const WOOD_KINDS: readonly string[] = ['capling', 'burr', 'dropcap', 'toadlet', 'spore'];
 // The puff of dust that anything landing, sliding or digging kicks up. Views reuse it for theirs.
 export const DUST: Burst = {
   n: 5,
@@ -146,6 +156,31 @@ function bounce(p: Presenter, x: number, y: number) {
     glow: true,
     dir: Math.PI,
     spread: 1.6,
+  });
+}
+
+// A spore pod popping, on a seed or on Pip: it's only his poison, so no cheer, and no petals.
+function popPod(p: Presenter, x: number, y: number) {
+  p.sfx('pop');
+  p.burst(x, y, {
+    n: 6,
+    shape: 'puff',
+    colors: ['#6cc638', '#8fd832', '#3f9a3c'],
+    speed: 90,
+    size: 7,
+    life: 0.5,
+    gravity: -30,
+    alpha: 0.85,
+    drag: 0.7,
+  });
+  p.burst(x, y, {
+    n: 5,
+    shape: 'circle',
+    colors: ['#8fd832', '#e6fb86'],
+    speed: 190,
+    size: 3.4,
+    life: 0.45,
+    gravity: 500,
   });
 }
 
@@ -280,7 +315,7 @@ export function present(e: SimEvent, p: Presenter, opts: PresentOptions) {
         size: 8,
         life: 1.3,
         gravity: 260,
-        shape: 'petal',
+        shape: opts.chapter.shedShape,
         radius: 50,
       });
       p.burst(e.x, e.y, {
@@ -294,6 +329,7 @@ export function present(e: SimEvent, p: Presenter, opts: PresentOptions) {
         glow: true,
       });
       p.toast(opts.chapter.phaseToasts[e.phase - 2], 2.4, 'alert');
+      if (opts.chapter.tunes.bossPhases) p.tune(opts.chapter.tunes.bossPhases[e.phase - 1]);
       break;
     }
     case 'groundPuff':
@@ -364,12 +400,12 @@ export function present(e: SimEvent, p: Presenter, opts: PresentOptions) {
       p.ring(e.x, e.y, { color: '#ffffff', from: 30, to: 260, life: 0.6 });
       p.burst(e.x, e.y, {
         n: 34,
-        colors: ['#ffd23f', '#ff8fb1', '#ffffff', '#ffb52e'],
+        colors: opts.chapter.cheeredColors,
         speed: 340,
         size: 8,
         life: 1.6,
         gravity: 200,
-        shape: 'petal',
+        shape: opts.chapter.shedShape,
         radius: 40,
       });
       p.burst(e.x, e.y, {
@@ -429,6 +465,10 @@ export function present(e: SimEvent, p: Presenter, opts: PresentOptions) {
       });
       break;
     case 'enemyCheered':
+      if (e.kind === 'spore') {
+        popPod(p, e.x, e.y);
+        break;
+      }
       // out of its mood: a cheer, a shower of petals and sparkles, and the stage holds still for a beat
       p.sfx('cheer');
       p.hitStop(0.04);
@@ -454,6 +494,10 @@ export function present(e: SimEvent, p: Presenter, opts: PresentOptions) {
       });
       break;
     case 'enemyBurst':
+      if (e.kind === 'spore') {
+        popPod(p, e.x, e.y);
+        break;
+      }
       // a Puffball on Pip: not cheered up, so no cheer, and its seeds scatter
       p.sfx('petal');
       p.burst(e.x, e.y, {
@@ -566,6 +610,78 @@ export function present(e: SimEvent, p: Presenter, opts: PresentOptions) {
       p.sfx('thud');
       p.shake(3);
       p.burst(e.x, e.y, { ...DUST, n: 7, speed: 110, color: '#cfc6e6' });
+      break;
+    case 'bossLand':
+      p.sfx('thud');
+      p.shake(7);
+      p.punch(0.025);
+      p.hitStop(0.05);
+      if (e.acid) {
+        p.sfx('acid');
+        p.ring(e.x, e.y, { color: '#b6e84c', from: 40, to: 170, life: 0.45 });
+        // a crown of drops thrown up, and dust
+        p.burst(e.x, e.y - 6, {
+          n: 14,
+          colors: ['#8fd832', '#e6fb86'],
+          speed: 340,
+          size: 5,
+          life: 0.7,
+          gravity: 500,
+          shape: 'circle',
+          dir: UP,
+          spread: 2,
+        });
+        p.burst(e.x, e.y, { ...DUST, n: 8, speed: 140, color: '#3f9a3c' });
+      } else p.burst(e.x, e.y, { ...DUST, n: 9, speed: 140, color: '#cfc6e6' });
+      break;
+    case 'whirl':
+      p.sfx('whirl');
+      if (e.wall) {
+        p.shake(4);
+        p.burst(e.x, GROUND - 30, {
+          n: 7,
+          shape: 'spark',
+          color: '#f0d8ff',
+          speed: 320,
+          size: 5,
+          life: 0.3,
+          gravity: 0,
+          glow: true,
+        });
+        p.burst(e.x, GROUND - 4, {
+          n: 8,
+          shape: 'clod',
+          colors: ['#3d2f5c', '#5a4a70', '#2b2342'],
+          speed: 240,
+          size: 4,
+          life: 0.6,
+          gravity: 800,
+          dir: UP,
+          spread: 1.8,
+        });
+      }
+      break;
+    case 'ringSeek':
+      p.sfx('rumble');
+      break;
+    case 'ringWarn':
+      p.sfx('ringUp');
+      break;
+    case 'ringErupt':
+      p.sfx('erupt');
+      p.shake(5);
+      p.ring(e.x, GROUND - 4, { color: '#8fd832', from: 20, to: 110, life: 0.4 });
+      p.burst(e.x, GROUND - 2, {
+        n: 10,
+        shape: 'clod',
+        colors: ['#3d2f5c', '#5a4a70', '#2b2342'],
+        speed: 300,
+        size: 4,
+        life: 0.7,
+        gravity: 800,
+        dir: UP,
+        spread: 1.6,
+      });
       break;
     case 'gladeClose':
       p.sfx('brambles');

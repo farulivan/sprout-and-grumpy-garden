@@ -1,9 +1,18 @@
 // A cheered-up plant that throws Pip into the air when he falls onto it. On a stage it stays for good; a boss
 // fight's wilt after a while (life).
+// Anything Pip is thrown up by when he falls onto it.
+export interface Springy {
+  readonly x: number;
+  readonly top: number;
+  sprung: number; // 1 -> 0 after he bounces on it; only drives how it is drawn
+  dead: boolean;
+  catches(x: number, prevY: number, y: number): boolean; // whether feet going from prevY down to y, at x, land on it
+}
+
 export const BOUNCER_TOP = 36; // how far above its foot Pip comes down on it
 const HALF = 34; // how far to each side of its middle he can land
 
-export class Bouncer {
+export class Bouncer implements Springy {
   dead = false;
   t = 0;
   sprung = 0; // 1 -> 0 after Pip bounces on it; only drives how it is drawn

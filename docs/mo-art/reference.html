@@ -1,0 +1,1504 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>Mo's fight, reference art</title>
+<!-- Open this file in a browser to see docs/mo-art/reference.jpg redrawn from code (without the game's backdrops, which
+     are only in the jpg). The drawing functions are in the first script; the panels that lay them out are in the second. -->
+<style>
+  body {
+    margin: 0;
+    background: #1a1730;
+    width: 1920px;
+    font:
+      600 26px Helvetica,
+      Arial,
+      sans-serif;
+    color: #f4efff;
+  }
+  canvas {
+    display: block;
+  }
+  #grid {
+    display: grid;
+    grid-template-columns: 960px 960px;
+  }
+  figure {
+    margin: 0;
+    position: relative;
+  }
+  figcaption {
+    position: absolute;
+    left: 12px;
+    top: 10px;
+    background: #000b;
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-size: 20px;
+  }
+</style>
+<div id="sheet"></div>
+<div id="grid"></div>
+<script>
+  // Reference art for Mo's fight, drawn with Canvas 2D in the game's world units (1 unit = 1 world pixel), with the
+  // same helpers as src/game/art/draw.ts. Each function draws around (0, 0), so it can go inside a bake() as it is.
+  const TAU = Math.PI * 2;
+  const INK = '#1c1238';
+
+  // ---- the helpers, as in src/game/art/draw.ts and color.ts ----
+  function seeded(seed) {
+    let s = seed >>> 0;
+    return () => (s = (s * 1664525 + 1013904223) >>> 0) / 2 ** 32;
+  }
+  const circle = (c, x, y, r) => (c.beginPath(), c.arc(x, y, r, 0, TAU));
+  const ellipse = (c, x, y, rx, ry, rot = 0) => (c.beginPath(), c.ellipse(x, y, rx, ry, rot, 0, TAU));
+  function stops(g, list) {
+    list.forEach((s, i) =>
+      Array.isArray(s) ? g.addColorStop(s[0], s[1]) : g.addColorStop(i / (list.length - 1), s),
+    );
+    return g;
+  }
+  const linear = (c, x0, y0, x1, y1, list) => stops(c.createLinearGradient(x0, y0, x1, y1), list);
+  const radial = (c, x, y, r, list, fx = x, fy = y) =>
+    stops(c.createRadialGradient(fx, fy, 0, x, y, r), list);
+  function inside(c, build, paint) {
+    c.save();
+    build();
+    c.clip();
+    paint();
+    c.restore();
+  }
+  function rgba(color, a) {
+    const n = parseInt(color.slice(1), 16);
+    return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+  }
+  function glow(c, x, y, rx, color, alpha = 1, ry = rx) {
+    c.save();
+    c.translate(x, y);
+    c.scale(1, ry / rx);
+    c.fillStyle = radial(c, 0, 0, rx, [
+      [0, rgba(color, alpha)],
+      [0.5, rgba(color, alpha * 0.45)],
+      [1, rgba(color, 0)],
+    ]);
+    c.fillRect(-rx, -rx, rx * 2, rx * 2);
+    c.restore();
+  }
+  function line(c, color, width, alpha = 1) {
+    c.save();
+    c.globalAlpha = alpha;
+    c.strokeStyle = color;
+    c.lineWidth = width;
+    c.lineCap = c.lineJoin = 'round';
+    c.stroke();
+    c.restore();
+  }
+  function smooth(c, pts) {
+    c.beginPath();
+    const n = pts.length,
+      mid = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2],
+      start = mid(pts[n - 1], pts[0]);
+    c.moveTo(start[0], start[1]);
+    for (let i = 0; i < n; i++) {
+      const m = mid(pts[i], pts[(i + 1) % n]);
+      c.quadraticCurveTo(pts[i][0], pts[i][1], m[0], m[1]);
+    }
+    c.closePath();
+  }
+  function blob(c, x, y, r, rand, bumps = 9, amp = 0.16) {
+    const pts = [];
+    for (let i = 0; i < bumps; i++) {
+      const a = (i / bumps) * TAU,
+        d = r * (1.08 + (rand() - 0.5) * 2 * amp);
+      pts.push([x + Math.cos(a) * d, y + Math.sin(a) * d]);
+    }
+    smooth(c, pts);
+  }
+
+  // ---- Mo ----
+  const CAP_COLORS = {
+    sulky: {
+      hi: '#d8e6ff',
+      lit: '#8fb0ff',
+      mid: '#5476ee',
+      low: '#2f3eae',
+      rim: '#1d2272',
+      spot: '#eef5ff',
+      halo: '#9ec8ff',
+    },
+    cross: {
+      hi: '#ffe6c4',
+      lit: '#ffa766',
+      mid: '#f4652f',
+      low: '#b52f1f',
+      rim: '#651420',
+      spot: '#fff2dc',
+      halo: '#ffb070',
+    },
+    furious: {
+      hi: '#f8dcff',
+      lit: '#cf95ff',
+      mid: '#9c4ef2',
+      low: '#5a22b0',
+      rim: '#2b0d66',
+      spot: '#ffd8ff',
+      halo: '#ff84f0',
+    },
+    happy: {
+      hi: '#fffcdc',
+      lit: '#ffe476',
+      mid: '#ffc53f',
+      low: '#e98a2b',
+      rim: '#94451a',
+      spot: '#fffaea',
+      halo: '#fff0a0',
+    },
+  };
+  const STALK = { hi: '#fff6e2', lit: '#f3dfbe', mid: '#d9bb9b', low: '#a9849a', deep: '#6f5288' };
+
+  // The cap's outline: a soft dome that slumps a little to one side, with a wavy, heavy brim. (0, 0) is the sim's capY.
+  function capPath(c) {
+    c.beginPath();
+    c.moveTo(-102, 14);
+    c.bezierCurveTo(-104, -30, -58, -64, -8, -64);
+    c.bezierCurveTo(50, -64, 102, -34, 104, 20);
+    c.bezierCurveTo(104, 30, 92, 36, 78, 32);
+    c.bezierCurveTo(62, 28, 50, 38, 32, 37);
+    c.bezierCurveTo(14, 36, 6, 30, -10, 32);
+    c.bezierCurveTo(-30, 34, -40, 40, -58, 35);
+    c.bezierCurveTo(-74, 30, -84, 34, -94, 28);
+    c.bezierCurveTo(-101, 24, -103, 20, -102, 14);
+    c.closePath();
+  }
+  const CAP_SPOTS = [
+    [-60, -14, 17, 14, -0.3],
+    [-16, -42, 21, 14, -0.05],
+    [34, -32, 16, 12, 0.25],
+    [72, -4, 13, 11, 0.5],
+    [-20, -2, 13, 10, 0],
+    [20, 6, 10, 8, 0.1],
+    [-84, 10, 8, 7, -0.5],
+    [54, 20, 8, 5, 0.2],
+    [-52, 22, 7, 4, -0.1],
+  ];
+  function drawCap(c, k) {
+    const p = CAP_COLORS[k];
+    capPath(c);
+    c.fillStyle = radial(c, -6, -8, 124, [p.hi, p.lit, p.mid, p.low], -40, -46);
+    c.fill();
+    inside(
+      c,
+      () => capPath(c),
+      () => {
+        // the brim turns under, away from the light
+        c.fillStyle = linear(c, 0, -2, 0, 40, [rgba(p.low, 0), rgba(p.low, 0.75), p.rim]);
+        c.fillRect(-110, -2, 220, 44);
+        // shade down the side away from the moon
+        c.fillStyle = radial(c, -30, -30, 150, [
+          [0.62, rgba(p.rim, 0)],
+          [1, rgba(p.rim, 0.6)],
+        ]);
+        c.fillRect(-110, -70, 220, 110);
+        for (const [x, y, rx, ry, rot] of CAP_SPOTS) {
+          ellipse(c, x + 1, y + 2, rx, ry, rot);
+          c.fillStyle = rgba(p.rim, 0.45);
+          c.fill();
+          ellipse(c, x, y, rx, ry, rot);
+          c.fillStyle = radial(
+            c,
+            x,
+            y,
+            Math.max(rx, ry),
+            [p.spot, p.spot, rgba(p.spot, 0.72)],
+            x - rx * 0.3,
+            y - ry * 0.3,
+          );
+          c.fill();
+        }
+        // moonlight along the top left edge
+        c.save();
+        c.translate(0, 3);
+        capPath(c);
+        c.restore();
+        c.beginPath();
+        c.moveTo(-98, 2);
+        c.bezierCurveTo(-92, -32, -52, -58, -8, -60);
+        line(c, '#ffffff', 3.2, 0.5);
+      },
+    );
+    capPath(c);
+    line(c, INK, 3.8);
+  }
+  // The same spots again, soft, to be drawn as light: they glow in the dark and pulse.
+  function drawCapGlow(c, k) {
+    const p = CAP_COLORS[k];
+    for (const [x, y, rx, ry] of CAP_SPOTS) glow(c, x, y, rx * 1.9, p.halo, 0.75, ry * 1.9);
+  }
+  // The underside, seen from a little below as he rears up.
+  function drawGills(c) {
+    ellipse(c, 0, 22, 92, 25);
+    c.fillStyle = linear(c, 0, 0, 0, 48, ['#3a2150', '#6e4668', '#94687a']);
+    c.fill();
+    inside(
+      c,
+      () => ellipse(c, 0, 22, 92, 25),
+      () => {
+        for (let i = -13; i <= 13; i++) {
+          const a = (i / 13) * 1.32;
+          c.beginPath();
+          c.moveTo(Math.sin(a) * 26, 26);
+          c.lineTo(Math.sin(a) * 94, 22 + Math.cos(a) * 26);
+          line(c, '#2c1840', 1.7, 0.6);
+        }
+      },
+    );
+    ellipse(c, 0, 22, 92, 25);
+    line(c, INK, 3);
+  }
+  // The stalk, from his feet (0, 0) up to h. In the game this is a Ribbon: a strip baked once and bent, as Sunny's stem.
+  function stalkPath(c, h, lean = 0) {
+    const top = 43;
+    c.beginPath();
+    c.moveTo(-60, -3);
+    c.bezierCurveTo(-74, -24, -58, -52, -50, -72);
+    c.bezierCurveTo(-46, -h * 0.62, -top + lean, -h * 0.82, -top + lean, -h);
+    c.lineTo(top + lean, -h);
+    c.bezierCurveTo(top + lean, -h * 0.82, 46, -h * 0.62, 50, -72);
+    c.bezierCurveTo(58, -52, 74, -24, 60, -3);
+    c.bezierCurveTo(30, 8, -30, 8, -60, -3);
+    c.closePath();
+  }
+  function drawStalk(c, h, lean = 0) {
+    stalkPath(c, h, lean);
+    c.fillStyle = linear(c, -62, 0, 66, 0, [
+      [0, STALK.lit],
+      [0.28, STALK.hi],
+      [0.62, STALK.lit],
+      [0.86, STALK.mid],
+      [1, STALK.low],
+    ]);
+    c.fill();
+    inside(
+      c,
+      () => stalkPath(c, h, lean),
+      () => {
+        // fibres running up it
+        const r = seeded(77);
+        for (let i = 0; i < 16; i++) {
+          const x = -48 + r() * 96,
+            y0 = -6 - r() * 40,
+            len = 26 + r() * Math.max(30, h * 0.35);
+          c.beginPath();
+          c.moveTo(x, y0);
+          c.quadraticCurveTo(x * 0.92, y0 - len / 2, x * 0.78, y0 - len);
+          line(c, STALK.low, 1.2, 0.3);
+        }
+        // the cap's shadow, and the dusk's cool bounce light low down
+        c.fillStyle = linear(c, 0, -h, 0, -h + 44, [rgba(STALK.deep, 0.85), rgba(STALK.deep, 0)]);
+        c.fillRect(-80, -h, 160, 44);
+        c.fillStyle = linear(c, 0, 8, 0, -30, [rgba(STALK.deep, 0.75), rgba(STALK.deep, 0)]);
+        c.fillRect(-80, -30, 160, 40);
+      },
+    );
+    stalkPath(c, h, lean);
+    line(c, INK, 3.6);
+    // root toes and a bit of moss where he meets the ground
+    for (const [x, w, a] of [
+      [-58, 15, 0.4],
+      [-30, 13, 0.1],
+      [28, 13, -0.1],
+      [56, 15, -0.4],
+    ]) {
+      ellipse(c, x, 1, w, 7, a);
+      c.fillStyle = linear(c, 0, -6, 0, 8, [STALK.lit, STALK.low]);
+      c.fill();
+      line(c, INK, 2.6);
+    }
+  }
+  // The frilly collar a toadstool wears under its cap.
+  function drawSkirt(c) {
+    const path = () => {
+      c.beginPath();
+      c.moveTo(-36, -8);
+      c.quadraticCurveTo(0, 2, 36, -8);
+      c.bezierCurveTo(44, 2, 50, 10, 46, 16);
+      c.bezierCurveTo(38, 12, 34, 22, 25, 18);
+      c.bezierCurveTo(17, 14, 12, 25, 1, 20);
+      c.bezierCurveTo(-8, 16, -14, 25, -24, 18);
+      c.bezierCurveTo(-32, 13, -38, 21, -46, 15);
+      c.bezierCurveTo(-50, 9, -43, 2, -36, -8);
+      c.closePath();
+    };
+    path();
+    c.fillStyle = linear(c, -46, 0, 46, 0, [STALK.lit, STALK.hi, STALK.lit, STALK.mid]);
+    c.fill();
+    inside(c, path, () => {
+      for (let i = -5; i <= 5; i++) {
+        c.beginPath();
+        c.moveTo(i * 6, -4);
+        c.lineTo(i * 8.4, 22);
+        line(c, STALK.low, 1.2, 0.55);
+      }
+    });
+    path();
+    line(c, INK, 2.8);
+  }
+  // One stubby arm, from the shoulder (0, 0) along +x.
+  function drawArm(c) {
+    const path = () => {
+      c.beginPath();
+      c.moveTo(0, -8);
+      c.bezierCurveTo(14, -10, 26, -13, 36, -13);
+      c.bezierCurveTo(50, -13, 50, 13, 36, 13);
+      c.bezierCurveTo(26, 13, 14, 10, 0, 8);
+      c.closePath();
+    };
+    path();
+    c.fillStyle = linear(c, 0, -13, 0, 13, [STALK.hi, STALK.lit, STALK.low]);
+    c.fill();
+    path();
+    line(c, INK, 3);
+  }
+
+  // ---- his face: (0, 0) is its middle. look: -1..1, which way his pupils go. ----
+  const FACES = {
+    sulk: { lid: 0.48, lidIn: -2, browIn: -3, browOut: 3, browY: -27, pupil: 0.92, blush: 0.6 },
+    shout: { lid: 0, browIn: 8, browOut: -11, browY: -31, pupil: 0.62, blush: 0.35 },
+    cross: { lid: 0.34, lidIn: 5, browIn: 12, browOut: -9, browY: -27, pupil: 0.74, blush: 0.75 },
+    furious: {
+      lid: 0.22,
+      lidIn: 7,
+      browIn: 16,
+      browOut: -11,
+      browY: -27,
+      pupil: 0.5,
+      blush: 0.9,
+      sclera: '#fff3a8',
+    },
+  };
+  function eye(c, side, f, look) {
+    const x = side * 22,
+      y = -5,
+      rx = 14,
+      ry = 18,
+      shape = () => ellipse(c, x, y, rx, ry);
+    shape();
+    c.fillStyle = f.sclera ?? '#ffffff';
+    c.fill();
+    inside(c, shape, () => {
+      const px = x + look * 5,
+        py = y + 3;
+      ellipse(c, px, py, 9 * f.pupil + 1, 11.5 * f.pupil + 1);
+      c.fillStyle = '#2d1a4a';
+      c.fill();
+      ellipse(c, px, py, 5 * f.pupil + 1, 6.5 * f.pupil + 1);
+      c.fillStyle = INK;
+      c.fill();
+      circle(c, px - 3, py - 5, 3);
+      c.fillStyle = '#fff';
+      c.fill();
+      circle(c, px + 3, py + 4, 1.4);
+      c.fillStyle = '#fff';
+      c.fill();
+      if (f.lid > 0) {
+        // a lid with a curved edge, lower toward his nose the crosser he is
+        const edge = y - ry + ry * 2 * f.lid,
+          inner = edge + (f.lidIn ?? 0),
+          outer = edge - (f.lidIn ?? 0) * 0.4,
+          lidPath = () => {
+            c.beginPath();
+            c.moveTo(x + side * (rx + 2), outer);
+            c.quadraticCurveTo(x, edge + 3, x - side * (rx + 2), inner);
+          };
+        lidPath();
+        c.lineTo(x - side * (rx + 2), y - ry - 3);
+        c.lineTo(x + side * (rx + 2), y - ry - 3);
+        c.closePath();
+        c.fillStyle = STALK.lit;
+        c.fill();
+        lidPath();
+        line(c, INK, 3.4);
+      }
+    });
+    shape();
+    line(c, INK, 2.3);
+    // the brow, thick and low: this is most of his mood
+    c.beginPath();
+    c.moveTo(side * 38, f.browY + f.browOut + 2);
+    c.quadraticCurveTo(side * 23, f.browY - 2 + (f.browIn + f.browOut) / 2, side * 9, f.browY + f.browIn);
+    line(c, INK, 5.8);
+  }
+  function blush(c, a) {
+    if (a <= 0) return;
+    for (const s of [-1, 1]) glow(c, s * 35, 16, 13, '#ff7a9a', a, 8);
+  }
+  function mouth(c, kind) {
+    if (kind === 'pout') {
+      c.beginPath();
+      c.moveTo(-17, 27);
+      c.quadraticCurveTo(0, 15, 17, 27);
+      line(c, INK, 3.6);
+      ellipse(c, 0, 26, 8, 3.6);
+      c.fillStyle = '#d97a8c';
+      c.fill();
+      line(c, INK, 2);
+    } else if (kind === 'shout') {
+      const s = () => {
+        c.beginPath();
+        c.moveTo(-22, 16);
+        c.quadraticCurveTo(0, 10, 22, 16);
+        c.bezierCurveTo(26, 34, 14, 46, 0, 46);
+        c.bezierCurveTo(-14, 46, -26, 34, -22, 16);
+        c.closePath();
+      };
+      s();
+      c.fillStyle = '#4a1230';
+      c.fill();
+      inside(c, s, () => {
+        ellipse(c, 0, 44, 15, 10);
+        c.fillStyle = '#ff7f96';
+        c.fill();
+        c.fillStyle = '#fff';
+        c.fillRect(-22, 10, 44, 8);
+      });
+      s();
+      line(c, INK, 3);
+    } else if (kind === 'grit') {
+      const s = () => {
+        c.beginPath();
+        c.moveTo(-23, 19);
+        c.quadraticCurveTo(0, 13, 23, 19);
+        c.quadraticCurveTo(25, 34, 15, 36);
+        c.quadraticCurveTo(0, 32, -15, 36);
+        c.quadraticCurveTo(-25, 34, -23, 19);
+        c.closePath();
+      };
+      s();
+      c.fillStyle = '#fff';
+      c.fill();
+      inside(c, s, () => {
+        c.beginPath();
+        c.moveTo(-26, 26);
+        c.quadraticCurveTo(0, 21, 26, 26);
+        line(c, INK, 2);
+        for (let i = -2; i <= 2; i++) {
+          c.beginPath();
+          c.moveTo(i * 8.6, 12);
+          c.lineTo(i * 8.6, 38);
+          line(c, INK, 2);
+        }
+      });
+      s();
+      line(c, INK, 3);
+    } else if (kind === 'roar') {
+      const s = () => {
+        c.beginPath();
+        c.moveTo(-26, 15);
+        c.quadraticCurveTo(0, 8, 26, 15);
+        c.bezierCurveTo(30, 36, 16, 50, 0, 50);
+        c.bezierCurveTo(-16, 50, -30, 36, -26, 15);
+        c.closePath();
+      };
+      s();
+      c.fillStyle = '#3e0c2a';
+      c.fill();
+      inside(c, s, () => {
+        ellipse(c, 0, 49, 17, 11);
+        c.fillStyle = '#ff6f8e';
+        c.fill();
+        c.fillStyle = '#fff';
+        for (let i = -3; i <= 3; i++) {
+          c.beginPath();
+          c.moveTo(i * 7.6 - 3.8, 8);
+          c.lineTo(i * 7.6 + 3.8, 8);
+          c.lineTo(i * 7.6, 21);
+          c.closePath();
+          c.fill();
+        }
+      });
+      s();
+      line(c, INK, 3);
+    }
+  }
+  function drawFace(c, mood, look = 0) {
+    c.lineCap = c.lineJoin = 'round';
+    if (FACES[mood]) {
+      const f = FACES[mood];
+      blush(c, f.blush);
+      eye(c, -1, f, look);
+      eye(c, 1, f, look);
+      mouth(c, { sulk: 'pout', shout: 'shout', cross: 'grit', furious: 'roar' }[mood]);
+      return;
+    }
+    if (mood === 'ouch') {
+      blush(c, 0.6);
+      for (const s of [-1, 1]) {
+        c.beginPath();
+        c.moveTo(s * 34, -16);
+        c.lineTo(s * 12, -5);
+        c.lineTo(s * 34, 6);
+        line(c, INK, 5.4);
+      }
+      ellipse(c, 0, 28, 9, 11);
+      c.fillStyle = '#4a1230';
+      c.fill();
+      line(c, INK, 3);
+    } else if (mood === 'dizzy') {
+      for (const s of [-1, 1]) {
+        const x = s * 21,
+          y = -5;
+        ellipse(c, x, y, 17, 20);
+        c.fillStyle = '#fff';
+        c.fill();
+        line(c, INK, 2.8);
+        c.beginPath();
+        for (let a = 0; a < TAU * 2.4; a += 0.25) {
+          const r = 1 + a * 0.95,
+            px = x + Math.cos(a * s + 1) * r,
+            py = y + Math.sin(a * s + 1) * r * 1.12;
+          if (a === 0) c.moveTo(px, py);
+          else c.lineTo(px, py);
+        }
+        line(c, INK, 2.4);
+      }
+      c.beginPath();
+      c.moveTo(-20, 28);
+      c.bezierCurveTo(-10, 18, -2, 36, 8, 26);
+      c.bezierCurveTo(14, 21, 18, 24, 21, 28);
+      line(c, INK, 3.4);
+      ellipse(c, 10, 34, 8, 10, 0.2);
+      c.fillStyle = '#ff7f96';
+      c.fill();
+      line(c, INK, 2.4);
+    } else if (mood === 'joy') {
+      blush(c, 0.95);
+      for (const s of [-1, 1]) {
+        c.beginPath();
+        c.arc(s * 21, 0, 15, 1.13 * Math.PI, 1.87 * Math.PI);
+        line(c, INK, 5.2);
+      }
+      const m = () => {
+        c.beginPath();
+        c.moveTo(-26, 12);
+        c.quadraticCurveTo(0, 18, 26, 12);
+        c.bezierCurveTo(26, 34, 12, 44, 0, 44);
+        c.bezierCurveTo(-12, 44, -26, 34, -26, 12);
+        c.closePath();
+      };
+      m();
+      c.fillStyle = '#5a1630';
+      c.fill();
+      inside(c, m, () => {
+        ellipse(c, 0, 42, 17, 13);
+        c.fillStyle = '#ff8fa6';
+        c.fill();
+        c.fillStyle = '#fff';
+        c.fillRect(-26, 8, 52, 9);
+      });
+      m();
+      line(c, INK, 3);
+    } else if (mood === 'sleepy') {
+      blush(c, 0.4);
+      for (const s of [-1, 1]) {
+        c.beginPath();
+        c.arc(s * 21, -8, 14, 0.15 * Math.PI, 0.85 * Math.PI);
+        line(c, INK, 4.6);
+      }
+      ellipse(c, 2, 28, 6, 7);
+      c.fillStyle = '#4a1230';
+      c.fill();
+      line(c, INK, 2.6);
+    }
+  }
+
+  // A burst of cartoon stars for dizzy.
+  function star(c, x, y, r, rot = 0) {
+    c.beginPath();
+    for (let i = 0; i < 10; i++) {
+      const a = rot + (i / 10) * TAU - Math.PI / 2,
+        d = i % 2 ? r * 0.46 : r;
+      c.lineTo(x + Math.cos(a) * d, y + Math.sin(a) * d);
+    }
+    c.closePath();
+    c.fillStyle = '#ffe25a';
+    c.fill();
+    line(c, '#7a4a10', 2.4);
+  }
+
+  // The whole of Mo, for this sheet: in the game each part is an image moved by MoView.
+  // x: where he stands; feet: the y of his feet; rear: 0-1 as in the sim. o: anything that's only acting.
+  function drawMo(c, x, feet, rear, o = {}) {
+    const {
+      cap = 'sulky',
+      face = 'sulk',
+      look = 0,
+      squash = 0,
+      tilt = 0,
+      capTilt = 0,
+      arms = 'droop',
+      lean = 0,
+      glowSpots = 0.5,
+    } = o;
+    const capH = (92 + (178 - 92) * rear) * (1 - squash * 0.75);
+    // the face keeps its distance under the brim: sulking his eyes peek out from under it, reared up it sits clear
+    const faceH = capH - (46 + (63 - 46) * rear);
+    c.save();
+    c.translate(x, feet);
+    c.scale(1 + squash * 0.42, 1);
+    c.rotate(tilt);
+    c.save();
+    c.translate(lean, -capH);
+    c.rotate(capTilt);
+    if (rear > 0.25) drawGills(c);
+    c.restore();
+    drawStalk(c, capH - 10, lean);
+    if (rear > 0.4) {
+      c.save();
+      c.translate(lean * 0.9, -capH + 42);
+      drawSkirt(c);
+      c.restore();
+    }
+    const armY = -Math.max(30, faceH - 44);
+    {
+      const a = { up: -1.0, out: -0.25, droop: 1.05, flail: -1.35 }[arms] ?? 1.05;
+      for (const s of [-1, 1]) {
+        c.save();
+        c.translate(s * 44, armY);
+        c.scale(s, 1);
+        c.rotate(a + (arms === 'flail' ? s * 0.25 : 0));
+        drawArm(c);
+        c.restore();
+      }
+    }
+    c.save();
+    c.translate(lean * 0.6, -faceH);
+    drawFace(c, face, look);
+    c.restore();
+    c.save();
+    c.translate(lean, -capH);
+    c.rotate(capTilt);
+    c.scale(1, 1 - squash * 0.25);
+    drawCap(c, cap);
+    if (glowSpots > 0) {
+      c.save();
+      c.globalCompositeOperation = 'lighter';
+      c.globalAlpha = glowSpots;
+      drawCapGlow(c, cap);
+      c.restore();
+    }
+    c.restore();
+    c.restore();
+  }
+
+  // Spinning like a top: the cap's spots slide past, the stalk is a blur with his face going round on it. Draw a few
+  // frames and flip through them. frame: 0..N. The sim's whirl has r = 52, and he leans into the way he is going.
+  function drawWhirl(c, frame, k = 'furious') {
+    const p = CAP_COLORS[k],
+      turn = frame / 6, // 0..1, one turn
+      wrap = (u) => ((u % 1) + 1) % 1;
+    const body = () => {
+      c.beginPath();
+      c.moveTo(-40, -66);
+      c.bezierCurveTo(-58, -40, -64, -12, -50, 0);
+      c.quadraticCurveTo(0, 12, 50, 0);
+      c.bezierCurveTo(64, -12, 58, -40, 40, -66);
+      c.closePath();
+    };
+    body();
+    c.fillStyle = linear(c, -60, 0, 60, 0, [STALK.mid, STALK.hi, STALK.lit, STALK.mid, STALK.low]);
+    c.fill();
+    inside(c, body, () => {
+      const r = seeded(31 + frame);
+      for (let i = 0; i < 12; i++) {
+        const y = -64 + r() * 64;
+        c.beginPath();
+        c.moveTo(-70, y);
+        c.quadraticCurveTo(0, y + 8, 70, y);
+        line(c, STALK.low, 1.6, 0.42);
+      }
+      // his eyes and mouth, smeared by the spin as they come round the front
+      const u = wrap(turn),
+        front = Math.cos((u - 0.5) * Math.PI * 2),
+        fx = Math.sin((u - 0.5) * Math.PI * 2) * 40;
+      if (front > -0.2) {
+        c.globalAlpha = 0.45 + front * 0.5;
+        for (const s of [-1, 1]) {
+          ellipse(c, fx + s * 16 * front, -44, 11 * Math.max(0.3, front) + 5, 5);
+          c.fillStyle = INK;
+          c.fill();
+        }
+        ellipse(c, fx, -24, 14 * Math.max(0.3, front) + 4, 4);
+        c.fillStyle = '#4a1230';
+        c.fill();
+        c.globalAlpha = 1;
+      }
+    });
+    body();
+    line(c, INK, 3.2);
+    const dome = () => {
+      c.beginPath();
+      c.moveTo(-92, -60);
+      c.bezierCurveTo(-90, -100, -46, -124, 0, -124);
+      c.bezierCurveTo(46, -124, 90, -100, 92, -60);
+      c.bezierCurveTo(56, -40, -56, -40, -92, -60);
+      c.closePath();
+    };
+    dome();
+    c.fillStyle = radial(c, -6, -84, 106, [p.hi, p.lit, p.mid, p.low], -30, -104);
+    c.fill();
+    inside(c, dome, () => {
+      c.fillStyle = linear(c, 0, -76, 0, -42, [rgba(p.low, 0), p.rim]);
+      c.fillRect(-96, -76, 192, 36);
+      // spots sliding round, wide in the middle and thin at the edges, each with a streak behind it
+      for (let i = 0; i < 8; i++) {
+        const u = wrap(i / 8 + turn),
+          a = (u - 0.5) * Math.PI,
+          sx = Math.sin(a) * 84,
+          wide = Math.cos(a) * 20 + 3,
+          y = -80 - ((i * 37) % 3) * 11;
+        ellipse(c, sx, y, wide, 7.5);
+        c.fillStyle = rgba(p.spot, 0.95);
+        c.fill();
+        c.beginPath();
+        c.moveTo(sx - wide - 2, y);
+        c.lineTo(sx - wide - 26 * Math.cos(a), y);
+        line(c, p.spot, 3, 0.4);
+      }
+    });
+    dome();
+    line(c, INK, 3.6);
+  }
+  // The arcs of air round him, drawn as light. They go in front of him.
+  function drawWhirlArcs(c, frame) {
+    for (let i = 0; i < 3; i++) {
+      const y = -96 + i * 38,
+        rx = 112 - i * 8,
+        from = 0.3 + ((frame + i * 2) % 6) * 0.42;
+      c.beginPath();
+      c.ellipse(0, y, rx, 18, 0, from, from + 2.3);
+      line(c, '#f0d8ff', 3.4, 0.75);
+    }
+  }
+
+  // ---- acid smoke: a heap of puffs in two passes, so they share one outline and never look like bubbles ----
+  const ACID = { out: '#145a30', deep: '#2b9440', mid: '#6cc638', lit: '#b6e84c', hi: '#ecfca0' };
+  // puffs: [x, y, r, stretch across, stretch up]
+  function billow(c, puffs, seed = 1, pal = ACID, outline = 2.4) {
+    const each = (i, grow) => {
+      const [x, y, r, sx = 1, sy = 1] = puffs[i];
+      c.save();
+      c.translate(x, y);
+      c.scale(sx, sy);
+      blob(c, 0, 0, r + grow, seeded(seed + i * 13), 11, 0.08);
+      c.restore();
+    };
+    for (let i = 0; i < puffs.length; i++) {
+      each(i, outline);
+      c.fillStyle = pal.out;
+      c.fill();
+    }
+    for (let i = 0; i < puffs.length; i++) {
+      const [x, y, r, sx = 1] = puffs[i],
+        rr = r * Math.max(sx, 1);
+      each(i, 0);
+      c.fillStyle = radial(
+        c,
+        x,
+        y,
+        rr * 1.25,
+        [
+          [0, pal.hi],
+          [0.3, pal.lit],
+          [0.7, pal.mid],
+          [1, pal.deep],
+        ],
+        x - rr * 0.34,
+        y - r * 0.5,
+      );
+      c.fill();
+    }
+  }
+  // The little "6" a cartoon draws inside smoke: this, not the outline, is what says it's smoke and not slime.
+  function curl(c, x, y, r, dir = 1, color = ACID.deep, width = 2.2, alpha = 0.7) {
+    c.beginPath();
+    for (let a = 0; a < TAU * 1.15; a += 0.3) {
+      const d = r * (1 - a / (TAU * 1.5));
+      const px = x + dir * Math.cos(a + 2.4) * d,
+        py = y + Math.sin(a + 2.4) * d;
+      if (a === 0) c.moveTo(px, py);
+      else c.lineTo(px, py);
+    }
+    line(c, color, width, alpha);
+  }
+  // A wisp curling off the top, thin at its end.
+  function wisp(c, x, y, len, lean, alpha = 0.6) {
+    c.beginPath();
+    c.moveTo(x, y);
+    c.bezierCurveTo(x - lean * 0.2, y - len * 0.4, x - lean, y - len * 0.5, x - lean * 0.9, y - len);
+    line(c, ACID.lit, 3, alpha);
+  }
+  // A soft-edged puff of gas: solid in the middle, fading over its last part, lit from above.
+  function gasPuff(c, x, y, rx, ry, col, alpha = 1, edge = 0.72, lit = null) {
+    c.save();
+    c.translate(x, y);
+    c.scale(1, ry / rx);
+    c.fillStyle = radial(c, 0, 0, rx, [
+      [0, rgba(col, alpha)],
+      [edge, rgba(col, alpha)],
+      [1, rgba(col, 0)],
+    ]);
+    c.fillRect(-rx, -rx, rx * 2, rx * 2);
+    if (lit) {
+      c.fillStyle = radial(c, -rx * 0.22, -rx * 0.32, rx * 0.72, [
+        [0, rgba(lit, alpha * 0.85)],
+        [1, rgba(lit, 0)],
+      ]);
+      c.fillRect(-rx, -rx, rx * 2, rx * 2);
+    }
+    c.restore();
+  }
+  // The smoke's four layers, back to front. Only the lowest, brightest one (the "body") hurts, and it's what the sim's
+  // hitbox covers; the two behind it are atmosphere, and fade out toward the tail.
+  const GAS = { back: '#1c6a4a', mid: '#3f9a3c', body: '#8fd832', hot: '#e6fb86', rim: '#14502e' };
+  // (0, 0) is on the ground at the front's middle, heading right. roll: 0..1, one turn of it.
+  function drawSmokeFront(c, roll = 0) {
+    c.save();
+    c.scale(1.28, 1.28);
+    const w = (a, amt) => Math.sin(roll * TAU + a) * amt;
+    // far smoke, tall and dark, leaning back
+    for (const [x, y, rx, ry, al] of [
+      [-92, -24, 36, 22, 0.32],
+      [-62, -36, 36, 26, 0.5],
+      [-30, -48, 36, 28, 0.62],
+      [2, -50, 32, 28, 0.66],
+      [24, -36, 26, 24, 0.6],
+    ])
+      gasPuff(c, x + w(x, 4), y + w(y, 3), rx, ry, GAS.back, Math.min(1, al * 1.25), 0.6);
+    // the middle of it
+    for (const [x, y, rx, ry, al] of [
+      [-104, -13, 34, 15, 0.42],
+      [-72, -19, 32, 19, 0.7],
+      [-42, -28, 30, 23, 0.86],
+      [-12, -33, 30, 25, 0.94],
+      [18, -27, 26, 22, 0.94],
+      [40, -15, 18, 15, 0.9],
+    ])
+      gasPuff(c, x + w(x + 1, 3), y + w(y + 1, 2), rx, ry, GAS.mid, al, 0.64, '#6cc438');
+    // the body: low, bright, nearly solid, with a soft dark rim
+    const body = [
+      [-58, -9, 28, 12, 0.72],
+      [-30, -13, 28, 16, 0.92],
+      [-2, -16, 28, 19, 1],
+      [24, -14, 24, 17, 1],
+      [44, -8, 15, 11, 1],
+    ];
+    for (const [x, y, rx, ry, al] of body)
+      gasPuff(c, x + w(x + 2, 2), y + w(y + 2, 1.5), rx + 3, ry + 3, GAS.rim, al * 0.75, 0.82);
+    for (const [x, y, rx, ry, al] of body)
+      gasPuff(c, x + w(x + 2, 2), y + w(y + 2, 1.5), rx, ry, GAS.body, al, 0.8, GAS.hot);
+    // curls say it's smoke; wisps say it's rising
+    curl(c, -4 + w(1, 3), -19, 7.5, 1, '#3f9a3c', 2.2, 0.8);
+    curl(c, 24 + w(3, 3), -16, 6, 1, '#3f9a3c', 2, 0.75);
+    curl(c, -34 + w(5, 3), -36, 8.5, 1, '#8fd832', 2.2, 0.55);
+    curl(c, -2 + w(2, 3), -56, 7, 1, '#6cc438', 2.2, 0.6);
+    wisp(c, -18, -68, 22, 16 + w(1, 4), 0.5);
+    wisp(c, -50, -54, 18, 14 + w(2, 4), 0.38);
+    c.restore();
+  }
+  // One puff of the harmless haze it leaves behind: soft, pale and without an outline.
+  function drawHaze(c, r, a) {
+    gasPuff(c, 0, 0, r, r * 0.6, GAS.mid, a, 0.45);
+    gasPuff(c, -r * 0.1, r * 0.08, r * 0.62, r * 0.32, GAS.body, a * 0.55, 0.4);
+  }
+
+  // ---- the fairy ring ----
+  // A tiny toadstool of the ring, standing on (0, 0). k: 0..1 as it pops up.
+  function drawRingShroom(c, h) {
+    const w = h * 0.86;
+    c.beginPath();
+    c.moveTo(-w * 0.2, 0);
+    c.quadraticCurveTo(-w * 0.14, -h * 0.34, -w * 0.13, -h * 0.62);
+    c.lineTo(w * 0.13, -h * 0.62);
+    c.quadraticCurveTo(w * 0.14, -h * 0.34, w * 0.2, 0);
+    c.quadraticCurveTo(0, h * 0.09, -w * 0.2, 0);
+    c.closePath();
+    c.fillStyle = linear(c, -w * 0.2, 0, w * 0.2, 0, ['#fff4da', '#e8cfae', '#b08ea0']);
+    c.fill();
+    line(c, INK, 1.9);
+    const cap = () => {
+      c.beginPath();
+      c.moveTo(-w / 2, -h * 0.52);
+      c.bezierCurveTo(-w / 2, -h * 1.06, w / 2, -h * 1.06, w / 2, -h * 0.52);
+      c.quadraticCurveTo(0, -h * 0.4, -w / 2, -h * 0.52);
+      c.closePath();
+    };
+    cap();
+    c.fillStyle = radial(
+      c,
+      0,
+      -h * 0.68,
+      w * 0.62,
+      [ACID.hi, ACID.lit, ACID.mid, ACID.deep],
+      -w * 0.16,
+      -h * 0.84,
+    );
+    c.fill();
+    inside(c, cap, () => {
+      for (const [x, y, r] of [
+        [-w * 0.2, -h * 0.72, w * 0.09],
+        [w * 0.14, -h * 0.82, w * 0.07],
+        [w * 0.26, -h * 0.62, w * 0.05],
+      ]) {
+        circle(c, x, y, r);
+        c.fillStyle = '#fbffd8';
+        c.fill();
+      }
+    });
+    cap();
+    line(c, INK, 2);
+  }
+  // The mycelium: pale roots through the soil, thick at the head and tapering back toward Mo. (0, 0) is its head, on the
+  // soil just under the turf; it reaches back to the right for `reach`. Rootlets only ever go down into the soil.
+  function drawMycelium(c, reach, seed = 9) {
+    const r = seeded(seed),
+      pts = [];
+    for (let x = 0; x <= reach; x += 26) pts.push([x, 5 + Math.sin(x * 0.03 + seed) * 3.5 + (r() - 0.5) * 3]);
+    const stroke = (color, width, alpha) => {
+      for (let i = 0; i < pts.length - 1; i++) {
+        const u = i / Math.max(1, pts.length - 1),
+          [x0, y0] = pts[i],
+          [x1, y1] = pts[i + 1];
+        c.beginPath();
+        c.moveTo(x0, y0);
+        c.quadraticCurveTo((x0 + x1) / 2, (y0 + y1) / 2 + (i % 2 ? 2 : -2), x1, y1);
+        line(c, color, width * (1 - u * 0.65), alpha);
+      }
+    };
+    c.save();
+    c.globalCompositeOperation = 'lighter';
+    stroke(ACID.lit, 8, 0.28);
+    c.restore();
+    stroke(ACID.lit, 3, 1);
+    stroke(ACID.hi, 1.2, 0.9);
+    for (let i = 1; i < pts.length; i += 1) {
+      const [x, y] = pts[i],
+        side = i % 2 ? 1 : -1,
+        len = 7 + r() * 11;
+      c.beginPath();
+      c.moveTo(x, y);
+      c.quadraticCurveTo(x + side * len * 0.8, y + 1, x + side * len, y + 5 + r() * 9);
+      line(c, ACID.lit, 1.3, 0.5);
+    }
+    // the head: a glow pushing up under the turf
+    c.save();
+    c.globalCompositeOperation = 'lighter';
+    glow(c, 0, 2, 34, ACID.lit, 0.7, 12);
+    glow(c, 0, 2, 14, ACID.hi, 0.9, 6);
+    c.restore();
+  }
+
+  // His portrait for the boss bar, in a box 64 across: what reads at that size is the cap, its spots and his eyes.
+  function drawPortrait(c, k, mood) {
+    glow(c, 0, 3, 30, '#120826', 0.45);
+    c.save();
+    c.translate(0, 14);
+    c.scale(0.42, 0.42);
+    stalkPath(c, 20);
+    c.fillStyle = STALK.lit;
+    c.fill();
+    line(c, INK, 6);
+    c.restore();
+    c.save();
+    c.translate(0, 4);
+    c.scale(0.27, 0.27);
+    c.lineWidth = 4;
+    drawFace(c, mood);
+    c.restore();
+    c.save();
+    c.translate(0, -6);
+    c.scale(0.29, 0.29);
+    drawCap(c, k);
+    c.restore();
+  }
+</script>
+<script>
+  const GROUND = 468;
+  const load = (n) =>
+    new Promise((ok) => {
+      const i = new Image();
+      i.onload = () => ok(i);
+      i.onerror = () => ok(null);
+      i.src = `bg-${n}.png`;
+    });
+
+  // Pip, roughly, only for scale. (The real one is PlayerView.)
+  function pip(c, x, feet, o = {}) {
+    c.save();
+    c.translate(x, feet);
+    c.scale(o.flip ? -1 : 1, 1);
+    ellipse(c, 0, -24, 22, 25);
+    c.fillStyle = radial(c, 0, -24, 28, ['#e6fd9e', '#b3ee6a', '#82d44c'], -6, -34);
+    c.fill();
+    line(c, '#226a2e', 3);
+    for (const s of [-1, 1]) {
+      c.save();
+      c.translate(s * 2, -48);
+      c.rotate(-Math.PI / 2 + s * 0.7);
+      c.beginPath();
+      c.moveTo(0, 0);
+      c.quadraticCurveTo(10, -7, 22, 0);
+      c.quadraticCurveTo(10, 7, 0, 0);
+      c.fillStyle = s < 0 ? '#58b947' : '#aaec7a';
+      c.fill();
+      line(c, '#226a2e', 2.2);
+      c.restore();
+    }
+    for (const s of [-1, 1]) {
+      ellipse(c, 2 + s * 8, -26, 3.2, 4);
+      c.fillStyle = '#2b1b17';
+      c.fill();
+    }
+    c.fillStyle = '#7a4a22';
+    c.fillRect(16, -30, 16, 12);
+    c.restore();
+  }
+  function bang(c, x, y) {
+    circle(c, x, y, 16);
+    c.fillStyle = '#ff7a2c';
+    c.fill();
+    line(c, '#fff4d6', 3.2);
+    c.fillStyle = '#fff';
+    c.fillRect(x - 2.5, y - 10, 5, 12);
+    circle(c, x, y + 7, 2.8);
+    c.fill();
+  }
+  function orangeRing(c, x, rx, a = 1) {
+    ellipse(c, x, GROUND + 1, rx, rx * 0.24);
+    c.fillStyle = `rgba(255,150,50,${0.22 * a})`;
+    c.fill();
+    line(c, '#ffb040', 3.4, a);
+  }
+  // Rolling smoke heading dir, with what it leaves behind: x is the front, travelled how far it has come.
+  function smokeWave(c, x, dir, travelled, roll, seed = 3) {
+    const r = seeded(seed);
+    // a scorch of light along the moss...
+    c.save();
+    c.globalCompositeOperation = 'lighter';
+    c.save();
+    c.translate(x - (dir * travelled) / 2, GROUND + 2);
+    glow(c, 0, 0, travelled / 2 + 70, ACID.lit, 0.42, 10);
+    c.restore();
+    c.restore();
+    // ...the haze, oldest and palest nearest where he landed...
+    const step = 26,
+      n = Math.floor(travelled / step);
+    for (let i = n; i >= 1; i--) {
+      const back = i * step + 92,
+        k = 1 - i / (n + 2);
+      c.save();
+      c.translate(x - dir * back + (r() - 0.5) * 10, GROUND - 13 - (1 - k) * 18 + (r() - 0.5) * 5);
+      drawHaze(c, 38 + (1 - k) * 22, 0.72 * k);
+      c.restore();
+      if (i % 2 === 0) {
+        // ...with a wisp lifting off it here and there
+        c.save();
+        c.translate(x - dir * back, GROUND - 34 - (1 - k) * 18);
+        c.scale(dir, 1);
+        curl(c, 0, 0, 7 + r() * 4, 1, ACID.lit, 2, 0.5 * k);
+        c.restore();
+      }
+    }
+    c.save();
+    c.translate(x, GROUND + 2);
+    c.scale(dir, 1);
+    drawSmokeFront(c, roll);
+    c.restore();
+  }
+  const RING = [
+    // around the ellipse, back ones first
+    [-0.6, -1, 21],
+    [0.15, -1, 24],
+    [0.72, -0.85, 20],
+    [-0.98, -0.2, 24],
+    [0.98, -0.1, 22],
+    [-0.72, 0.8, 27],
+    [-0.05, 1, 30],
+    [0.68, 0.85, 25],
+  ];
+  function ringBack(c, x, k = 1) {
+    for (const [u, v, h] of RING.filter((s) => s[1] < 0)) {
+      c.save();
+      c.translate(x + u * 52, GROUND + 1 + v * 12);
+      c.scale(k, k);
+      drawRingShroom(c, h);
+      c.restore();
+    }
+  }
+  function ringFront(c, x, k = 1, burst = 0) {
+    for (const [u, v, h] of RING.filter((s) => s[1] >= 0)) {
+      c.save();
+      c.translate(x + u * (52 + burst * 5), GROUND + 1 + v * 12);
+      c.rotate(u * burst * 0.4);
+      c.scale(k, k);
+      drawRingShroom(c, h);
+      c.restore();
+    }
+  }
+  // Warning: the ring is up, the ground shines orange, a pale beam says where it will go, the "!".
+  function ringWarn(c, x) {
+    c.save();
+    c.globalCompositeOperation = 'lighter';
+    const beam = linear(c, 0, 110, 0, GROUND, ['rgba(255,190,90,0)', 'rgba(255,190,90,0.26)']);
+    c.fillStyle = beam;
+    c.fillRect(x - 29, 110, 58, GROUND - 110);
+    c.restore();
+    orangeRing(c, x, 62);
+    ringBack(c, x);
+    const r = seeded(21);
+    for (let i = 0; i < 7; i++) {
+      c.save();
+      c.translate(x + (r() - 0.5) * 44, GROUND - 16 - r() * 64);
+      drawHaze(c, 6 + r() * 7, 0.7);
+      c.restore();
+    }
+  }
+  // The eruption: one flowing column of gas with wavy sides (in the game, a strip that scrolls up fast), a plume of
+  // soft puffs at its top, and a splash at its foot. t: seconds, only so the column's waves move.
+  function ringJet(c, x, t) {
+    const top = 118,
+      wave = (y, a) => Math.sin(y * 0.038 + t * 14 + a) * 5 + Math.sin(y * 0.09 + t * 21 + a * 2) * 2.5,
+      side = (dir, grow) => {
+        for (let y = GROUND; y >= top; y -= 10) {
+          const u = (GROUND - y) / (GROUND - top),
+            half = 24 + u * 8 + grow + wave(y, dir);
+          c.lineTo(x + dir * half, y);
+        }
+      },
+      column = (grow) => {
+        c.beginPath();
+        c.moveTo(x - 24 - grow, GROUND);
+        side(-1, grow);
+        const rev = [];
+        for (let y = top; y <= GROUND; y += 10) {
+          const u = (GROUND - y) / (GROUND - top);
+          c.lineTo(x + (24 + u * 8 + grow + wave(y, 1)), y);
+        }
+        c.closePath();
+      };
+    c.save();
+    c.globalCompositeOperation = 'lighter';
+    glow(c, x, GROUND + 2, 124, ACID.lit, 0.6, 18);
+    c.fillStyle = linear(c, x - 66, 0, x + 66, 0, [
+      'rgba(143,216,50,0)',
+      'rgba(143,216,50,0.28)',
+      'rgba(143,216,50,0)',
+    ]);
+    c.fillRect(x - 66, top, 132, GROUND - top);
+    c.restore();
+    // the plume behind the column
+    for (const [px, py, rx, ry, col, al] of [
+      [x - 62, 136, 34, 20, GAS.back, 0.6],
+      [x + 62, 134, 34, 20, GAS.back, 0.6],
+      [x - 32, 106, 42, 30, GAS.back, 0.75],
+      [x + 32, 102, 42, 30, GAS.back, 0.75],
+      [x, 84, 40, 28, GAS.back, 0.7],
+    ])
+      gasPuff(c, px, py, rx, ry, col, al, 0.56);
+    for (const [px, py, rx, ry, al] of [
+      [x - 52, 132, 28, 16, 0.85],
+      [x + 52, 130, 28, 16, 0.85],
+      [x - 24, 112, 32, 22, 0.95],
+      [x + 24, 108, 32, 22, 0.95],
+      [x, 94, 28, 20, 0.95],
+    ])
+      gasPuff(c, px, py, rx, ry, GAS.mid, al, 0.66, '#6cc438');
+    // the column: rim, body, and a hot heart with streaks of speed
+    column(3);
+    c.fillStyle = GAS.rim;
+    c.fill();
+    column(0);
+    c.fillStyle = linear(c, x - 32, 0, x + 32, 0, [
+      [0, GAS.mid],
+      [0.22, GAS.body],
+      [0.5, GAS.hot],
+      [0.78, GAS.body],
+      [1, GAS.mid],
+    ]);
+    c.fill();
+    const r = seeded(11 + Math.floor(t * 30));
+    inside(
+      c,
+      () => column(0),
+      () => {
+        for (let i = 0; i < 16; i++) {
+          const sx = x + (r() - 0.5) * 56,
+            y0 = top + r() * (GROUND - top),
+            len = 24 + r() * 46;
+          c.beginPath();
+          c.moveTo(sx, y0);
+          c.lineTo(sx + Math.sin(y0) * 2, y0 - len);
+          line(c, i % 3 ? '#ffffff' : GAS.mid, i % 3 ? 2 : 2.6, i % 3 ? 0.55 : 0.5);
+        }
+      },
+    );
+    // over the column's top, where it opens out
+    for (const [px, py, rx, ry] of [
+      [x - 18, 122, 26, 15],
+      [x + 18, 120, 26, 15],
+      [x, 114, 24, 15],
+    ])
+      gasPuff(c, px, py, rx, ry, GAS.body, 1, 0.74, GAS.hot);
+    curl(c, x - 34, 110, 9.5, 1, '#3f9a3c', 2.4, 0.8);
+    curl(c, x + 30, 104, 8.5, 1, '#3f9a3c', 2.4, 0.8);
+    curl(c, x, 92, 7, 1, '#3f9a3c', 2.2, 0.7);
+    wisp(c, x - 20, 74, 22, 12, 0.5);
+    wisp(c, x + 30, 80, 20, -12, 0.45);
+    // the splash at its foot
+    for (const [px, py, rx, ry] of [
+      [x - 34, GROUND - 8, 24, 13],
+      [x + 34, GROUND - 8, 24, 13],
+      [x, GROUND - 12, 30, 15],
+    ])
+      gasPuff(c, px, py, rx, ry, GAS.body, 0.95, 0.74, GAS.hot);
+    c.save();
+    c.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 16; i++)
+      glow(c, x + (r() - 0.5) * 120, 80 + r() * (GROUND - 90), 2.5 + r() * 3.5, '#f4ffb8', 0.9);
+    c.restore();
+  }
+  function pod(c, x, y, s = 1) {
+    c.save();
+    c.translate(x, y);
+    c.scale(s, s);
+    c.save();
+    c.globalCompositeOperation = 'lighter';
+    glow(c, 0, 0, 30, ACID.lit, 0.55);
+    c.restore();
+    const r = seeded(7);
+    blob(c, 0, 0, 15, r, 14, 0.14);
+    c.fillStyle = radial(c, 0, 0, 18, [ACID.hi, ACID.lit, ACID.mid, ACID.deep], -5, -6);
+    c.fill();
+    line(c, ACID.out, 2.6);
+    for (const [px, py, pr] of [
+      [-7, 7, 2.2],
+      [8, 5, 1.8],
+      [8, -8, 1.6],
+    ]) {
+      circle(c, px, py, pr);
+      c.fillStyle = ACID.deep;
+      c.fill();
+    }
+    for (const s2 of [-1, 1]) {
+      ellipse(c, s2 * 5, -2, 2, 2.6);
+      c.fillStyle = INK;
+      c.fill();
+      c.beginPath();
+      c.moveTo(s2 * 9, -7);
+      c.lineTo(s2 * 2, -5);
+      line(c, INK, 1.8);
+    }
+    c.beginPath();
+    c.arc(0, 8, 3.4, 1.15 * Math.PI, 1.85 * Math.PI);
+    line(c, INK, 1.8);
+    c.restore();
+  }
+  // Lets the backdrop's blue and brown mushrooms sit back behind him.
+  function panel(id, cap, draw, bg) {
+    const f = document.createElement('figure'),
+      cv = document.createElement('canvas');
+    cv.width = 960;
+    cv.height = 540;
+    const c = cv.getContext('2d');
+    if (bg) c.drawImage(bg, 0, 0, 960, 540);
+    else {
+      c.fillStyle = linear(c, 0, 0, 0, 540, ['#241c5c', '#6a3a7a', '#1d1640']);
+      c.fillRect(0, 0, 960, 540);
+      c.fillStyle = '#23684f';
+      c.fillRect(0, GROUND, 960, 72);
+    }
+    draw(c);
+    f.append(cv);
+    const t = document.createElement('figcaption');
+    t.textContent = cap;
+    f.append(t);
+    document.getElementById('grid').append(f);
+  }
+
+  (async () => {
+    const [dusk, gloom, tantrum, glowBg] = await Promise.all(['dusk', 'gloom', 'tantrum', 'glow'].map(load));
+
+    // ---- the model sheet ----
+    const cv = document.createElement('canvas');
+    cv.width = 1920;
+    cv.height = 470;
+    document.getElementById('sheet').append(cv);
+    const s = cv.getContext('2d');
+    s.fillStyle = linear(s, 0, 0, 0, 470, ['#2c2360', '#4b2f72', '#2a2150']);
+    s.fillRect(0, 0, 1920, 470);
+    s.fillStyle = '#1f6c54';
+    s.fillRect(0, 432, 1920, 38);
+    const poses = [
+      ['Sulk (seeds bounce off)', 0, { face: 'sulk', look: -0.8, arms: 'droop' }],
+      ['Rears up (face open)', 1, { face: 'shout', arms: 'up', look: -0.4 }],
+      ['Cross', 1, { cap: 'cross', face: 'cross', arms: 'out', look: -0.6 }],
+      ['Furious', 1, { cap: 'furious', face: 'furious', arms: 'flail', look: -0.5, glowSpots: 0.95 }],
+      ['Landing', 0.85, { cap: 'cross', face: 'ouch', squash: 0.3, arms: 'out', capTilt: -0.04 }],
+      [
+        'Dizzy (long hit window)',
+        0.72,
+        { cap: 'furious', face: 'dizzy', arms: 'droop', tilt: 0.05, capTilt: 0.2, glowSpots: 0.5 },
+      ],
+      ['Cheered up', 0.9, { cap: 'happy', face: 'joy', arms: 'up', capTilt: -0.05, glowSpots: 0.9 }],
+    ];
+    poses.forEach(([label, rear, o], i) => {
+      const x = 140 + i * 272;
+      drawMo(s, x, 434, rear, o);
+      s.fillStyle = '#f4efff';
+      s.font = '600 20px Helvetica';
+      s.textAlign = 'center';
+      s.fillText(label, x, 30);
+    });
+    for (let i = 0; i < 3; i++)
+      star(s, 140 + 5 * 272 + Math.cos(i * 2.1) * 74, 434 - 262 + Math.sin(i * 2.1) * 14, 11, i);
+
+    [
+      ['sulky', 'cross'],
+      ['cross', 'cross'],
+      ['furious', 'furious'],
+      ['happy', 'joy'],
+    ].forEach(([k, m], i) => {
+      s.save();
+      s.translate(60 + i * 84, 76);
+      drawPortrait(s, k, m);
+      s.restore();
+    });
+    // ---- the fight ----
+    panel(
+      'a',
+      '1. He rears up, the hop is ringed',
+      (c) => {
+        pip(c, 300, GROUND);
+        orangeRing(c, 470, 92);
+        bang(c, 470, GROUND - 42);
+        drawMo(c, 700, GROUND, 1, { face: 'shout', arms: 'up', look: -0.7 });
+        bang(c, 700, GROUND - 262);
+      },
+      dusk,
+    );
+    panel(
+      'b',
+      '2. He lands: acid smoke rolls out both ways',
+      (c) => {
+        smokeWave(c, 270, -1, 170, 0.2, 3);
+        smokeWave(c, 730, 1, 170, 0.6, 4);
+        c.save();
+        c.globalCompositeOperation = 'lighter';
+        glow(c, 500, GROUND, 150, ACID.lit, 0.4, 26);
+        c.restore();
+        drawMo(c, 500, GROUND, 0.85, { face: 'ouch', squash: 0.3, arms: 'out' });
+        pip(c, 150, GROUND - 92);
+      },
+      dusk,
+    );
+    panel(
+      'c',
+      '3. Fairy ring: mycelium finds Pip, toadstools pop up under the "!"',
+      (c) => {
+        // the root back to Mo, through the soil
+        c.save();
+        c.translate(350, GROUND + 8);
+        drawMycelium(c, 340, 12);
+        c.restore();
+        ringWarn(c, 350);
+        pip(c, 350, GROUND);
+        ringFront(c, 350);
+        bang(c, 350, GROUND - 92);
+        drawMo(c, 690, GROUND, 0, { cap: 'cross', face: 'cross', look: -0.9, arms: 'droop' });
+      },
+      gloom,
+    );
+    panel(
+      'd',
+      '4. It erupts, right through the shelf',
+      (c) => {
+        ringJet(c, 92, 0.2);
+        ringBack(c, 92, 0.9);
+        ringFront(c, 92, 0.9, 1);
+        ringJet(c, 420, 0.5);
+        ringBack(c, 420, 0.9);
+        ringFront(c, 420, 0.9, 1);
+        pip(c, 270, GROUND);
+        drawMo(c, 700, GROUND, 0, { cap: 'cross', face: 'cross', look: -0.8, arms: 'droop' });
+      },
+      gloom,
+    );
+    panel(
+      'e',
+      '5. Cap Spin: a whirl, not a lost hat',
+      (c) => {
+        c.save();
+        c.globalCompositeOperation = 'lighter';
+        c.save();
+        c.translate(470, GROUND + 2);
+        glow(c, 0, 0, 190, ACID.lit, 0.3, 9);
+        c.restore();
+        c.restore();
+        for (let i = 0; i < 6; i++) {
+          c.save();
+          c.translate(520 - i * 44, GROUND - 16 - i * 3);
+          drawHaze(c, 30 + i * 5, 0.55 - i * 0.07);
+          c.restore();
+        }
+        c.save();
+        c.translate(610, GROUND);
+        c.rotate(-0.1);
+        c.scale(0.85, 0.85);
+        drawWhirl(c, 3);
+        drawWhirlArcs(c, 3);
+        c.restore();
+        pip(c, 800, GROUND - 120, { flip: true });
+        pod(c, 240, 300);
+        pod(c, 180, 340, 0.94);
+      },
+      tantrum,
+    );
+    panel(
+      'f',
+      '6. Dizzy: his face is open',
+      (c) => {
+        drawMo(c, 620, GROUND, 0.72, {
+          cap: 'furious',
+          face: 'dizzy',
+          arms: 'droop',
+          tilt: 0.05,
+          capTilt: 0.2,
+          glowSpots: 0.55,
+        });
+        for (let i = 0; i < 3; i++)
+          star(c, 620 + Math.cos(i * 2.1 + 0.6) * 92, GROUND - 256 + Math.sin(i * 2.1 + 0.6) * 15, 11, i);
+        pip(c, 340, GROUND);
+      },
+      tantrum,
+    );
+    panel(
+      'g',
+      '7. Spore pods, shootable',
+      (c) => {
+        drawMo(c, 700, GROUND, 1, { cap: 'cross', face: 'cross', arms: 'up', look: -0.5 });
+        pod(c, 560, 180);
+        pod(c, 470, 234);
+        pod(c, 390, 300);
+        pip(c, 250, GROUND);
+      },
+      gloom,
+    );
+    panel(
+      'h',
+      '8. Cheered up: the whole wood lit',
+      (c) => {
+        drawMo(c, 560, GROUND, 0.9, { cap: 'happy', face: 'joy', arms: 'up', glowSpots: 0.9 });
+        pip(c, 330, GROUND - 34);
+      },
+      glowBg,
+    );
+    window.__done = true;
+  })();
+</script>

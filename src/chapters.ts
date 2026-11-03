@@ -3,6 +3,7 @@
 // nothing else has to know whose chapter it is. (How a chapter's world looks is in
 // src/game/views/chapterViews.ts.)
 import type { Tune } from './audio';
+import type { ParticleShape } from './presentation';
 import type { BossId } from './sim/bosses';
 import type { StageId } from './sim/stage/stages';
 
@@ -24,7 +25,12 @@ export interface Chapter {
   readonly gate: string; // over the gate at its end, where the boss is
   readonly stage: StageId;
   readonly boss: BossId;
-  readonly tunes: { readonly stage: Tune; readonly boss: Tune };
+  // bossPhases: if he has a tune for each phase. boss is what his fight starts on.
+  readonly tunes: {
+    readonly stage: Tune;
+    readonly boss: Tune;
+    readonly bossPhases?: readonly [Tune, Tune, Tune];
+  };
   // The boss's fight, in toasts: a hint as it starts (a touch screen can't aim, so it has its own), a line for
   // each new phase, 2 then 3, and one as he is cheered up.
   readonly fightHint: { readonly aim: string; readonly touch: string };
@@ -32,11 +38,14 @@ export interface Chapter {
   readonly cheeredToast: string;
   readonly bounceHint?: string; // the one message on a stage with bounce pads, as its first one grows
   readonly shed: readonly [string, string]; // what he sheds as he leaves phase 1, then phase 2
+  readonly shedShape: ParticleShape; // ...and what shape it is
+  readonly cheeredColors: readonly string[]; // what bursts from him as he is cheered up
   readonly lose: { readonly stage: LoseText; readonly boss: LoseText };
   readonly win: WinText;
   // The boss on the HUD: his bar's colour in each phase, and his portrait's baked parts (src/game/hud/art.ts).
   readonly barColors: readonly [number, number, number];
   readonly portrait: { readonly angry: string; readonly joy: string };
+  readonly portraitPhases?: readonly [string, string, string]; // if his portrait follows his phase
 }
 
 export const SUNFLOWER = {
@@ -55,6 +64,8 @@ export const SUNFLOWER = {
   phaseToasts: ['Sunny is getting grumpier!', 'Sunny is SUPER grumpy!'],
   cheeredToast: 'Sunny is blooming!',
   shed: ['#ffc62e', '#ff982c'], // yellow petals, then orange
+  shedShape: 'petal',
+  cheeredColors: ['#ffd23f', '#ff8fb1', '#ffffff', '#ffb52e'],
   lose: {
     stage: {
       who: 'The garden path is',
@@ -70,8 +81,7 @@ export const SUNFLOWER = {
   portrait: { angry: 'bar-icon-sunny-angry', joy: 'bar-icon-sunny-joy' },
 } as const satisfies Chapter;
 
-// Chapter 2 is reached only through ?debug&chapter=2 until it goes live. Until Mo arrives, the gate still leads
-// to Sunny, so what is said about the fight is still his.
+// Chapter 2 is reached only through ?debug&chapter=2 until it goes live.
 export const WOOD = {
   ...SUNFLOWER,
   id: 'wood',
@@ -79,15 +89,33 @@ export const WOOD = {
   sign: 'Mushroom Wood',
   gate: "Mo's Hollow",
   stage: 'mushroomWood',
-  tunes: { stage: 'wood', boss: 'boss' },
+  boss: 'mo',
+  tunes: { stage: 'wood', boss: 'moSulky', bossPhases: ['moSulky', 'moCross', 'moFurious'] },
+  fightHint: {
+    aim: 'He rears up to attack: hold ↑ and hit his face for double damage!',
+    // a touch screen can't aim, but a straight seed in the air reaches his face
+    touch: 'He rears up to attack: jump and hit his face for double damage!',
+  },
+  phaseToasts: ['Mo is getting cross!', 'Mo is FURIOUS!'],
+  cheeredToast: 'Mo is beaming!',
+  shed: ['#6a8cff', '#ff7a3c'], // the blue of his cap, then the orange
+  shedShape: 'spot',
+  cheeredColors: ['#ffc53f', '#ffe476', '#ffc9d8', '#fff0a0'],
   bounceHint: 'Bounce on it! Hold jump to go higher.',
   lose: {
     stage: {
       who: 'The Mushroom Wood is',
       progress: (percent) => `You made it ${percent}% of the way to Mo!`,
     },
-    boss: SUNFLOWER.lose.boss,
+    boss: {
+      who: 'Mo is',
+      progress: (percent) => `You cheered Mo up ${percent}% of the way!`,
+    },
   },
+  win: { badge: '🍄', line: 'Mo is all smiles, and the whole wood is aglow. What a hero, Pip!' },
+  barColors: [0x5476ee, 0xf4652f, 0x9c4ef2], // his cap, as his mood turns
+  portrait: { angry: 'bar-icon-mo-0', joy: 'bar-icon-mo-joy' },
+  portraitPhases: ['bar-icon-mo-0', 'bar-icon-mo-1', 'bar-icon-mo-2'],
 } as const satisfies Chapter;
 
 export const CHAPTERS = [SUNFLOWER, WOOD] as const satisfies readonly Chapter[];

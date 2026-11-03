@@ -282,6 +282,10 @@ one world:
 - **The wood is painted for dusk.** Its far trees go pale into the last warm light, its giant mushrooms glow but
   stay well faded so they can't be taken for anything in the fight, and halfway along the weather slowly tints
   it all into deeper dusk: a moon, more fireflies. Only what hurts and what helps stays untinted and bright.
+- **Mo is the boldest thing there.** He has the thickest outline and the strongest colour, and his hollow's mist
+  keeps the bright mushrooms behind it from competing with him. All his poison is one acid green. What looks
+  solid with a dark rim hurts, and what is soft and see-through never does. Smoke is layers of soft puffs with
+  curls in it: hard-edged circles look like a hedge.
 - **The title is Pip's yard, and belongs to no boss.** It is made from the path's and the arena's own parts
   (the sky, the far hills, the cottage, hedges and fence), with the dawn as a weather of its own. Its
   opening is staged like a cartoon's: an iris in, a camera move, things that drop, squash and settle, and an
@@ -308,12 +312,12 @@ keyboard / gamepad / touch ─► Controls ─► App ──step(input)──►
 | `src/sim/level.ts` | What the views need from the level being played (`Level`); `Fight` is one |
 | `src/sim/yard.ts` | `Yard`: Pip's yard behind the opening, the title and the menu. Its beats (`sting`, `intro`, `press`, `menu`, `leave`), the opening's timings, and the real Pip walked by a script: out of the door, idle hops and strolls, and off down the path after Play |
 | `src/sim/boss.ts` | What every boss shares: health, three phases, the intro, the attack scheduler |
-| `src/sim/bosses/` | One file per boss (`sunny.ts`) and the registry of all of them (`index.ts`) |
-| `src/sim/bouncer.ts` | A bounce pad: what a cheered-up Capling leaves. Pip falling onto one is thrown up, higher with the button held (`bounceOff` in `player.ts`) |
-| `src/sim/hazards.ts`, `projectile.ts`, `pickups.ts`, `arena.ts` | Vine, root and pollen; seeds and petals; the dewdrop; the leaf platforms of Sunny's arena |
+| `src/sim/bosses/` | One file per boss (`sunny.ts`, `mo.ts`) and the registry of all of them (`index.ts`) |
+| `src/sim/bouncer.ts` | A bounce pad: what a cheered-up Capling leaves. Pip falling onto one is thrown up, higher with the button held (`bounceOff` in `player.ts`). `Springy` is anything that does that, which includes Mo's cap |
+| `src/sim/hazards.ts`, `projectile.ts`, `pickups.ts`, `arena.ts` | Vine, root and pollen, and Mo's acid smoke and fairy ring; seeds and petals; the dewdrop; the leaf platforms of Sunny's arena |
 | `src/sim/events.ts` | The list of things the simulation announces (`jump`, `bossHit`, `phase`, the opening's `cue`s, ...) |
 | `src/sim/stage/stage.ts` | `Stage`: one scrolling stage, the way `Fight` is one boss fight. Ground in solid boxes with pits between, logs, trunks, thorns, leaf pads, the camera, pickups, the glades that shut until every plant in them is cheered up, and the gate, and the rules that advance it |
-| `src/sim/stage/enemies/` | The small enemies a stage places (Grumbud, Puffball, Pea Pod, Snapper, and the Mushroom Wood's Capling, Burr, Dropcap and Toadlet), one file each, and their registry (`index.ts`) |
+| `src/sim/stage/enemies/` | The small enemies a stage places (Grumbud, Puffball, Pea Pod, Snapper, and the Mushroom Wood's Capling, Burr, Dropcap and Toadlet), one file each, and their registry (`index.ts`). A boss can bring them too: Mo sprouts Caplings and blows spore bubbles (`spore.ts`) |
 | `src/sim/stage/stages/` | The stages, as data: where everything goes. `gardenPath.ts` is Stage 1, `mushroomWood.ts` Stage 2 |
 | `src/presentation.ts` | The one table that turns each event into a sound, particles, rings, a shake, a flash or a toast |
 | `src/chapters.ts` | The chapters (`CHAPTERS`), one profile each: the stage and the boss, the tunes, and what the game says and shows about them (the chapter's title, the toasts in the fight, the win and lose cards, the sign and the gate, the boss's bar colours and portrait) |
@@ -322,11 +326,12 @@ keyboard / gamepad / touch ─► Controls ─► App ──step(input)──►
 | `src/audio.ts` | Synthesized sound effects and music, each on a bus with its own volume |
 | `src/save.ts` | Easy mode, mute, the music and effects volumes, and the best time for each boss and each stage, in one versioned `localStorage` entry (or in a slot of its own: see "More than one version online") |
 | `src/game/art/` | `draw.ts`: Canvas 2D paths, gradients and shading helpers. `face.ts`: the small shared face. `color.ts`: colour maths and the shared outline pens. `bake.ts`: turns drawings into textures, packs them into an atlas, and bends one along a curve (`Ribbon`). `shared.ts`: parts several views use |
-| `src/game/views/` | One view per thing on screen. Each bakes its own parts and animates them from the simulation: `PlayerView`, `SunnyView`, `ProjectileViews`, `HazardViews`, `PickupViews`, `WorldView`, and on a stage `EnemyViews` (parts in `enemies/art.ts`). `chapterViews.ts` says how each chapter's world looks. `pool.ts` reuses the views of things that come and go |
+| `src/game/views/` | One view per thing on screen. Each bakes its own parts and animates them from the simulation: `PlayerView`, `SunnyView`, `MoView`, `ProjectileViews`, `HazardViews`, `PickupViews`, `WorldView`, and `EnemyViews` (parts in `enemies/art.ts`). `chapterViews.ts` says how each chapter's world looks. `pool.ts` reuses the views of things that come and go |
 | `src/game/views/title/` | Pip's yard (`YardView`), the logo in parts (`Logo`), the studio's sting (`Sting`), and their art (`art.ts`) |
 | `src/game/views/Iris.ts` | The round hole that opens on a scene and closes on it, as old cartoons do: the title's, and each stage's start |
 | `src/game/views/stage/` | A stage's world: `StageWorldView` (the sky that stays put, landscape strips that repeat and slide by how far away they are, the ground with its pits, logs, thorns and leaf pads, the sign, the gate, and the flowers cheered-up plants leave), which lays out any theme, and the Garden Path's theme (`gardenTheme.ts`) and parts (`art.ts`) |
-| `src/game/views/wood/` | The Mushroom Wood's theme (`woodTheme.ts`), its world (`art.ts`) and its enemies and bounce pad (`enemyArt.ts`), baked the first time the chapter is played |
+| `src/game/views/wood/` | The Mushroom Wood's theme (`woodTheme.ts`), its world (`art.ts`), its enemies and bounce pad (`enemyArt.ts`) and Mo's hollow (`hollow.ts`), baked the first time the chapter is played |
+| `src/game/views/mo/` | Mo: his parts and palette (`art.ts`), his layered face (`face.ts`), and the art and views of his two big attacks (`smoke.ts`, `ring.ts`). `bake.ts` bakes all of it on an atlas page of its own. `docs/mo-art/` is the reference art it was drawn from, and `docs/chapter-2-boss-spec.md` the design |
 | `src/game/views/world/` | The arena, one file per layer: `sky.ts`, `air.ts` and `weather.ts` (which blends between the moods: Sunny's four, the title's dawn, and the wood's and Mo's four) are shared; `land.ts` and `ground.ts` are the garden's, handed to `WorldView` by `chapterViews.ts` |
 | `src/game/views/sunny/`, `hazards/` | The bigger views keep their drawing code beside them: Sunny's parts (`art.ts`) and layered face (`face.ts`), the hazards' parts (`art.ts`) |
 | `src/game/scenes/`, `src/game/hud/` | `BootScene` (font, baking), `TitleScene`, `FightScene` and `StageScene` (sync the views every frame; only the one for what is being played runs, and each chapter has a `FightScene` and a `StageScene` of its own; `TitleScene` also stages the opening), `HudScene` (hearts, the boss's bar or the stage's path bar and golden seeds, toasts, the chapter and stage names); `hud/art.ts` bakes the HUD's parts |
@@ -435,8 +440,12 @@ Pip's heels, steam from Sunny) are made by that view, which is handed the same `
 **Add a boss.** Write `src/sim/bosses/<name>.ts` extending `Boss` (its arena's platforms and `maxX`, its
 movement, hurtboxes and attacks) and add it to `src/sim/bosses/index.ts`. TypeScript then asks for its view in
 `src/game/views/bossViews.ts`. A boss is played as part of a chapter, so it needs one too. The weather already
-follows any boss's phase (`moodOf` in `src/game/views/world/weather.ts`), and the title (Pip's yard) belongs
-to no boss and needs nothing.
+follows any boss's phase (`moodOf` in `src/game/views/world/weather.ts`; an arena can bring its own with `mood`),
+and the title (Pip's yard) belongs to no boss and needs nothing. A boss can also bring small enemies
+(`fight.addEnemy`), bounce pads (`fight.pads`) and something of his own that throws Pip up (`fight.bouncers`), and
+can override `blocks` (seeds bounce off here) and `touches` (touching him hurts). `src/sim/bosses/mo.ts` does all
+of these. Keep how he moves in plain fields stepped by `move()`, as Mo does, rather than inside an attack's
+generator: a bot can then copy the fight to look ahead.
 
 **Add a chapter.** Add its profile to `CHAPTERS` in `src/chapters.ts`: its stage and boss, its tunes, and what
 the game says and shows about them. TypeScript then asks for its entry in `CHAPTER_VIEWS`
@@ -444,7 +453,7 @@ the game says and shows about them. TypeScript then asks for its entry in `CHAPT
 light at its gate. `src/main.ts` gives it scenes of its own, so nothing has to hide anything. Two things still
 assume one chapter: How to play in `index.html` names Sunny, and nothing moves `App.chapter` on from the first
 chapter yet, so a win ends the game with Play again. Chapter 2 is in `CHAPTERS` but isn't live: only
-`?debug&chapter=2` reaches it (see "Tests"), and its gate still leads to Sunny.
+`?debug&chapter=2` reaches it (see "Tests").
 
 **Add a stage.** Write its layout as data in `src/sim/stage/stages/<name>.ts`, a `StageData`: its length,
 ground and pits, logs, thorns, leaf pads, enemies, dewdrops, golden seeds and gate. Add it to `STAGES` in
@@ -510,8 +519,8 @@ console.log(S.game.boss.hp, S.game.player.hp, S.game.state);
 ```
 
 Add `?hitboxes` (or call `S.hitboxes(true)`) to draw what the simulation actually collides with,
-`?skipintro` to open on the menu instead of watching the opening on every reload, and `&chapter=2` to make new
-games start at that chapter, for playing one that isn't live yet. `S.startGame()` is Play
+`?skipintro` to open on the menu instead of watching the opening on every reload, `&chapter=2` to make new
+games start at that chapter, for playing one that isn't live yet, and `&boss` to make them start at its boss. `S.startGame()` is Play
 (the Garden Path, then Sunny through its gate); `S.startStage()` and `S.startBoss(hearts)` start either one
 directly; `S.skipIntro()` skips to "Press any key" and `S.toMenu()` goes back to the menu.
 

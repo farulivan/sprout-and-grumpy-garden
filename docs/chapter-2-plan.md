@@ -47,8 +47,8 @@ About 9,000 px (Stage 1 is 7,300), going from dusk to deeper dusk as Pip walks. 
 | Enemy | What it does | Seeds | Teaches |
 | --- | --- | --- | --- |
 | Capling | Sits still and hurts to touch. Cheered up, it becomes a bounce pad for good | 2 | Bouncing |
-| Burr | Curls under a "!" (seeds bounce off), rolls at Pip and stops dizzy at a wall, when it can be hit | 3 | Jumping his shockwaves |
-| Dropcap | Hangs in the canopy, out of reach of straight shots. Drops after a "!", timed to land in front of a running Pip | 1 | Watching overhead (his rain) |
+| Burr | Curls under a "!" (seeds bounce off), rolls at Pip and stops dizzy at a wall, when it can be hit | 3 | Jumping his acid smoke |
+| Dropcap | Hangs in the canopy, out of reach of straight shots. Drops after a "!", timed to land in front of a running Pip | 1 | Watching the ground under Pip (his Fairy Ring) |
 | Toadlet | Hops at Pip in arcs that clear straight shots, and crosses pits | 2 | Passing under a hop |
 
 **Glades:** the camera stops and Pip can't leave until every plant there is cheered up, then the brambles wither in a burst of flowers.
@@ -61,8 +61,8 @@ Sunny stands still on the right. **Mo moves**, so the fight has no fixed spot: h
 
 | Phase | Mood | Cap | Weather | New attacks |
 | --- | --- | --- | --- | --- |
-| 1 | Sulky | Blue | Dusk, a small rain cloud over him | Big Hop, Gloom Cloud |
-| 2 | Cross | Orange-red | Dark, raining | Spore Puffs, Sprout Caplings |
+| 1 | Sulky | Blue | Dusk | Big Hop, Fairy Ring |
+| 2 | Cross | Orange-red | Dark | Spore Puffs, Sprout Caplings |
 | 3 | Furious | Purple | Night, glowing | Cap Spin |
 | Cheered up | Happy | Bright | The whole wood lights up with glowing mushrooms and fireflies | |
 
@@ -70,8 +70,8 @@ All attacks start with the usual "!" (and an orange ring where something will la
 
 | Attack | What happens | Answer |
 | --- | --- | --- |
-| Big Hop (1, 2, then 3 hops by phase) | He lands on a ringed spot near Pip and sends a shockwave each way | Pass under him, jump the waves |
-| Gloom Cloud | A small rain cloud follows Pip, stops, then rains straight down, even through platforms | Keep moving. This is what stops safe spots |
+| Big Hop (1, 2, then 3 hops by phase) | He lands on a ringed spot near Pip and acid smoke rolls out each way | Pass under him, jump the smoke |
+| Fairy Ring | A root follows Pip through the soil, stops, toadstools pop up, then the ring erupts straight up, even through platforms | Keep moving. This is what stops safe spots |
 | Spore Puffs | Slow bubbles drift at Pip | Dodge them, or spend shots popping them |
 | Sprout Caplings | Caplings pop up at ringed spots. Cheered up, they bounce for about 8 s, then wilt | A bounce gives height, time in the air and a way over him |
 | Cap Spin | He spins from wall to wall, then sits dizzy | Jump him, then punish him: his face is open for a long window |
@@ -83,7 +83,7 @@ All attacks start with the usual "!" (and an orange ring where something will la
 - His face can be hit by aiming up from the ground, or by a straight shot during any jump or bounce. So touch players keep the same fight without an aim button.
 - Touching him hurts, but his cap is bouncy: landing on it while he sulks bounces Pip over him, so he can never pin Pip against a wall.
 
-**Arena:** Pip can use the full width, and there are two low shelf fungi at the sides. Nothing there is out of Gloom Cloud's reach.
+**Arena:** Pip can use the full width, and there are two low shelf fungi at the sides. Nothing there is out of the Fairy Ring's reach.
 
 ### Difficulty targets, measured with bots
 
@@ -180,7 +180,7 @@ Small commits, each one passing on its own. Each PR body gets its preview link o
 
 ### PR 4: Mo's rules
 
-- **New `src/sim/bosses/mo.ts`,** added to `BOSSES`, and hazards in `src/sim/hazards.ts` (`shockwave`, `gloom`), each with `shape()` null during its warning.
+- **New `src/sim/bosses/mo.ts`,** added to `BOSSES`, and hazards in `src/sim/hazards.ts` (`smoke`, `ring`), each with `shape()` null during its warning.
 - **`src/sim/boss.ts`:** optional `touches(circle)` for contact damage, false by default.
 - **`src/sim/fight.ts`:** `enemies` and `bouncers`, empty for Sunny, so no change to his fight or its random numbers. Spore bubbles and Caplings are `Enemy` subclasses. `FightScene` adds `EnemyViews`.
 - **`src/game/views/bossViews.ts`:** a placeholder `MoView`.
@@ -193,9 +193,11 @@ Small commits, each one passing on its own. Each PR body gets its preview link o
 
 ### PR 5: Mo's look
 
+**Replaced by [`docs/chapter-2-boss-spec.md`](chapter-2-boss-spec.md), written after Farul played PR 4.** It brings in the Fairy Ring and Acid Smoke. Where the two disagree, the spec wins. The original outline, for reference:
+
 - **New `src/game/views/mo/`:** art and face in layered parts, as `sunny/` does, with `MoView` doing the acting: squash and stretch on hops, the drooping sulk, rearing up, spin, dizzy stars, cap colour for each mood, and the happy ending.
 - **Arena:** his hollow's land and ground, and the `glow` ending.
-- **Attack art:** shockwaves, the gloom cloud and its rain, spore bubbles.
+- **Attack art:** Acid Smoke, the Fairy Ring, spore pods.
 - **HUD:** portrait and phase colours through the profile.
 - **Audio:** one version of his tune per mood, switched on the `phase` event.
 

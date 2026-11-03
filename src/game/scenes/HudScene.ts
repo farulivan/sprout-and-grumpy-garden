@@ -479,7 +479,12 @@ export class HudScene extends Scene {
       BAR_X + (Math.random() - 0.5) * 5 * this.barShake,
       BAR_Y + (Math.random() - 0.5) * 3 * this.barShake,
     );
-    show(this.barIcon, b.alive ? chapter.portrait.angry : chapter.portrait.joy);
+    show(
+      this.barIcon,
+      !b.alive
+        ? chapter.portrait.joy
+        : (chapter.portraitPhases?.[Math.min(b.phase, 3) - 1] ?? chapter.portrait.angry),
+    );
     this.barIcon
       .setScale(INV * (1 + Math.sin(this.iconPop * Math.PI) * 0.5 + (b.alive ? 0 : 0.12)))
       .setRotation(

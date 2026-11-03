@@ -9,13 +9,18 @@ import type { PollenDrop, RootSpike, VineSweep } from '../../sim/hazards';
 import { clamp, lerp } from '../../sim/math';
 import { DUST, type Burst } from '../../presentation';
 import { INV, part, Ribbon } from '../art/bake';
-import { easeOutBack, rand } from '../motion';
+import { rand } from '../motion';
 import type { FxTarget } from '../presenter';
 import { bakeHazards, VINE_LEN, VINE_POINTS } from './hazards/art';
+import { showMark } from './marks';
+import { RingView } from './mo/ring';
+import { AcidTrail, SmokeView } from './mo/smoke';
 import { ViewPool, type PooledView } from './pool';
 
 export { bakeHazards };
 
+const SMOKE_FRONTS = 6,
+  FAIRY_RINGS = 3;
 const POLLEN_FALL = (GROUND - 14 + 30) / 520; // seconds a pollen ball takes to reach the ground
 const DUST_PUFF: Burst = { ...DUST, n: 1 };
 const DUST_KICKED: Burst = { ...DUST, n: 1, dir: UP - 0.6 }; // thrown back by something sliding left
@@ -31,15 +36,6 @@ const CLODS: Burst = {
   dir: UP,
   spread: 1.5,
 };
-
-// The "!" badge pops in, then bounces. Every badge is drawn on the marks layer, in front of Pip, so a
-// warning can never hide behind the hero. A stage's small enemies use it too (EnemyViews.ts).
-export function showMark(mark: GameObjects.Image, x: number, y: number, t: number) {
-  mark
-    .setVisible(true)
-    .setPosition(x, y - Math.abs(Math.sin(t * 8.5)) * 7)
-    .setScale(INV * 1.3 * easeOutBack(Math.min(1, t / 0.18)));
-}
 
 interface HazardView extends PooledView {
   // fresh = the first frame this view shows this hazard.
@@ -304,9 +300,10 @@ class PollenView implements HazardView {
 
 export class HazardViews {
   private pool: ViewPool<Hazard, HazardView>;
+  private rings: RingView[] = []; // what is left of a ring fades by itself, once it has stopped hurting
 
-  // markDepth = in front of Pip, where the "!" badges go.
-  constructor(scene: Scene, depth: number, markDepth: number, fx: FxTarget) {
+  // markDepth = in front of Pip, where the "!" badges go. trail = what a boss's smoke leaves behind, if he has any.
+  constructor(scene: Scene, depth: number, markDepth: number, fx: FxTarget, trail?: AcidTrail) {
     this.pool = new ViewPool<Hazard, HazardView>(
       (h) => h.kind,
       (h) =>
@@ -314,10 +311,25 @@ export class HazardViews {
           ? new VineView(scene, depth, markDepth, fx)
           : h.kind === 'root'
             ? new RootView(scene, depth, markDepth, fx)
-            : new PollenView(scene, depth, fx),
+            : h.kind === 'pollen'
+              ? new PollenView(scene, depth, fx)
+              : h.kind === 'smoke'
+                ? new SmokeView(scene, trail!)
+                : this.makeRing(scene, depth, markDepth, fx, trail!),
     );
+    // Ready now, so that none has to be made during the fight: up to six fronts in a triple hop, and two rings at once.
+    if (trail) {
+      this.pool.prepare('smoke', SMOKE_FRONTS, () => new SmokeView(scene, trail));
+      this.pool.prepare('ring', FAIRY_RINGS, () => this.makeRing(scene, depth, markDepth, fx, trail));
+    }
+  }
+  private makeRing(scene: Scene, depth: number, markDepth: number, fx: FxTarget, trail: AcidTrail) {
+    const ring = new RingView(scene, depth, markDepth, fx, trail);
+    this.rings.push(ring);
+    return ring;
   }
   sync(hazards: readonly Hazard[], alpha: number, dt: number) {
     this.pool.sync(hazards, (h, view, fresh) => view.sync(h, alpha, dt, fresh));
+    for (const ring of this.rings) ring.fade(dt);
   }
 }

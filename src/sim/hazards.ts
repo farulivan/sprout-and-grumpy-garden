@@ -1,15 +1,20 @@
 // Boss hazards. Each one shows a warning before it can hurt: a kids' game should never hurt without warning.
 // shape() is the area that hurts right now, or null while the hazard is still harmless.
 import { GROUND, W } from '../config';
+import type { SimEvent } from './events';
 import { circleHit, rectCircleHit, type Circle, type Rect } from './math';
 
 export const VINE_WARN = 0.7;
 export const ROOT_WARN = 0.75;
 export const POLLEN_WARN = 0.9;
 export const POLLEN_CLOUD = 0.5;
+export const SMOKE_WARN = 0.1;
+export const RING_SEEK = 1.5,
+  RING_WARN = 0.8,
+  RING_ERUPT = 1.1;
 
 export interface Hazard {
-  readonly kind: 'vine' | 'root' | 'pollen';
+  readonly kind: 'vine' | 'root' | 'pollen' | 'smoke' | 'ring';
   x: number;
   y: number;
   px: number;
@@ -138,6 +143,98 @@ export class PollenDrop implements Hazard {
     if (this.phase === 'fall') return { x: this.x, y: this.y, r: this.r - 2 };
     if (this.phase === 'cloud') return { x: this.x, y: GROUND - 14, r: 22 };
     return null;
+  }
+  hits(c: Circle) {
+    return overlaps(this.shape(), c);
+  }
+}
+
+// Acid smoke rolling along the ground each way from where Mo lands. Jump it. It swells for a moment first.
+export class AcidSmoke implements Hazard {
+  readonly kind = 'smoke';
+  readonly w = 64;
+  readonly h = 40;
+  readonly y = GROUND - this.h;
+  readonly py = this.y;
+  px: number;
+  t = 0;
+  warn = SMOKE_WARN;
+  dead = false;
+  constructor(
+    public x: number,
+    readonly dir: 1 | -1,
+    readonly speed: number,
+    private readonly minX: number,
+    private readonly maxX: number,
+  ) {
+    this.px = x;
+  }
+
+  update(dt: number) {
+    this.t += dt;
+    if (this.warn > 0) {
+      this.warn -= dt;
+      return;
+    }
+    this.x += this.dir * this.speed * dt;
+    if (this.x < this.minX || this.x > this.maxX) this.dead = true;
+  }
+  shape(): Rect | null {
+    return this.warn > 0 ? null : { x: this.x - this.w / 2 + 4, y: this.y + 4, w: this.w - 8, h: this.h - 4 };
+  }
+  hits(c: Circle) {
+    return overlaps(this.shape(), c);
+  }
+}
+
+// A root creeps through the soil after Pip, stops, toadstools pop up in a ring, and the ring erupts straight up,
+// even through a shelf. Keep moving: this is what stops there being any safe spot.
+export class FairyRing implements Hazard {
+  readonly kind = 'ring';
+  readonly y = 96;
+  readonly py = this.y;
+  readonly w = 58;
+  px: number;
+  t = 0;
+  state: 'seek' | 'warn' | 'erupt' = 'seek';
+  private timer: number;
+  dead = false;
+  constructor(
+    private readonly target: { readonly x: number },
+    public x: number,
+    private readonly speed: number,
+    delay: number,
+    readonly from: number, // where the root sets off from; only drives how it is drawn
+    private readonly fight: { emit(e: SimEvent): void },
+  ) {
+    this.px = x;
+    this.timer = RING_SEEK + delay;
+    fight.emit({ type: 'ringSeek' });
+  }
+
+  update(dt: number) {
+    this.t += dt;
+    this.timer -= dt;
+    if (this.state === 'seek') {
+      const d = this.target.x - this.x,
+        step = this.speed * dt;
+      this.x += Math.abs(d) <= step ? d : Math.sign(d) * step;
+      if (this.timer <= 0) {
+        this.state = 'warn';
+        this.timer = RING_WARN;
+        this.fight.emit({ type: 'ringWarn' });
+      }
+    } else if (this.timer <= 0) {
+      if (this.state === 'warn') {
+        this.state = 'erupt';
+        this.timer = RING_ERUPT;
+        this.fight.emit({ type: 'ringErupt', x: this.x });
+      } else this.dead = true;
+    }
+  }
+  shape(): Rect | null {
+    if (this.state !== 'erupt') return null;
+    return { x: this.x - this.w / 2, y: this.y + 14, w: this.w, h: GROUND - this.y - 14 };
   }
   hits(c: Circle) {
     return overlaps(this.shape(), c);

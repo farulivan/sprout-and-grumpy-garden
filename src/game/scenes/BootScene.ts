@@ -5,6 +5,7 @@ import type { GameAudio } from '../../audio';
 import { bakeApart, finishBaking } from '../art/bake';
 import { bakeShared } from '../art/shared';
 import { bakeFx } from '../fx';
+import { bakeMoPortraits } from '../hud/art';
 import { BOSS_VIEWS } from '../views/bossViews';
 import { bakeIris } from '../views/Iris';
 import { bakeEnemies } from '../views/EnemyViews';
@@ -49,7 +50,7 @@ export class BootScene extends Scene {
       bakeShared(this);
       bakeWorld(this);
       bakePlayer(this);
-      for (const boss of Object.values(BOSS_VIEWS)) boss.bake(this);
+      for (const boss of Object.values(BOSS_VIEWS)) boss.bake?.(this);
       bakeProjectiles(this);
       bakeHazards(this);
       bakePickups(this);
@@ -63,6 +64,7 @@ export class BootScene extends Scene {
       bakeFx(this);
       bakeHud(this);
       finishBaking(this);
+      bakeMoPortraits(this);
       this.scene.start('title');
       this.scene.launch('hud');
     });

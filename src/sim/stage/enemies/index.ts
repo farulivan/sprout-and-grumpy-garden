@@ -7,6 +7,7 @@ import { Grumbud } from './grumbud';
 import { PeaPod } from './peaPod';
 import { Puffball } from './puffball';
 import { Snapper } from './snapper';
+import { SporeBubble } from './spore';
 import { Toadlet } from './toadlet';
 
 // y: its feet (or, for a Puffball or a Dropcap, the height it floats or hangs at). level: 1 is the gentlest, for Stage 1; later
@@ -20,4 +21,5 @@ export const ENEMIES: Record<EnemyKind, (x: number, y: number, level: number) =>
   burr: (x, y) => new Burr(x, y),
   dropcap: (x, y) => new Dropcap(x, y),
   toadlet: (x, y) => new Toadlet(x, y),
+  spore: (x, y) => new SporeBubble(x, y, 60),
 };

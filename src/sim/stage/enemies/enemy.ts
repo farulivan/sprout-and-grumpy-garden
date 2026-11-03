@@ -6,7 +6,7 @@ import type { Player } from '../../player';
 import type { Projectile } from '../../projectile';
 
 export type EnemyKind =
-  'grumbud' | 'puffball' | 'peaPod' | 'snapper' | 'capling' | 'burr' | 'dropcap' | 'toadlet';
+  'grumbud' | 'puffball' | 'peaPod' | 'snapper' | 'capling' | 'burr' | 'dropcap' | 'toadlet' | 'spore';
 
 // What an enemy can see and do.
 export interface EnemyWorld {

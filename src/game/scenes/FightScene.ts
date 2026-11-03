@@ -9,6 +9,8 @@ import { Fx } from '../fx';
 import type { GamePresenter } from '../presenter';
 import { BOSS_VIEWS, type BossView } from '../views/bossViews';
 import type { ChapterViews } from '../views/chapterViews';
+import type { AcidTrail } from '../views/mo/smoke';
+import { BouncerViews, EnemyViews } from '../views/EnemyViews';
 import { HazardViews } from '../views/HazardViews';
 import { PickupViews } from '../views/PickupViews';
 import { PlayerView } from '../views/PlayerView';
@@ -22,6 +24,7 @@ const DEPTH = {
   boss: 2,
   platforms: 3,
   hazards: 4,
+  enemies: 4.5,
   pickups: 5,
   player: 6,
   marks: 6.5, // warnings that must show even where Pip is standing
@@ -38,8 +41,11 @@ export class FightScene extends Scene {
   private boss: BossView | null = null; // made as his fight is first drawn
   private player!: PlayerView;
   private projectiles!: ProjectileViews;
+  private trail?: AcidTrail; // what his attacks leave behind, in a chapter whose boss's do
   private hazards!: HazardViews;
   private pickups!: PickupViews;
+  private enemies!: EnemyViews;
+  private bouncers!: BouncerViews;
   private fx!: Fx;
 
   constructor(
@@ -56,8 +62,11 @@ export class FightScene extends Scene {
     fitCamera(this);
     this.fx = new Fx(this, DEPTH.particles, DEPTH.flash);
     this.world = this.views.arena(this, DEPTH);
-    this.hazards = new HazardViews(this, DEPTH.hazards, DEPTH.marks, this.fx);
+    this.trail = this.views.trail?.(this, DEPTH.boss - 0.12, DEPTH.ground + 0.02); // smoke goes behind him: he stays the boldest thing there
+    this.hazards = new HazardViews(this, DEPTH.hazards, DEPTH.marks, this.fx, this.trail);
     this.pickups = new PickupViews(this, DEPTH.pickups, this.fx);
+    this.enemies = new EnemyViews(this, DEPTH.enemies, DEPTH.marks, this.fx, this.trail);
+    this.bouncers = new BouncerViews(this, DEPTH.enemies);
     this.player = new PlayerView(this, DEPTH.player, this.fx);
     this.projectiles = new ProjectileViews(this, DEPTH.projectiles);
     this.hitboxes = new HitboxOverlay(this, DEPTH.hitboxes);
@@ -81,10 +90,13 @@ export class FightScene extends Scene {
     if (!(fight instanceof Fight)) return; // a stage is being played: its own scene draws it
 
     this.world.sync(dt, fight, alpha);
-    this.boss ??= BOSS_VIEWS[fight.boss.id].create(this, DEPTH.boss, this.fx);
+    this.boss ??= BOSS_VIEWS[fight.boss.id].create(this, DEPTH.boss, this.fx, this.trail);
     this.boss.sync(fight, alpha, dt);
     this.hazards.sync(fight.hazards, alpha, dt);
+    this.trail?.update(dt * fight.timeScale);
     this.pickups.sync(fight.pickups, alpha, dt);
+    this.enemies.sync(fight.enemies, alpha, dt);
+    this.bouncers.sync(fight.pads);
     this.player.sync(fight, alpha, dt);
     this.projectiles.sync(fight.projectiles, alpha);
     this.hitboxes.sync(fight);
