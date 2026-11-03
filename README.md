@@ -4,9 +4,10 @@ A cute, kid-friendly run 'n gun game in the style of Cuphead and Mega Man, theme
 **Pip** the sprout cheers up the garden's grumpy plants by showering them with seeds: the small ones along a
 scrolling stage, then its boss.
 
-The game is named after the garden and each chapter after its boss. So far there is one chapter, **The
-Grumpy Sunflower**: walk the Garden Path to Sunny's meadow, then win by emptying **Sunny**'s bar without
-losing all your hearts.
+The game is named after the garden and each chapter after its boss. There are two so far. In **The Grumpy
+Sunflower**, walk the Garden Path to Sunny's meadow, then win by emptying **Sunny**'s bar without losing all
+your hearts. In **The Moody Mushroom**, do the same through the Mushroom Wood for **Mo**. Cheering up a boss earns
+a life and opens the next chapter.
 
 Built with TypeScript, Vite and Phaser 4. There are still no art or sound files: every picture is drawn in
 code when the game starts, and every sound is synthesized with WebAudio.
@@ -235,7 +236,7 @@ be changed in Options). The win card and the Game over card have a Main menu but
 
 Every card works the same way: click or tap a button, or choose one with the arrow keys, the d-pad or the
 stick and press it with Space, Enter or A. With nothing chosen, Enter or Start presses the card's main button
-(Play, Try again, Play again, Keep playing, or Back on a menu page), and so does Space or A on the menu and
+(Play, Try again, Next chapter, Play again, Keep playing, or Back on a menu page), and so does Space or A on the menu and
 pause cards. On a volume slider, ◀ ▶ turn it instead of moving off it. A menu page opens on its first
 control, and going back returns to the board that opened it. Pausing from the keyboard or a gamepad starts
 on Keep playing, so pressing A or Space right away just resumes.
@@ -263,7 +264,7 @@ way, growing as Pip gets closer, and the bar at the top shows how far along the 
   costs one, and so does Start over. While Pip has lives left, Try again restarts the level that was lost:
   the stage from its start, or Sunny at his gate with full hearts, so the gate is a checkpoint. With the last
   life gone it's Game over, and Start again begins a new game from the first stage. Easy mode has the same
-  lives.
+  lives. Cheering up a boss earns one more, and the next chapter starts with full hearts.
 - **Small enemies:** each one teaches something Sunny will test. Only a Puffball follows him from behind, and
   slowly. There are at most three on screen, and every attack is announced by the same orange "!" as Sunny's.
 
@@ -395,9 +396,10 @@ Fight states: `play → ending (slow-mo bloom) → win`, or `play → down (Pip 
 
 A new level replaces the old one rather than resetting it. The game opens on a `Yard` at its sting. Play
 (once Pip has run off), Play again and Start again go back to the first chapter, make its stage and give Pip
-all his lives (`LIVES`); its gate makes the boss fight with the hearts Pip has left; Try again and
-Start over make the level being played again (a boss fight with full hearts) for a life, or a new game when
-none are left; and Main menu makes a `Yard` straight at its menu.
+all his lives (`LIVES`); its gate makes the boss fight with the hearts Pip has left; a win earns a life and Next
+chapter makes the next chapter's stage, with full hearts, or after the last chapter the button is Play again; Try
+again and Start over make the level being played again (a boss fight with full hearts) for a life, or a new game
+when none are left; and Main menu makes a `Yard` straight at its menu, which ends the run.
 
 ### Things to know before changing it
 
@@ -500,10 +502,9 @@ generator: a bot can then copy the fight to look ahead.
 **Add a chapter.** Add its profile to `CHAPTERS` in `src/chapters.ts`: its stage and boss, its tunes, and what
 the game says and shows about them. TypeScript then asks for its entry in `CHAPTER_VIEWS`
 (`src/game/views/chapterViews.ts`): the theme of its stage's world, the land and ground of its arena, and the
-light at its gate. `src/main.ts` gives it scenes of its own, so nothing has to hide anything. Two things still
-assume one chapter: How to play in `index.html` names Sunny, and nothing moves `App.chapter` on from the first
-chapter yet, so a win ends the game with Play again. Chapter 2 is in `CHAPTERS` but isn't live: only
-`?debug&chapter=2` reaches it (see "Tests").
+light at its gate. `src/main.ts` gives it scenes of its own, so nothing has to hide anything, and the last
+chapter's win card then offers Next chapter by itself (`App.onward`). How to play in `index.html` names the bosses
+by hand, so add a line there.
 
 **Add a stage.** Write its layout as data in `src/sim/stage/stages/<name>.ts`, a `StageData`: its length,
 ground and pits, logs, thorns, leaf pads, enemies, dewdrops, golden seeds and gate. Add it to `STAGES` in
@@ -570,7 +571,7 @@ console.log(S.game.boss.hp, S.game.player.hp, S.game.state);
 
 Add `?hitboxes` (or call `S.hitboxes(true)`) to draw what the simulation actually collides with,
 `?skipintro` to open on the menu instead of watching the opening on every reload, `&chapter=2` to make new
-games start at that chapter, for playing one that isn't live yet, and `&boss` to make them start at its boss. `S.startGame()` is Play
+games start at that chapter, without playing the ones before it, and `&boss` to make them start at its boss. `S.startGame()` is Play
 (the Garden Path, then Sunny through its gate); `S.startStage()` and `S.startBoss(hearts)` start either one
 directly; `S.skipIntro()` skips to "Press any key" and `S.toMenu()` goes back to the menu.
 
