@@ -166,18 +166,23 @@ npx wrangler@4 deploy --name sprout-v1 --assets ./dist --compatibility-date 2026
   --domain sprout-v1.farulivan.com
 ```
 
-**The last of version 2** never changes either. It lives on the `release/v2` branch: `main` as it was just before
-Chapter 2 (`5e8bf3c`), plus the version in Credits. On that branch, `wrangler.jsonc` is v2's own and names only
-`sprout-v2` and its address, so deploying from it can't reach the live game. To upload it:
+**The last of version 2** never changes either, so it was uploaded once by hand from its tag, `v2.1.0`, and runs on
+its own like the first. That tag is `main` as it was just before Chapter 2 (`5e8bf3c`), plus the version in Credits
+and `wrangler.v2.jsonc`, a config that names only `sprout-v2` and its address. To upload it again:
 
 ```bash
-git worktree add ../sprout-v2 release/v2 && cd ../sprout-v2
+git worktree add ../sprout-v2 v2.1.0 && cd ../sprout-v2
 pnpm install --frozen-lockfile && pnpm build
-pnpm exec wrangler deploy
+pnpm exec wrangler deploy --config wrangler.v2.jsonc
 ```
 
-To keep a later major version online the same way, branch `release/v<major>` from its last tag and make that
-branch's `wrangler.jsonc` the version's own.
+Keep the `--config`. The tag's ordinary `wrangler.jsonc` belongs to the live game and names its address, so a plain
+`wrangler deploy` there would put version 2 in place of the live game.
+
+To keep a later major version online the same way, when the next one is released (version 3 at
+`sprout-v3.farulivan.com`, say), do the same from its last tag. In the worktree, write a config like
+`wrangler.v2.jsonc` with that version's own name and address, and deploy with `--config` naming it. No branch is
+needed: once it's uploaded, a site keeps running however the repository changes.
 
 **What the domain adds.** Two settings of `farulivan.com` each put a small script on every page it serves,
 on all of the sites. They are Cloudflare's, not the game's, and nothing in this repo switches them on or off:
