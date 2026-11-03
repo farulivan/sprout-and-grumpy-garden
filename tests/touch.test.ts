@@ -1,7 +1,7 @@
 // What a finger presses on the touch screen's buttons (src/ui/touch.ts): the button it is on, a little past
 // its edge, both action buttons from the gap between them, and on the move buttons, the side it is on.
 import { describe, expect, it } from 'vitest';
-import { directionAt, pressedAt, type Disc } from '../src/ui/touch';
+import { directionAt, isSecondTap, pressedAt, type Disc } from '../src/ui/touch';
 
 // As laid out on screen: the big Shoot button, and Jump up and to its right with a gap between them.
 const shoot: Disc = { act: 'shoot', x: 100, y: 200, r: 58 };
@@ -36,5 +36,20 @@ describe('the move buttons', () => {
     expect(directionAt(left, right, 107)).toBe('left');
     expect(directionAt(left, right, 108)).toBe('right');
     expect(directionAt(left, right, 400)).toBe('right');
+  });
+});
+
+// Off the game's buttons, a quick second tap on the same spot is ignored, so Safari can't zoom on it.
+describe('a second tap', () => {
+  const first = { t: 1000, x: 300, y: 200 };
+  it('is one that comes quickly on the same spot, or near it', () => {
+    expect(isSecondTap(first, { t: 1150, x: 300, y: 200 })).toBe(true);
+    expect(isSecondTap(first, { t: 1340, x: 330, y: 230 })).toBe(true);
+  });
+
+  it('is not the first tap, a slow one, or one somewhere else', () => {
+    expect(isSecondTap(undefined, first)).toBe(false);
+    expect(isSecondTap(first, { t: 1500, x: 300, y: 200 })).toBe(false); // half a second later
+    expect(isSecondTap(first, { t: 1150, x: 500, y: 200 })).toBe(false); // on another button
   });
 });

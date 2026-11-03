@@ -44,6 +44,43 @@ export function directionAt(left: Disc, right: Disc, x: number): TouchAction {
   return x < (left.x + right.x) / 2 ? 'left' : 'right';
 }
 
+// The end of a tap: when (in ms) and where (in client pixels).
+export interface Tap {
+  t: number;
+  x: number;
+  y: number;
+}
+const SECOND_TAP_MS = 350; // a little over the 300 ms usually allowed for a double tap
+const SECOND_TAP_PX = 60;
+
+// Whether a tap comes so soon after the last one, and so near it, that Safari would take the two for a
+// double tap and zoom.
+export function isSecondTap(prev: Tap | undefined, now: Tap): boolean {
+  return (
+    prev !== undefined &&
+    now.t - prev.t < SECOND_TAP_MS &&
+    Math.hypot(now.x - prev.x, now.y - prev.y) < SECOND_TAP_PX
+  );
+}
+
+// Everywhere else on the page (the cards, pause and sound), a quick second tap on the same spot is
+// ignored: cancelled, so Safari can't zoom on it, which also means it doesn't press the button again.
+// After the target's own handlers, so Phaser still sees its canvas's touches first.
+function guardDoubleTap() {
+  let last: Tap | undefined;
+  document.addEventListener(
+    'touchend',
+    (e) => {
+      const touch = e.changedTouches[0];
+      if (!touch) return;
+      const tap = { t: performance.now(), x: touch.clientX, y: touch.clientY };
+      if (isSecondTap(last, tap) && e.cancelable) e.preventDefault();
+      last = tap; // even when ignored, so a third quick tap is too
+    },
+    { passive: false },
+  );
+}
+
 const RELEASE = ['pointerup', 'pointercancel', 'lostpointercapture'] as const;
 // Capture keeps a finger working if it slides off its area. It can throw if the pointer is already gone.
 const capture = (el: HTMLElement, e: PointerEvent) => {
@@ -105,6 +142,12 @@ function touchArea(
     area.addEventListener(t, (e) => {
       if (fingers.delete(e.pointerId)) sync();
     });
+  // Safari zooms the page when a button is tapped twice quickly. touch-action: none should stop that, but
+  // Safari ignores it on an absolutely placed area like this one (WebKit bug 218015), and cancelling
+  // pointerdown doesn't stop it either. Cancelling the touch itself does, as Phaser does on its canvas.
+  // The pointer events above still come, so the buttons work just as before.
+  for (const t of ['touchstart', 'touchend'] as const)
+    area.addEventListener(t, (e) => e.cancelable && e.preventDefault(), { passive: false });
 }
 
 export function initTouch(controls: Controls, onPress: () => void = () => {}) {
@@ -115,6 +158,7 @@ export function initTouch(controls: Controls, onPress: () => void = () => {}) {
   };
   if (window.matchMedia?.('(pointer: coarse)').matches) enable();
   window.addEventListener('touchstart', enable, { passive: true });
+  guardDoubleTap();
 
   const find = (discs: Disc[], act: TouchAction) => discs.find((d) => d.act === act) as Disc;
   touchArea(
