@@ -76,11 +76,14 @@ const trim = (b: Box): Box => {
 };
 
 // Where a card's main button is among its controls: the one pressed when the player hasn't moved to another
-// (Play, Try again, Play again, Keep playing). It is the first button (the Easy mode checkbox comes before it
-// on the lose card), except on a menu page, where it is Back.
+// (Play, Try again, Next chapter, Keep playing). On a menu page it is Back. Otherwise it is the button marked
+// data-main (the win card's, which sits on the right), or else the first button (the Easy mode checkbox comes
+// before it on the lose card).
 const main = (controls: readonly HTMLElement[]) => {
   const back = controls.findIndex((c) => c.classList.contains('back'));
-  return back >= 0 ? back : controls.findIndex((c) => c instanceof HTMLButtonElement);
+  if (back >= 0) return back;
+  const marked = controls.findIndex((c) => c.hasAttribute('data-main'));
+  return marked >= 0 ? marked : controls.findIndex((c) => c instanceof HTMLButtonElement);
 };
 
 const byId = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
