@@ -948,14 +948,6 @@ body.touch .planks {
   font-weight: 600;
   color: #5a4636;
 }
-/* what the version's numbers mean, under the credits */
-.version-note {
-  margin: 10px auto 0;
-  max-width: 360px;
-  font-size: 13px;
-  line-height: 1.35;
-  color: #8a7050;
-}
 
 /* ---------- round HUD buttons (sound + pause), visible only during the fight ---------- */
 #hud-btns {
