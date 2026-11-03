@@ -2,3 +2,4 @@ dist/
 tests/fixtures/
 *.md
 pnpm-lock.yaml
+.release-please-manifest.json

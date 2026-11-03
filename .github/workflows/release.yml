@@ -1,0 +1,54 @@
+# Releases. On every merge to main, release-please keeps one pull request open for the next release: the version it
+# works out from the commit messages since the last one (fix: a patch, feat: a minor, feat!: or Release-As: a major),
+# that version in package.json, and its entry in CHANGELOG.md. Merging that pull request is the release: release-please
+# tags it vX.Y.Z and publishes a GitHub Release, and this then moves the production branch to it, which Cloudflare
+# builds and puts online. See "Versions" in the README.
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+# The workflow's own token can only read. Everything is done with RELEASE_PLEASE_TOKEN instead: a pull request opened
+# with the workflow's token would never run the checks main requires, and this repository doesn't let Actions open
+# pull requests anyway.
+permissions:
+  contents: read
+
+# Releases happen one at a time, and each runs to the end.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      HAS_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN != '' }}
+    steps:
+      - name: Wait for the token
+        if: env.HAS_TOKEN != 'true'
+        run: echo "::notice::There is no RELEASE_PLEASE_TOKEN secret yet, so no release pull request. See Versions in the README."
+      # Pinned to a commit, as the repository's Actions policy requires; Dependabot keeps the pin up to date.
+      - id: release
+        if: env.HAS_TOKEN == 'true'
+        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        with:
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+      # A release was just made: put it online. Only ever forward, so production can't go back to an older release by
+      # mistake.
+      - if: steps.release.outputs.release_created == 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+          fetch-depth: 0
+      - name: Move production to the release
+        if: steps.release.outputs.release_created == 'true'
+        env:
+          SHA: ${{ steps.release.outputs.sha }}
+          TAG: ${{ steps.release.outputs.tag_name }}
+        run: |
+          git push origin "$SHA:refs/heads/production"
+          echo "::notice::$TAG is on its way to sprout.farulivan.com"
