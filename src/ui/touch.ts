@@ -105,6 +105,12 @@ function touchArea(
     area.addEventListener(t, (e) => {
       if (fingers.delete(e.pointerId)) sync();
     });
+  // Safari zooms the page when a button is tapped twice quickly. touch-action: none should stop that, but
+  // Safari ignores it on an absolutely placed area like this one (WebKit bug 218015), and cancelling
+  // pointerdown doesn't stop it either. Cancelling the touch itself does, as Phaser does on its canvas.
+  // The pointer events above still come, so the buttons work just as before.
+  for (const t of ['touchstart', 'touchend'] as const)
+    area.addEventListener(t, (e) => e.cancelable && e.preventDefault(), { passive: false });
 }
 
 export function initTouch(controls: Controls, onPress: () => void = () => {}) {
