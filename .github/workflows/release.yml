@@ -8,6 +8,8 @@ name: Release
 on:
   push:
     branches: [main]
+  # Run it by hand from the Actions tab, for example after the token has been renewed. Only on main: see the job's if.
+  workflow_dispatch:
 
 # The workflow's own token can only read. release-please works with RELEASE_PLEASE_TOKEN instead: a pull request opened
 # with the workflow's token would never run the checks main requires, and this repository doesn't let Actions open
@@ -24,6 +26,8 @@ concurrency:
 jobs:
   release:
     name: Release
+    # The token only ever works for main, whichever branch a run by hand is started on.
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:

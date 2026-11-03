@@ -85,8 +85,8 @@ token never runs the checks `main` requires. It is a fine-grained personal acces
 **Contents** and **Pull requests** set to read and write and nothing else, saved as the Actions secret
 `RELEASE_PLEASE_TOKEN`. Release pull requests are opened in its owner's name. Only the Release workflow uses it, which
 runs on `main` and never on a pull request, and runs nothing but the pinned release-please action. Until the secret
-exists, the workflow only leaves a notice. When the token expires, the Release workflow fails: make a new one and
-replace the secret. If release-please ever can't label its pull request, give the token **Issues** as well.
+exists, the workflow only leaves a notice. When the token expires, the Release workflow fails: make a new one, replace
+the secret, and run the workflow again from the **Actions** tab (**Release → Run workflow**, on `main`). If release-please ever can't label its pull request, give the token **Issues** as well.
 
 ## Putting it online
 
