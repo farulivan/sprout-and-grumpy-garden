@@ -243,7 +243,9 @@ still works; it is just not listed there, and pause and sound have buttons on sc
 On a touch screen the buttons are icons, as in other mobile action games: arrowheads, an arrow up, and one
 of Pip's seeds. Shoot is the biggest, as the main action. A thumb can slide from button to button without
 lifting, and resting it between Shoot and Jump presses both, to jump while shooting. There is no aiming on a
-touch screen: Sunny's face is still in reach of a straight seed from the high leaf.
+touch screen: Sunny's face is still in reach of a straight seed from the high leaf. A double tap never zooms
+the page (Safari would, src/ui/touch.ts explains why), and on the cards and the pause and sound buttons a
+quick second tap on the same spot counts once.
 
 The pause card has **Keep playing**, **Start over** (the stage or the boss fight again from its start, with
 the same Easy setting, for one of Pip's lives) and **Main menu** (back to the signpost, where Easy mode can
