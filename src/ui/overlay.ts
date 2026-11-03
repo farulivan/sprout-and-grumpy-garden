@@ -1,5 +1,6 @@
 // The HTML layer over the game: "Press any key" on the title, the main menu and its pages, the win, lose and
 // pause cards, plus the round sound and pause buttons.
+import { version } from '../../package.json';
 import type { FightResult } from '../sim/events';
 
 export type Card = 'press' | 'menu' | Page | 'win' | 'lose' | 'pause';
@@ -118,6 +119,7 @@ export class Overlay {
         handlers.easy(el.checked);
       });
     }
+    byId('version').textContent = version;
     byId('btn-play').addEventListener('click', handlers.play);
     byId('btn-again').addEventListener('click', handlers.start);
     byId('btn-retry').addEventListener('click', handlers.retry);

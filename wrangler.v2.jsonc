@@ -1,0 +1,12 @@
+// How Cloudflare serves the last of version 2, at its own address beside the game. This site never changes, so nothing
+// builds it automatically: `pnpm exec wrangler deploy --config wrangler.v2.jsonc` uploads it once, by hand. It needs a
+// file of its own because wrangler.jsonc is the live game's, with the live game's address.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "sprout-v2",
+  "compatibility_date": "2026-10-01",
+  "assets": { "directory": "./dist" },
+  "routes": [{ "pattern": "sprout-v2.farulivan.com", "custom_domain": true }],
+  "workers_dev": false,
+  "preview_urls": false,
+}
